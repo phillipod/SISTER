@@ -23,7 +23,7 @@ def download_icons(icons_dir):
     This function is a wrapper around CargoDownloader, which is used to download icons.
     The mappings from cargo types to subdirectories are hardcoded.
     """
-    images_root = Path(icon_dir)
+    images_root = Path(icons_dir)
     image_cache_path = images_root / "image_cache.json"
 
     downloader = CargoDownloader()
@@ -206,12 +206,12 @@ def main():
     setup_logging(log_level=args.log_level)
 
     if args.download:
-        download_main(args.icons)
-        sys.exit(0)
+        download_icons(args.icons)
+        exit(0)
 
     if args.screenshot is None:
         parser.print_help()
-        sys.exit(1)
+        exit(1)
 
     os.makedirs(args.output, exist_ok=True)
 
