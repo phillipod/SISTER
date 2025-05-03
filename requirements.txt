@@ -1,0 +1,10 @@
+# Core image processing and computer vision
+opencv-python
+numpy
+scikit-image
+
+# OCR engine
+easyocr
+
+# Web interaction for CargoDownloader
+requests
