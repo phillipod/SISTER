@@ -70,7 +70,8 @@ def build_icon_dir_map(images_root):
             "Kit Frame": [images_root / 'ground/kit'], # And "Kit" becomes "Kit Frame"
             "Devices": [images_root / 'ground/device'],
             "Weapon": [images_root / 'ground/weapon'],
-        }
+        },
+        "inventory": { "Inventory": [ p for p in images_root.rglob('*') if p.is_dir() ] }
     }
 
 def main():
@@ -106,7 +107,7 @@ def main():
         #"screenshot_ground_1.png": "PC Ground Build",
         #"screenshot_ground_2.png": "PC Ground Build",
         #"screenshot_ground_3.png": "PC Ground Build",
-        "screenshot_console_ground_1.png": "Console Ground Build",
+        #"screenshot_console_ground_1.png": "Console Ground Build",
         #"screenshot_console_ground_2.png": "Unknown",
         #"screenshot_console_space_1.png": "Console Ship Build",
         #"screenshot_console_space_2.png": "Console Ship Build",
@@ -114,6 +115,8 @@ def main():
         #"screenshot_console_space_4.png": "Console Ship Build",
         #"screenshot_console_space_5.png": "Console Ship Build",
         #"screenshot_console_space_6.png": "Console Ship Build",
+        "screenshot_inventory_1.png": "Inventory",
+
     }
 
     for image_name, expected_type in sample_images.items():
@@ -128,16 +131,24 @@ def main():
         try:
             timings = {}
 
-            t0 = time.perf_counter()
-            labels = locator.locate_labels(input_path, output_path if args.debug else None)
-            timings["Label Location"] = time.perf_counter() - t0
-            print(f"Found {len(labels)} labels.")
+            image = cv2.imread(input_path)
 
-            t1 = time.perf_counter()
-            build_info = classifier.classify(labels)
-            timings["Build Classification"] = time.perf_counter() - t1
-            detected_type = build_info["build_type"]
-            print(f"Detected Build Type: {detected_type}")
+            labels = None
+            build_info = None
+
+            if "Inventory" in expected_type:
+                detected_type = "Inventory"
+            else:
+                t0 = time.perf_counter()
+                labels = locator.locate_labels(input_path, output_path if args.debug else None)
+                timings["Label Location"] = time.perf_counter() - t0
+                print(f"Found {len(labels)} labels.")
+
+                t1 = time.perf_counter()
+                build_info = classifier.classify(labels)
+                timings["Build Classification"] = time.perf_counter() - t1
+                detected_type = build_info["build_type"]
+                print(f"Detected Build Type: {detected_type}")
 
             if detected_type == expected_type:
                 print(f"[PASS] Classification matches expected.")
@@ -155,10 +166,10 @@ def main():
                 icon_set = "pc_ground"
             elif "Console Ground Build" in detected_type:
                 icon_set = "console_ground"
-                
-            if "PC Ship Build" in detected_type or "PC Ground Build" in detected_type or "Console Ship Build" in detected_type or "Console Ground Build" in detected_type:
-                image = cv2.imread(input_path)
+            elif "Inventory" in detected_type:
+                icon_set = "inventory"
 
+            if "PC Ship Build" in detected_type or "PC Ground Build" in detected_type or "Console Ship Build" in detected_type or "Console Ground Build" in detected_type:
                 t2 = time.perf_counter()
                 region_data = detector.detect(image, build_info, labels, debug_output_path=region_debug_path)
                 timings["Region Detection"] = time.perf_counter() - t2
@@ -166,64 +177,68 @@ def main():
                 t3 = time.perf_counter()
                 icon_slots = icon_finder.detect(image, build_info, region_data, debug_output_path=icon_debug_path)
                 timings["Icon Slot Detection"] = time.perf_counter() - t3
+            elif "Inventory" in detected_type:
+                t2 = time.perf_counter()
+                icon_slots = icon_finder.detect_inventory(image, debug_output_path=icon_debug_path)
+                timings["Icon Slot Detection"] = time.perf_counter() - t2
+                
+            print(f"Detected {sum(len(v) for v in icon_slots.values())} icon slot candidates across {len(icon_slots)} labels.")
 
-                print(f"Detected {sum(len(v) for v in icon_slots.values())} icon slot candidates across {len(icon_slots)} labels.")
+            overlays = matcher.load_quality_overlays(args.overlay_dir)
 
-                overlays = matcher.load_quality_overlays(args.overlay_dir)
+            icon_dir_map = {
+                label: list(map(str, icon_dir_map_master[icon_set].get(label, [args.icon_dir])))
+                for label in icon_slots
+            }
 
-                icon_dir_map = {
-                    label: list(map(str, icon_dir_map_master[icon_set].get(label, [args.icon_dir])))
-                    for label in icon_slots
-                }
+            print("Launching icon matching process...")
 
-                print("Launching icon matching process...")
+            t4 = time.perf_counter()
+            matches = matcher.match_all(image, build_info, icon_slots, icon_dir_map, overlays, threshold=0.7)
+            timings["Icon Matching"] = time.perf_counter() - t4
 
-                t4 = time.perf_counter()
-                matches = matcher.match_all(image, build_info, icon_slots, icon_dir_map, overlays, threshold=0.7)
-                timings["Icon Matching"] = time.perf_counter() - t4
+            print(f"Matching complete. Total matches found: {len(matches)}")
 
-                print(f"Matching complete. Total matches found: {len(matches)}")
+            os.makedirs("output", exist_ok=True)
 
-                os.makedirs("output", exist_ok=True)
+            matches_by_region_slot = defaultdict(lambda: defaultdict(list))
 
-                matches_by_region_slot = defaultdict(lambda: defaultdict(list))
+            # Map each original region candidate to its index so we can group consistently
+            region_slot_index_map = {
+                region_label: {
+                    tuple(slot): idx for idx, slot in enumerate(slots)
+                } for region_label, slots in icon_slots.items()
+            }
 
-                # Map each original region candidate to its index so we can group consistently
-                region_slot_index_map = {
-                    region_label: {
-                        tuple(slot): idx for idx, slot in enumerate(slots)
-                    } for region_label, slots in icon_slots.items()
-                }
+            for match in matches:
+                region = match["region"]
+                top_left = match["top_left"]
+                # Find the closest candidate region box and get its index
+                candidate_idx = None
+                for box, idx in region_slot_index_map[region].items():
+                    x, y, w, h = box
+                    if x <= top_left[0] <= x + w and y <= top_left[1] <= y + h:
+                        candidate_idx = idx
+                        break
+                if candidate_idx is not None:
+                    matches_by_region_slot[region][candidate_idx].append(match)
 
-                for match in matches:
-                    region = match["region"]
-                    top_left = match["top_left"]
-                    # Find the closest candidate region box and get its index
-                    candidate_idx = None
-                    for box, idx in region_slot_index_map[region].items():
-                        x, y, w, h = box
-                        if x <= top_left[0] <= x + w and y <= top_left[1] <= y + h:
-                            candidate_idx = idx
-                            break
-                    if candidate_idx is not None:
-                        matches_by_region_slot[region][candidate_idx].append(match)
-
-                with open("output/detected_icons.txt", "w") as f:
-                    for region in sorted(matches_by_region_slot.keys()):
-                        f.write(f"=== Region: {region} ===\n")
-                        for slot_idx in sorted(matches_by_region_slot[region].keys()):
-                            slot_matches = matches_by_region_slot[region][slot_idx]
-                            sorted_matches = sorted(slot_matches, key=lambda m: m["score"], reverse=True)
-                            best = sorted_matches[0]
-                            f.write(f"  -- Slot {slot_idx} --\n")
-                            f.write(f"  BEST: {best['name']} using {best['method']} "
-                                    f"(score {best['score']:.2f}, scale {best['scale']:.2f}, quality scale {best.get('quality_scale', 0):.2f})\n")
-                            if len(sorted_matches) > 1:
-                                f.write("  Others:\n")
-                                for match in sorted_matches[1:]:
-                                    f.write(f"    - {match['name']} using {match['method']} "
-                                            f"(score {match['score']:.2f}, scale {match['scale']:.2f}, quality scale {match.get('quality_scale', 0):.2f})\n")
-                        f.write("\n")
+            with open("output/detected_icons.txt", "w") as f:
+                for region in sorted(matches_by_region_slot.keys()):
+                    f.write(f"=== Region: {region} ===\n")
+                    for slot_idx in sorted(matches_by_region_slot[region].keys()):
+                        slot_matches = matches_by_region_slot[region][slot_idx]
+                        sorted_matches = sorted(slot_matches, key=lambda m: m["score"], reverse=True)
+                        best = sorted_matches[0]
+                        f.write(f"  -- Slot {slot_idx} --\n")
+                        f.write(f"  BEST: {best['name']} using {best['method']} "
+                                f"(score {best['score']:.2f}, scale {best['scale']:.2f}, quality scale {best.get('quality_scale', 0):.2f})\n")
+                        if len(sorted_matches) > 1:
+                            f.write("  Others:\n")
+                            for match in sorted_matches[1:]:
+                                f.write(f"    - {match['name']} using {match['method']} "
+                                        f"(score {match['score']:.2f}, scale {match['scale']:.2f}, quality scale {match.get('quality_scale', 0):.2f})\n")
+                    f.write("\n")
 
             results_dict = {
                 "build_type": detected_type,

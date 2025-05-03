@@ -24,6 +24,40 @@ class IconSlotDetector:
 
         self.debug = debug
 
+    def detect_inventory(self, screenshot_color, debug_output_path=None):
+        """
+        Detect icon slot candidates globally.
+
+        Args:
+            screenshot_color (np.array): Full BGR screenshot.
+            debug_output_path (str): If set, saves debug images.
+
+        Returns:
+            list: List of (x, y, w, h) tuples.
+        """
+        gray = cv2.cvtColor(screenshot_color, cv2.COLOR_BGR2GRAY)
+        _, binary = cv2.threshold(gray, 63, 255, cv2.THRESH_BINARY)
+
+        candidates = self._find_slot_candidates(binary, screenshot_color, debug_output_path)
+
+        region_candidates = {
+            "Inventory": []
+        }
+
+        for (x, y, w, h) in candidates:
+            region_candidates["Inventory"].append((x, y, w, h))
+
+        # Convert all box values to native Python int to avoid JSON serialization issues
+        region_candidates = {
+            label: [tuple(int(v) for v in box) for box in boxes]
+            for label, boxes in region_candidates.items()
+        }
+
+        for label in region_candidates:
+            region_candidates[label] = self._sort_boxes_grid_order(region_candidates[label])
+
+        return region_candidates
+
     def detect(self, screenshot_color, build_info, region_data, debug_output_path=None):
         """
         Detect icon slot candidates globally and assign them to labeled regions.
@@ -71,7 +105,7 @@ class IconSlotDetector:
             cv2.imwrite(f"{base}_candidates.png", debug_image)
 
         # Do not apply normalization yet
-                # Convert all box values to native Python int to avoid JSON serialization issues
+        # Convert all box values to native Python int to avoid JSON serialization issues
         region_candidates = {
             label: [tuple(int(v) for v in box) for box in boxes]
             for label, boxes in region_candidates.items()
