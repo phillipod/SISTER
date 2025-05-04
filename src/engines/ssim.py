@@ -177,10 +177,17 @@ class SSIMEngine:
             logger.info(f"Matching {len(icons)} icons against {len(candidate_regions)} candidates for label '{region_label}'")
 
             # Precompute overlay quality once per candidate region
-            predicted_qualities = [
-                self.identify_overlay(screenshot_color[y:y+h, x:x+w], overlays)
-                for (x, y, w, h) in candidate_regions
-            ]
+            #predicted_qualities = [
+            #    self.identify_overlay(screenshot_color[y:y+h, x:x+w], overlays)
+            #    for (x, y, w, h) in candidate_regions
+            #]
+            with ProcessPoolExecutor() as executor:
+                overlay_futures = [
+                    executor.submit(self.identify_overlay, screenshot_color[y:y+h, x:x+w], overlays)
+                    for (x, y, w, h) in candidate_regions
+                ]
+
+                predicted_qualities = [future.result() for future in overlay_futures]
 
             args_list = [
                 (name, icon_color, screenshot_color, candidate_regions, predicted_qualities, threshold, overlays, idx, len(icons), region_label, False)
