@@ -77,7 +77,7 @@ class SSIMEngine:
                             best_scale = scale
                             best_method = 'ssim'
 
-        logger.debug(f"Best matched overlay: {best_quality} with score {best_score:.4f} at scale {best_scale:.2f} using {best_method}")
+        logger.debug(f"Best matched overlay: {best_quality} with score {best_score:.4f} at scale {best_score if best_score is not None else 'N/A'} using {best_method}")
         return best_quality, best_scale, best_method
 
  

@@ -54,6 +54,8 @@ Supported Operations (used as dictionaries):
 - "midpoint":   Midpoint between two coordinates
 - "first_of":   Tries each expression in order, returns the first that works
 - "contour_right_of": Finds the far-right contour right of a label at given Y
+- "minimum_of":  Returns the minimum of each expression
+- "maximum_of":  Returns the maximum of each expression
 
 Region Loop Example:
     {
@@ -83,7 +85,14 @@ ROI_DETECTION_RULES = {
             "half_lower": {"divide": [{"distance": ["lower_y", "deflector_y"]}, 2]},
             "box_height": {"add": ["half_upper", "half_lower"]},
             "deflector_right_x": "label:Deflector.right",
-            "max_right_x": {"contour_right_of": ["Deflector", "deflector_y"]}
+            "max_box_width": {"multiply": [{"distance": ["label:Deflector.right", "label:Deflector.left"]}, 4.5]},
+            "max_right_bound": {"add": ["label:Deflector.left", "max_box_width"]},
+            "max_right_x": {
+                "minimum_of": [
+                    {"contour_right_of": ["Deflector", "deflector_y"]},
+                    "max_right_bound"
+                ]
+            }
         },
 
         # Standard regions
@@ -568,6 +577,19 @@ class RegionDetector:
                 if self.debug:
                     logger.debug(f"contour_right_of for {label} at y={y_value} = {max_right}")
                 return max_right
+            if 'maximum_of' in expr:
+                values = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['maximum_of']]
+                result = max(values)
+                if self.debug:
+                    logger.debug(f"maximum_of {values} = {result}")
+                return result
+            if 'minimum_of' in expr:
+                values = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['minimum_of']]
+                result = min(values)
+                if self.debug:
+                    logger.debug(f"minimum_of {values} = {result}")
+                return result
+
             raise ValueError(f"Unsupported expression: {expr}")
 
         raise TypeError(f"Unsupported type: {type(expr)}")
