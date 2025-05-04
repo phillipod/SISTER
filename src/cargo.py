@@ -243,7 +243,7 @@ class CargoDownloader:
         else:
             matching_items = data
 
-        logger.info(f"Downloading {len(matching_items)} {cargo_type} icons...")
+        logger.info(f"Downloading {len(matching_items)} {cargo_type} icons into {dest_dir}...")
 
         self._download_icons(matching_items, dest_dir, image_cache_path, cargo_type, filters)
 
