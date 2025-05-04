@@ -259,7 +259,7 @@ def main():
             start = time.perf_counter()
             slots = slot_finder.detect(screenshot, build_info, regions, debug_output_path=os.path.join(args.output, "slots_debug.png") if args.debug else None)
             timings["Slot Detection"] = time.perf_counter() - start
-            print(f"Found {len(slots)} slots")
+            print(f"Found {sum(len(v) for v in slots.values())} slots")
 
             # Build icon dir map based on icon slots found and build type icon set
             icon_dir_map = {
