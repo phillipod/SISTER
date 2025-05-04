@@ -163,6 +163,17 @@ class SSIMEngine:
         matches = []
         matched_indexes_global = set()
 
+        max_x = 0
+        max_y = 0
+        for candidate_regions in icon_slots.values():
+            for (x, y, w, h) in candidate_regions:
+                max_x = max(max_x, x + w)
+                max_y = max(max_y, y + h)
+
+        if max_x > 0 and max_y > 0:
+            screenshot_color = screenshot_color[:max_y, :max_x]
+            logger.debug(f"Cropped screenshot to ({max_x}, {max_y}) based on candidate regions.")
+
         for region_label, candidate_regions in icon_slots.items():
             folders = icon_dir_map.get(region_label, [])
             if not folders:
