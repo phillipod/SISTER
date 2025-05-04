@@ -77,7 +77,7 @@ class SSIMEngine:
                             best_scale = scale
                             best_method = 'ssim'
 
-        logger.debug(f"Best matched overlay: {best_quality} with score {best_score:.4f} at scale {best_score if best_score is not None else 'N/A'} using {best_method}")
+        #logger.debug(f"Best matched overlay: {best_quality} with score {best_score:.4f} at scale {best_score if best_score is not None else 'N/A'} using {best_method}")
         return best_quality, best_scale, best_method
 
  
@@ -86,7 +86,7 @@ class SSIMEngine:
         found_matches = []
         matched_candidate_indexes = set()
 
-        logger.verbose(f"Matching icon {idx}/{total} '{name}' in region '{region_label}'")
+        #logger.verbose(f"Matching icon {idx}/{total} '{name}' in region '{region_label}'")
         
         for idx_region, (x, y, w, h) in enumerate(candidate_regions):
             quality, quality_scale, quality_method = predicted_qualities[idx_region]
