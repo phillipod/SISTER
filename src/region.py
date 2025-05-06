@@ -232,7 +232,7 @@ ROI_DETECTION_RULES = {
                 "labels": ["Warp", "Singularity"],
                 "loop": {
                     "x1": "impulse_warp_mid",
-                    "x2": "col2_right",
+                    "x2": "warp_right", # Use the right edge of the col2 region as we have no other good anchor"]"first_of": ["region:Hangar.left", "col2_right"]}, # Use the right edge of the col2 region as we have no other good anchor"}"col2_right",
                     "y1": {"subtract": ["label:.bottom", "vertical_padding"]},
                     "height": "line_height"
                 }
@@ -244,7 +244,7 @@ ROI_DETECTION_RULES = {
             { "Shield":      {"x1": "col2_left", "x2": "shield_deflector_mid", "y1": {"subtract": ["label:Shield.bottom", "vertical_padding"]}, "height": "line_height"} },
             { "Deflector":   {"x1": "shield_deflector_mid", "x2": "deflector_impulse_mid", "y1": {"subtract": ["label:Deflector.bottom", "vertical_padding"]}, "height": "line_height"} },
             { "Impulse":     {"x1": "deflector_impulse_mid", "x2": "impulse_warp_mid", "y1": {"subtract": ["label:Impulse.bottom", "vertical_padding"]}, "height": "line_height"} },
-            { "Hangar":      {"x1": {"add": ["warp_right", {"divide": ["padding", "2"]}]}, "x2": "col2_right", "y1": {"subtract": ["label:Hangar.bottom", "vertical_padding"]}, "height": "line_height"} }
+            { "Hangar":      {"x1": {"add": ["warp_right", {"divide": ["padding", "4"]}]}, "x2": "col2_right", "y1": {"subtract": ["label:Hangar.bottom", "vertical_padding"]}, "height": "line_height"} }
         ]
     },
 
