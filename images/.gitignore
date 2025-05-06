@@ -1,2 +1,3 @@
 *.png
 *.json
+!hash_index.json
