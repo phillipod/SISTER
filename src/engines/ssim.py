@@ -2,9 +2,10 @@ import os
 import cv2
 import numpy as np
 import tempfile
-import atexit
-import cProfile, pstats
+#import atexit
+#import cProfile, pstats
 import statistics
+import traceback
 
 from collections import Counter
 from pathlib import Path
@@ -391,13 +392,10 @@ class SSIMEngine:
         dtype = screenshot_color.dtype
         logger.debug(f"Created shared memory block with name '{shm_name}' and shape {shape} and dtype {dtype}.")
 
-        try:           
+        try:
             filtered_icons = {}
             similar_icons = {}
             found_icons = {}
-
-            hash_tasks = []
-            task_meta = []
 
             for region_label, candidate_regions in icon_slots.items():
                 folders = icon_dir_map.get(region_label, [])
@@ -412,27 +410,17 @@ class SSIMEngine:
 
                 for idx, (x, y, w, h) in enumerate(candidate_regions):
                     logger.debug(f"Predicting icons for region '{region_label}' at slot {idx}")
-                    found_icons[region_label][(x, y, w, h)] = {}
+                    box = (x, y, w, h)
                     roi = screenshot_color[y:y+h, x:x+w]
-                    hash_tasks.append(roi)
-                    task_meta.append((region_label, (x, y, w, h), folders))
-
-            with ProcessPoolExecutor() as executor:
-                futures = {
-                    executor.submit(self.hash_index.find_similar_to_image, roi, max_distance=18, top_n=None, grayscale=False): meta
-                    for roi, meta in zip(hash_tasks, task_meta)
-                }
-
-                for future in as_completed(futures):
-                    region_label, box, folders = futures[future]
-                    x, y, w, h = box
-                    similar_icons[region_label][box] = []
+                    found_icons[region_label][box] = {}
+                    similar_icons[region_label][box] = {}
                     filtered_icons[region_label][box] = {}
 
                     try:
-                        results = future.result()
+                        results = self.hash_index.find_similar_to_image(roi, max_distance=18, top_n=None, grayscale=False)
                     except Exception as e:
                         logger.warning(f"Hash prefilter failed for region '{region_label}' at {box}: {e}")
+                        traceback.print_exc()
                         continue
 
                     for rel_path, dist in results:
@@ -460,7 +448,6 @@ class SSIMEngine:
                         if not allowed or not full_path.exists():
                             continue
 
-                        # Update found_icons
                         box_icons = found_icons[region_label][box]
                         if filename not in box_icons or box_icons[filename]["dist"] > dist:
                             box_icons[filename] = {
@@ -469,43 +456,31 @@ class SSIMEngine:
                                 "name": name,
                             }
 
-                        # Load filtered icon once
                         if filename not in filtered_icons[region_label]:
                             icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
                             if icon is not None:
                                 filtered_icons[region_label][filename] = icon
 
-            # let's just use the hash index output for now
-            icons = {}
             for region_label, candidate_regions in icon_slots.items():
                 for idx_region, (x, y, w, h) in enumerate(candidate_regions):
                     roi = screenshot_color[y:y+h, x:x+w]
-
                     candidates = found_icons[region_label][(x, y, w, h)]
-                    
-                    # Step 1: collect all distances
+
                     dists = [info["dist"] for info in candidates.values()]
                     if not dists:
                         continue
 
-                    # Step 2: calculate best score and stddev
                     best_score = min(dists)
                     stddev = statistics.stdev(dists) if len(dists) > 1 else 0
-
-                    # Step 3: calculate threshold
                     stddev_threshold = best_score + (2 * stddev)
                     dm_threshold = self.dynamic_hamming_cutoff(dists, best_score, max_next_ranks=1, max_allowed_gap=6)
-                    
-                    threshold = np.ceil(max(dm_threshold, stddev_threshold)).astype(int)
+                    threshold_val = np.ceil(max(dm_threshold, stddev_threshold)).astype(int)
 
-                    #print(f"Name: {region_label} Slot: {idx_region} Dynamic hamming cutoff: {dm_threshold} StdDev: {stddev_threshold:.2f} Threshold: {threshold:.2f}")
-                    # Step 4: filter, append predictions, and retain only matching icons
                     candidate_predictions = []
                     filtered_slot_icons = {}
 
                     for filename, info in candidates.items():
-                        if info["dist"] > threshold: # and region_label in ["Science Console"] and idx_region == 0:
-                            #print(f"Skipping {filename} with dist {info['dist']:.2f} > threshold {threshold:.2f} for region '{region_label}' at slot {idx_region}.")
+                        if info["dist"] > threshold_val:
                             continue
 
                         candidate_predictions.append({
@@ -513,20 +488,18 @@ class SSIMEngine:
                             "top_left": (x, y),
                             "bottom_right": (x + w, y + h),
                             "score": info["dist"],
-                            "match_threshold": int(threshold),
+                            "match_threshold": int(threshold_val),
                             "region": region_label,
-                            "method": "hash" if info["dist"] <= threshold else "hash-skipped",
+                            "method": "hash",
                             "quality": info["quality"],
                             "quality_scale": 1.0,
                             "quality_score": 0.0,
                             "scale": 1.0,
-                            "skipped": info["dist"] > threshold
+                            "skipped": info["dist"] > threshold_val
                         })
 
-                        # update filtered versions
                         filtered_slot_icons[filename] = info
 
-                    # update found_icons and filtered_icons to retain only filtered icons
                     found_icons[region_label][(x, y, w, h)] = filtered_slot_icons
                     for filename in filtered_slot_icons:
                         if filename not in filtered_icons[region_label]:
@@ -536,19 +509,14 @@ class SSIMEngine:
                                 filtered_icons[region_label][filename] = icon
 
                     logger.debug(f"Predicted {len(candidate_predictions)} icons for region '{region_label}' at slot {idx_region}.")
-                    
                     predictions.extend(candidate_predictions)
 
-
-        finally:    
-            # Always cleanup shared memory
+        finally:
             shm.close()
             shm.unlink()
 
         logger.info(f"Completed all candidate predictions.")
-
         return predictions, found_icons, filtered_icons
-
 
     def quality_predictions(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, threshold=0.8):
         matches = []

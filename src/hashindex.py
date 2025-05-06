@@ -5,6 +5,9 @@ from datetime import datetime
 from PIL import Image
 import imagehash
 import logging
+from pybktree import BKTree
+from imagehash import hex_to_hash
+
 import cv2
 import numpy as np
 
@@ -17,6 +20,32 @@ HASHER_FACTORY = {
     # "ahash": AHashHasher,  # If you add more
     # "dhash": DHashHasher,
 }
+def hamming_distance(h1, h2):
+    return h1 - h2
+
+BK_TREE_MAP = {}
+BK_TREE_RELPATHS = {}
+
+def add_to_bktree(namespace, hash_str, rel_path):
+    if namespace not in BK_TREE_MAP:
+        BK_TREE_MAP[namespace] = BKTree(hamming_distance)
+        BK_TREE_RELPATHS[namespace] = {}
+    hash_obj = hex_to_hash(hash_str)
+    BK_TREE_MAP[namespace].add(hash_obj)
+    BK_TREE_RELPATHS[namespace][str(hash_obj)] = rel_path
+
+def find_similar_in_namespace(namespace, target_hash, max_distance=10, top_n=None):
+    if namespace not in BK_TREE_MAP:
+        return []
+    if isinstance(target_hash, str):
+        target_hash = hex_to_hash(target_hash)
+    results = BK_TREE_MAP[namespace].find(target_hash, max_distance)
+    filtered = [
+        (BK_TREE_RELPATHS[namespace].get(str(item)), distance)
+        for distance, item in results
+        if str(item) in BK_TREE_RELPATHS[namespace]
+    ]
+    return filtered[:top_n] if top_n else filtered
 
 class HashIndex:
     """
@@ -57,6 +86,14 @@ class HashIndex:
                 return
             self.hashes = data.get("hashes", {})
             logger.verbose(f"Loaded hash index from {self.output_file} with {len(self.hashes)} entries.")
+            for rel_path, entry in self.hashes.items():
+                try:
+                    hash_obj = hex_to_hash(entry["hash"])
+                    #self.bktree.add(hash_obj)
+                    add_to_bktree(self.hasher_name, entry["hash"], rel_path)
+                    #self.bktree_map[hash_obj] = rel_path
+                except Exception as e:
+                    logger.warning(f"Failed to rehydrate BKTree for {rel_path}: {e}")
         except Exception as e:
             logger.warning(f"Failed to load hash index: {e}")
 
@@ -72,6 +109,7 @@ class HashIndex:
             logger.info(f"Saved hash index to {self.output_file} with {len(self.hashes)} entries.")
         except Exception as e:
             logger.error(f"Failed to write hash index: {e}")
+
 
     def build_or_update(self):
         pattern = "**/*.png" if self.recursive else "*.png"
@@ -158,28 +196,7 @@ class HashIndex:
         return {k: v["hash"] for k, v in self.hashes.items()}
 
     def find_similar(self, target_hash, max_distance=10, top_n=None):
-        if isinstance(target_hash, str):
-            try:
-                target_hash = imagehash.hex_to_hash(target_hash)
-            except Exception as e:
-                logger.error(f"Invalid target hash: {e}")
-                return []
-
-        results = []
-        for rel_path, entry in self.hashes.items():
-            try:
-                stored_hash = imagehash.hex_to_hash(entry["hash"])
-                dist = target_hash - stored_hash
-                #print(f"Comparing {target_hash} vs {stored_hash} -> dist={dist} for {rel_path}")
-                
-                if dist <= max_distance:
-                    #print(f"found match: dist <= max_distance for {rel_path} {target_hash} {stored_hash}")
-                    results.append((rel_path, dist))
-            except Exception as e:
-                logger.warning(f"Hash compare failed for {rel_path}: {e}")
-
-        results.sort(key=lambda x: x[1])
-        return results[:top_n] if top_n else results
+        return find_similar_in_namespace(self.hasher_name, target_hash, max_distance, top_n)
 
     def find_similar_to_image(self, roi_bgr, max_distance=20, top_n=None, size=None, grayscale=False):
         """
