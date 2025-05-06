@@ -5,18 +5,29 @@ import cv2
 
 # Import available engines
 from .engines.ssim import SSIMEngine
+#from .engines.akaze import AKAZEEngine
+#from .engines.phash import PHashEngine
+#from .engines.ncc import NCCEngine
+#from .engines.edgehistogram import EdgeHistogramEngine
+#from .engines.hog import HOGEngine
+
 # from engines.orb import ORBEngine  # (future engines)
 
 logger = logging.getLogger(__name__)
 
 ENGINE_CLASSES = {
     "ssim": SSIMEngine,
+ #   "akaze": AKAZEEngine,
+ #   "phash": PHashEngine,
+ #   "ncc": NCCEngine,
+ #   "edgehistogram": EdgeHistogramEngine,
+ #   "hog": HOGEngine,
     # "orb": ORBEngine,  # placeholder
 }
 
 
 class IconMatcher:
-    def __init__(self, debug=False, engine_type="ssim"):
+    def __init__(self, hash_index=None, debug=False, engine_type="ssim"):
         """
         IconMatcher runner that delegates to a selected engine.
 
@@ -25,6 +36,10 @@ class IconMatcher:
             engine_type (str): Engine backend to use. Options: 'ssim', 'orb', etc.
         """
         self.debug = debug
+        self.predicted_qualities = None
+        self.found_icons = None
+        self.filtered_icons = None
+
         self.engine_type = engine_type.lower()
 
         if self.engine_type not in ENGINE_CLASSES:
@@ -33,7 +48,8 @@ class IconMatcher:
         self.engine = ENGINE_CLASSES[self.engine_type](
             debug=debug,
             icon_loader=self.load_icons,
-            overlay_loader=self.load_quality_overlays
+            overlay_loader=self.load_quality_overlays,
+            hash_index=hash_index
         )
         logger.info(f"[IconMatcher] Using engine: {self.engine_type}")
 
@@ -69,6 +85,9 @@ class IconMatcher:
             icon_slots,
             icon_dir_map,
             overlays,
+            self.predicted_qualities,
+            self.filtered_icons,
+            self.found_icons,
             threshold
         )
 
@@ -86,3 +105,52 @@ class IconMatcher:
             cv2.imwrite("output/debug_matched_icons.png", debug_img)
 
         return matches
+
+    def quality_predictions(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, threshold=0.8):
+        """
+        Run icon matching using the selected engine.
+        """
+        self.predicted_qualities = self.engine.quality_predictions(
+            screenshot_color,
+            build_info,
+            icon_slots,
+            icon_dir_map,
+            overlays,
+            threshold
+        )
+
+        logger.info(f"[IconMatcher] Total quality predictions: {len(self.predicted_qualities)}")
+
+        # if self.debug:
+        #     debug_img = screenshot_color.copy()
+        #     for match in matches:
+        #         cv2.rectangle(debug_img, match["top_left"], match["bottom_right"], (0, 255, 0), 2)
+        #     os.makedirs("output", exist_ok=True)
+        #     cv2.imwrite("output/debug_matched_icons.png", debug_img)
+
+        return self.predicted_qualities
+
+
+    def icon_predictions(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, threshold=0.8):
+        """
+        Run icon matching using the selected engine.
+        """
+        self.predicted_icons, self.found_icons, self.filtered_icons = self.engine.icon_predictions(
+            screenshot_color,
+            build_info,
+            icon_slots,
+            icon_dir_map,
+            overlays,
+            threshold
+        )
+
+        logger.info(f"[IconMatcher] Total icon predictions: {len(self.predicted_icons)}")
+
+        # if self.debug:
+        #     debug_img = screenshot_color.copy()
+        #     for match in matches:
+        #         cv2.rectangle(debug_img, match["top_left"], match["bottom_right"], (0, 255, 0), 2)
+        #     os.makedirs("output", exist_ok=True)
+        #     cv2.imwrite("output/debug_matched_icons.png", debug_img)
+
+        return self.predicted_icons

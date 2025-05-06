@@ -2,6 +2,13 @@ import os
 import cv2
 import numpy as np
 
+
+#try:
+#    from .c_ext.fastssim import fast_ssim as ssim
+#except ImportError:
+from skimage.metrics import structural_similarity as ssim
+#    print("[WARNING] fast_ssim C-extension not available, falling back to skimage SSIM.")
+
 def load_image(image_or_path, resize_fullhd=False):
     """
     Load an image from path, bytes, or numpy array, with optional resize-to-FullHD.
@@ -39,6 +46,29 @@ def load_image(image_or_path, resize_fullhd=False):
         image = resize_to_max_fullhd(image)
 
     return image
+
+def load_quality_overlays(overlay_folder):
+    overlays = {}
+    filenames = [
+        "common.png", "uncommon.png", "rare.png",
+        "very rare.png", "ultra rare.png", "epic.png"
+    ]
+
+    for filename in filenames:
+        path = os.path.join(overlay_folder, filename)
+        if not os.path.exists(path):
+            print(f"[WARNING] Overlay not found: {filename}")
+            continue
+
+        overlay = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        if overlay is None or overlay.shape[2] != 4:
+            print(f"[WARNING] Skipping {filename}: not a valid 4-channel PNG.")
+            continue
+
+        key = filename.rsplit(".", 1)[0]  # remove ".png"
+        overlays[key] = overlay
+
+    return overlays
 
 def resize_to_max_fullhd(image, max_width=1920, max_height=1080):
     """

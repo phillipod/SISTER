@@ -6,13 +6,18 @@ import traceback
 from collections import Counter, defaultdict
 from pathlib import Path
 
+# C-ext fast-ssim
+#import sys
+#sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
+
 from src.cargo import CargoDownloader
 from src.locator import LabelLocator
 from src.classifier import BuildClassifier
 from src.region import RegionDetector
 from src.iconslot import IconSlotDetector
 from src.iconmatch import IconMatcher
-from src.utils.image import load_image
+from src.hashindex import HashIndex
+from src.utils.image import load_image, load_quality_overlays
 
 from log_config import setup_logging
 
@@ -73,6 +78,8 @@ def download_icons(icons_dir):
     for cargo_type, filters, subdir in download_mappings:
         dest_dir = images_root / subdir
         downloader.download_icons(cargo_type, dest_dir, image_cache_path, filters)
+
+    return download_mappings
 
 def build_icon_dir_map(images_root):
     """
@@ -174,17 +181,23 @@ def save_match_summary(output_dir, screenshot_path, slots, matches):
             f.write(f"=== Region: {region} ===\n")
             for slot_idx in sorted(matches_by_region_slot[region].keys()):
                 slot_matches = matches_by_region_slot[region][slot_idx]
-                sorted_matches = sorted(slot_matches, key=lambda m: m["score"], reverse=True)
+                
+                # Determine if this group is using hash method
+                is_hash_method = slot_matches and slot_matches[0]["method"] == "hash"
+                sorted_matches = sorted(slot_matches, key=lambda m: m["score"], reverse=not is_hash_method)
+
                 best = sorted_matches[0]
                 f.write(f"  -- Slot {slot_idx} --\n")
-                f.write(f"  BEST: {best['name']} using {best['method']} "
+                f.write(f"  BEST: {best['name']} ({best.get('quality', '')}) using {best['method']} "
                         f"(score {best['score']:.2f}, scale {best['scale']:.2f}, quality scale {best.get('quality_scale', 0):.2f})\n")
+                
                 if len(sorted_matches) > 1:
                     f.write("  Others:\n")
                     for match in sorted_matches[1:]:
                         f.write(f"    - {match['name']} using {match['method']} "
                                 f"(score {match['score']:.2f}, scale {match['scale']:.2f}, quality scale {match.get('quality_scale', 0):.2f})\n")
             f.write("\n")
+
     print(f"Saved match summary to {output_file}")
 
 
@@ -200,13 +213,28 @@ def main():
     parser.add_argument("--threshold", type=float, default=0.7, help="Threshold for icon matching. Defaults to 0.7")
     parser.add_argument("--debug", action="store_true", help="Enable debug image output.")
     parser.add_argument("--gpu", action="store_true", help="Enable GPU usage for OCR.")
+    parser.add_argument("--build-phash-cache", action="store_true", help="Build a perceptual hash (phash) cache for all icons.")
 
     args = parser.parse_args()
 
     setup_logging(log_level=args.log_level)
 
-    if args.download:
-        download_icons(args.icons)
+    icon_root = Path(args.icons)
+    hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
+    
+    if args.download or args.build_phash_cache:
+        if args.download:
+            print("Downloading icon data from STO Wiki...")
+            download_icons(args.icons)
+
+        if args.build_phash_cache:
+            print("Building PHash cache with overlays...")
+     
+            overlays = load_quality_overlays(args.overlays)  # Must return dict of quality -> RGBA overlay np.array
+            hash_index.build_with_overlays(overlays)
+
+            print(f"[DONE] Built PHash index with {len(hash_index.hashes)} entries.")
+            return
         exit(0)
 
     if args.screenshot is None:
@@ -214,14 +242,14 @@ def main():
         exit(1)
 
     os.makedirs(args.output, exist_ok=True)
-
+    
     screenshot = load_image(args.screenshot, resize_fullhd=not args.no_resize)
 
     locator = LabelLocator(gpu=args.gpu, debug=args.debug)
     classifier = BuildClassifier(debug=args.debug)
     regioner = RegionDetector(debug=args.debug)
     slot_finder = IconSlotDetector(debug=args.debug)
-    matcher = IconMatcher(debug=args.debug)
+    matcher = IconMatcher(hash_index=hash_index, debug=args.debug)
 
     icon_dir_map_master = build_icon_dir_map(Path(args.icons))
     overlays = matcher.load_quality_overlays(args.overlays)
@@ -268,15 +296,29 @@ def main():
             }
 
             start = time.perf_counter()
+            predicted_qualities = matcher.quality_predictions(screenshot, build_info, slots, icon_dir_map, overlays, threshold=args.threshold)
+            timings["Quality Prediction"] = time.perf_counter() - start
+            print(f"Found {len(predicted_qualities)} quality predictions")
+
+            start = time.perf_counter()
+            predicted_icons = matcher.icon_predictions(screenshot, build_info, slots, icon_dir_map, overlays, threshold=args.threshold)
+            timings["Icon Prediction"] = time.perf_counter() - start
+            print(f"Found {len(predicted_icons)} icon predictions")
+
+
+            start = time.perf_counter()
             matches = matcher.match_all(screenshot, build_info, slots, icon_dir_map, overlays, threshold=args.threshold)
             timings["Icon Matching"] = time.perf_counter() - start
             print(f"Found {len(matches)} matches")
 
             save_match_summary(args.output, args.screenshot, slots, matches)
+            #save_match_summary(args.output, args.screenshot, slots, predicted_icons)
 
             print("\n--- Timing Summary ---")
             for stage, seconds in timings.items():
                 print(f"{stage}: {seconds:.2f} seconds")
+
+            print(f"\nTotal: {sum(timings.values()):.2f} seconds")
         else:
             print(f"No icon matching performed - unknown build type '{build_info['build_type']}'")
 
