@@ -104,7 +104,7 @@ def main():
         #"screenshot_space_1.png": "PC Ship Build",
         #"screenshot_space_2.png": "Unknown",
         #"screenshot_space_3.png": "PC Ship Build",
-        #"screenshot_ground_1.png": "PC Ground Build",
+        "screenshot_ground_1.png": "PC Ground Build",
         #"screenshot_ground_2.png": "PC Ground Build",
         #"screenshot_ground_3.png": "PC Ground Build",
         #"screenshot_console_ground_1.png": "Console Ground Build",
@@ -115,7 +115,7 @@ def main():
         #"screenshot_console_space_4.png": "Console Ship Build",
         #"screenshot_console_space_5.png": "Console Ship Build",
         #"screenshot_console_space_6.png": "Console Ship Build",
-        "screenshot_inventory_1.png": "Inventory",
+        #"screenshot_inventory_1.png": "Inventory",
 
     }
 
