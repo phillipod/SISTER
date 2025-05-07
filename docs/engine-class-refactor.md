@@ -11,11 +11,10 @@
 | `on_slots_detected`         | After detecting candidate icon slot boxes                     | `{ region: str, slots: List[Tuple] }`        | `IconSlotDetector`      |
 | `on_quality_predicted`      | After overlay prediction for each slot                        | `{ region, qualities: [...] }`               | `SSIMEngine`            |
 | `on_icon_candidates`        | After pHash filtering and candidate icon selection            | `{ region, num_filtered, best_score }`       | `SSIMEngine`            |
-| `on_icon_slot_match_complete` | After finishing all icon matching in a specific slot        | `{ region, slot_index, matches: [...] }`     | `IconMatcher`           | 
-| `on_icon_match_complete`    | After finishing all icon matching in a region                 | `{ region, matches: [...] }`                 | `IconMatcher`           |
+| `on_icon_slot_match_complete` | After finishing all icon matching in a specific slot        | `{ region, slot_index, matches: [...] }`     | `SSIMEngine`           | 
+| `on_region_match_complete` | After finishing icon matching in a single region               | `{ region, matches: [...] }`                 | `IconMatcher`           |
+| `on_icon_match_complete`   | After icon matching for all regions completes                  | `{ matches: [...] }`                         | `SISTER`          |
 | `on_icon_match_progress`    | During SSIM matching of a single icon candidate               | `{ region, icon_name, slot_index, score }`   | `SSIMEngine`            | This could slow matching. 
-| `on_screenshot_complete`    | After full pipeline completion for one screenshot             | `{ matches: [...] }`                         | `SisterEngine`          |
+| `on_screenshot_complete`    | After full pipeline completion for one screenshot             | `{ matches: [...] }`                         | `SISTER`          |
 | `on_error`                  | On any exception                                              | `{ stage, error, traceback }`                | Any stage               |
-
-
 
