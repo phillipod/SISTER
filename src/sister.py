@@ -1,8 +1,12 @@
 # sister.py
-from cargo_downloader import CargoDownloader
-from label_locator import LabelLocator
-from region_detector import RegionDetector
-from icon_slot_detector import IconSlotDetector
+from cargo import CargoDownloader
+from locator import LabelLocator
+from classifier import BuildClassifier
+from region import RegionDetector
+from iconslot import IconSlotDetector
+from iconmatch import IconMatcher
+from hashindex import HashIndex
+from utils.image import load_image, load_quality_overlays
 
 class SISTER:
     def __init__(self, config=None, callbacks=None):
@@ -12,6 +16,7 @@ class SISTER:
         # Initialize components
         self.hash_index = HashIndex(config["icon_dir"], hasher="phash")  # assumes icon_dir in config
 
+        self.classifier = BuildClassifier(debug=config.get("debug", False))
         self.cargo = CargoDownloader(force_download=config.get("force_download", False))
         self.label_locator = LabelLocator(gpu=config.get("gpu", False), debug=config.get("debug", False))
         self.region_detector = RegionDetector(debug=config.get("debug", False))
@@ -25,7 +30,7 @@ class SISTER:
             labels = self.label_locator.locate_labels(screenshot)
             self._trigger("on_labels_detected", labels)
 
-            build_info = self.classify_build(screenshot)
+            build_info = self.classifier.classify(labels)
             self._trigger("on_build_classified", build_info)
 
             regions = self.region_detector.detect(screenshot, build_info, labels)
@@ -34,16 +39,7 @@ class SISTER:
             slots = self.icon_slot_detector.detect(screenshot, build_info, regions)
             self._trigger("on_slots_detected", slots)
 
-            # quality_preds = self.icon_matcher.quality_predictions(screenshot, build_info, slots, ...)
-            # self._trigger("on_quality_predicted", quality_preds)
-
-            # predictions, found, filtered = self.icon_matcher.icon_predictions(screenshot, build_info, slots, ...)
-            # self._trigger("on_icons_predicted", predictions)
-
-            # final_matches = self.icon_matcher.match_all(screenshot, build_info, slots, ..., filtered, found)
-            # self._trigger("on_final_matches", final_matches)
-
-            return final_matches
+            return slots #final_matches
         except Exception as e:
             self._trigger("on_error", e)
             raise
@@ -54,10 +50,6 @@ class SISTER:
 
     def load_overlays(self):
         # Load quality overlays
-        ...
-
-    def classify_build(self, screenshot):
-        # Wrap classifier.py functionality here
         ...
 
     def _trigger(self, event_name, payload):
