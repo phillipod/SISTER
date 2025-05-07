@@ -6,5 +6,9 @@ scikit-image
 # OCR engine
 easyocr
 
+# Perceptual hashing
+imagehash
+pybktree
+
 # Web interaction for CargoDownloader
 requests
