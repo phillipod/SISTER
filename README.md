@@ -128,8 +128,10 @@ AGPL-3.0 License © 2025 Phillip O'Donnell
 
 ## 💬 Acknowledgements
 
-- EasyOCR for multilingual OCR support
+- `STO Wiki` (stowiki.net) for public asset data and metadata
+- `EasyOCR` for OCR support
 - `imagehash` for perceptual hashing
-- STO Wiki (stowiki.net) for public asset data and metadata
+- `pybktree` for BKTree
+- `scikit-image` for ssim
 
 ---
