@@ -1,4 +1,4 @@
-# SISTER Tool
+# SISTER
 
 **SISTER** (Screenshot Icon Slot & Trait Extraction & Recognition) is a computer vision pipeline designed to analyze **Star Trek Online** character build screenshots. It detects labels, classifies build types, extracts icon slots, and matches equipment and trait icons using image similarity methods.
 
