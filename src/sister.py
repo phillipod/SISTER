@@ -1,113 +1,189 @@
-# sister.py
-import os
-import json
-from pathlib import Path
-from collections import defaultdict
-import traceback
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Tuple, Optional
+import numpy as np
 
-from cargo import CargoDownloader
-from locator import LabelLocator
-from classifier import BuildClassifier
-from region import RegionDetector
-from iconslot import IconSlotDetector
-from iconmatch import IconMatcher
-from hashindex import HashIndex
-from utils.image import load_image, load_quality_overlays
+# --- Import your existing modules (adjust names as needed) ---
+from src.locator import LabelLocator
+from src.classifier import Classifier
+#from region import RegionDetector
+#from iconslot import IconSlotDetector
 
+
+# --- Core value objects ---
+@dataclass(frozen=True)
+class Slot:
+    region_label: str
+    index: int
+    bbox: Tuple[int, int, int, int]
+
+@dataclass
+class PipelineContext:
+    screenshot: np.ndarray
+    config: Dict[str, Any] = field(default_factory=dict)
+    labels: Dict[str, Tuple[int, int, int, int]] = field(default_factory=dict)
+    regions: Dict[str, Tuple[int, int, int, int]] = field(default_factory=dict)
+    slots: Dict[str, List[Slot]] = field(default_factory=dict)
+    classification: Dict[Slot, Any] = field(default_factory=dict)
+
+@dataclass
+class StageResult:
+    """
+    Holds the context after a stage and any stage-specific output.
+    """
+    context: PipelineContext
+    output: Any
+
+# --- Abstract Stage ---
+class Stage:
+    name: str = ""
+    interactive: bool = False
+
+    def run(
+        self,
+        ctx: PipelineContext,
+        report: Callable[[str, float], None]
+    ) -> StageResult:
+        """
+        Execute the stage, updating ctx in place or returning a new one.
+        Use report(stage_name, percent_complete) to emit progress.
+        """
+        raise NotImplementedError
+
+# --- Concrete Stages ---
+class LabelLocatorStage(Stage):
+    name = "label_locator"
+
+    def __init__(self, opts: Dict[str, Any]):
+        self.opts = opts
+        self.locator = LabelLocator(**opts)
+
+    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
+        report(self.name, 0.0)
+        ctx.labels = self.locator.locate(ctx.screenshot)    
+        report(self.name, 1.0)
+        return StageResult(ctx, ctx.labels)
+
+
+class ClassifierStage(Stage):
+    name = "classifier"
+
+    def __init__(self, opts: Dict[str, Any]):
+        self.opts = opts
+        self.classifier = Classifier(**opts)
+
+    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
+        report(self.name, 0.0)
+        ctx.classification = self.classifier.classify(ctx.labels)
+        report(self.name, 1.0)
+        return StageResult(ctx, ctx.classification)
+
+# class RegionDetectionStage(Stage):
+#     name = "region_detection"
+#     interactive = True  # allow UI confirmation
+
+#     def __init__(self, opts: Dict[str, Any]):
+#         self.opts = opts
+#         self.detector = RegionDetector(**opts)
+
+#     def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
+#         report(self.name, 0.0)
+#         ctx.regions = self.detector.detect_regions(ctx.screenshot)
+#         report(self.name, 1.0)
+#         return ctx
+
+# class IconSlotDetectionStage(Stage):
+#     name = "iconslot_detection"
+
+#     def __init__(self, opts: Dict[str, Any]):
+#         self.opts = opts
+#         self.slot_detector = IconSlotDetector(**opts)
+
+#     def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
+#         report(self.name, 0.0)
+#         slots_by_region: Dict[str, List[Slot]] = {}
+#         regions = ctx.regions
+#         for i, (label, bbox) in enumerate(regions.items()):
+#             # allow override of threshold via context config
+#             threshold = self.opts.get("threshold", ctx.config.get("iconslot", {}).get("threshold"))
+#             raw_slots = self.slot_detector.detect_slots(ctx.screenshot, bbox, threshold=threshold)  # type: ignore
+#             slots_by_region[label] = [Slot(label, idx, s) for idx, s in enumerate(raw_slots)]
+#             report(self.name, (i + 1) / max(len(regions), 1))
+#         ctx.slots = slots_by_region
+#         report(self.name, 1.0)
+#         return ctx
+
+
+
+# --- The Pipeline Orchestrator ---
 class SISTER:
-    def __init__(self, config=None, callbacks=None):
-        self.config = config or {}
-        self.callbacks = callbacks or {}
+    def __init__(
+        self,
+        stages: List[Stage],
+        on_progress: Callable[[str, float, PipelineContext], None],
+        on_interactive: Callable[[str, PipelineContext], PipelineContext],
+        config: Dict[str, Any],
+        on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,  # Callable[[str, PipelineContext, Any], None],
+        on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None] ] = None  # Callable[[PipelineContext, Dict[str, Any]], None]
+    ):
+        self.stages = stages
+        self.on_progress = on_progress
+        self.on_interactive = on_interactive
+        self.on_stage_complete = on_stage_complete
+        self.on_pipeline_complete = on_pipeline_complete
 
-        # Initialize components
-        self.hash_index = HashIndex(config["icon_dir"], hasher="phash")  # assumes icon_dir in config
+        self.config = config
 
-        self.classifier = BuildClassifier(debug=config.get("debug", False))
-        self.cargo = CargoDownloader(force_download=config.get("force_download", False))
-        self.label_locator = LabelLocator(gpu=config.get("gpu", False), debug=config.get("debug", False))
-        self.region_detector = RegionDetector(debug=config.get("debug", False))
-        self.icon_slot_detector = IconSlotDetector(debug=config.get("debug", False))
-        self.icon_matcher = IconMatcher(hash_index=self.hash_index, debug=config.get("debug", False))
+    def run(self, screenshot: np.ndarray) -> PipelineContext:
+        ctx = PipelineContext(screenshot=screenshot, config=self.config)
+        results: Dict[str, Any] = {}
 
-        
-    def run_pipeline(self, image_input):
-        try:
-            screenshot = load_image(image_input, resize_fullhd=True)
-            labels = self.label_locator.locate_labels(screenshot)
-            self._trigger("on_labels_detected", labels)
+        for stage in self.stages:
+            # notify start
+            self.on_progress(stage.name, 0.0, ctx)
 
-            build_info = self.classifier.classify(labels)
-            self._trigger("on_build_classified", build_info)
-
-            regions = self.region_detector.detect(screenshot, build_info, labels)
-            self._trigger("on_regions_detected", regions)
-
-            slots = self.icon_slot_detector.detect(screenshot, build_info, regions)
-            self._trigger("on_slots_detected", slots)
-
-            return slots #final_matches
-        except Exception as e:
-            self._trigger("on_error", e)
-            raise
-
-    def download_icons(self):
-        """Download all icons for equipment, personal traits, and starship traits from STO wiki."""
-        try:
-            self.cargo.download_icons(self.config["icon_dir"])
-        except Exception as e:
-            print(f"Error downloading icons: {e}")
-
-    def build_phash_cache(self, overlays_dir):
-        """Build a perceptual hash (phash) cache for all icons."""
-        try:
-            overlays = self.load_overlays(overlays_dir)
-            self.hash_index.build_with_overlays(overlays)
-            print(f"[DONE] Built PHash index with {len(self.hash_index.hashes)} entries.")
-        except Exception as e:
-            print(f"Error building PHash cache: {e}")
-
-    def save_match_summary(self, output_dir, screenshot_path, slots, matches):
-        """Save the match results to a text file."""
-        try:
-            base_name = Path(screenshot_path).stem
-            output_file = Path(output_dir) / f"{base_name}_matches.txt"
-
-            matches_by_region_slot = defaultdict(lambda: defaultdict(list))
-
-            for match in matches:
-                region = match["region"]
-                top_left = match["top_left"]
-                matches_by_region_slot[region][top_left].append(match)
-
-            with open(output_file, "w") as f:
-                for region, slots in matches_by_region_slot.items():
-                    f.write(f"=== Region: {region} ===\n")
-                    for slot, slot_matches in slots.items():
-                        best = max(slot_matches, key=lambda m: m["score"])
-                        f.write(f"  BEST: {best['name']} (score {best['score']:.2f})\n")
-            print(f"Saved match summary to {output_file}")
-        except Exception as e:
-            print(f"Error saving match summary: {e}")
-
-    def load_overlays(self, overlays_dir):
-        """Load quality overlays."""
-        try:
-            return load_quality_overlays(overlays_dir)
-        except Exception as e:
-            print(f"Error loading overlays: {e}")
-
-    def match_icons(self, screenshot, build_info, slots, icon_dir_map, overlays, threshold):
-        """Perform icon matching for the given screenshot and slots."""
-        try:
-            matches = self.icon_matcher.match_all(
-                screenshot, build_info, slots, icon_dir_map, overlays, threshold=threshold
+            # execute stage
+            stage_result = stage.run(
+                ctx,
+                lambda pct, name=stage.name: self.on_progress(name, pct, ctx)
             )
-            print(f"Found {len(matches)} matches")
-            return matches
-        except Exception as e:
-            print(f"Error during icon matching: {e}")
-            return []
+            # update context and results
+            ctx = stage_result.context
+            results[stage.name] = stage_result.output
 
-    def _trigger(self, event_name, payload):
-        if event_name in self.callbacks:
-            self.callbacks[event_name](payload)
+            # notify completion
+            self.on_progress(stage.name, 1.0, ctx)
+
+            # on_stage_complete hook
+            if self.on_stage_complete:
+                self.on_stage_complete(stage.name, ctx, stage_result.output)
+
+            # interactive hook
+            if stage.interactive:
+                ctx = self.on_interactive(stage.name, ctx)
+
+        # on_pipeline_complete hook    
+        if self.on_pipeline_complete:
+            self.on_pipeline_complete(ctx, results)
+
+        return ctx, results
+    
+def build_default_pipeline(
+    on_progress: Callable[[str, float, PipelineContext], None],
+    on_interactive: Callable[[str, PipelineContext], PipelineContext],
+    on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
+    on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None] ] = None,
+    config: Dict[str, Any] = {}
+) -> SISTER:
+    stages: List[Stage] = [
+        LabelLocatorStage(config.get("locator", {})),
+        ClassifierStage(config.get("classifier", {})),
+        # RegionDetectionStage(config.get("region", {})),
+        # IconSlotDetectionStage(config.get("iconslot", {})),
+        # IconMatchingQualityDetectionStage(config.get("quality", {})),
+        # IconMatchingPrefilterStage(config.get("prefilter", {})),
+        # IconMatchingStage(
+        #     workers=config.get("matching_workers", 8),
+        #     opts=config.get("matching", {})
+        # ),
+    ]
+    return SISTER(stages, on_progress, on_interactive, config=config, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)

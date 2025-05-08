@@ -1,4 +1,6 @@
 import logging
+import numpy as np
+from typing import Any, Callable, Dict, List, Tuple, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +158,7 @@ class Classifier:
         self.config: Dict[str, Any] = config or {}
         self.debug = debug
 
-    def classify(self, image: np.ndarray) -> Dict[str, Any]:
+    def classify(self, label_positions: np.ndarray) -> Dict[str, Any]:
         """
         Classify the build type based on detected label positions.
 

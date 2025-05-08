@@ -1,21 +1,21 @@
-importimport cv2
+import cv2
 import easyocr
 import os
 import numpy as np
 from difflib import SequenceMatcher
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional, List
 
 import logging
 
 logger = logging.getLogger(__name__)
 
-class Locator:
+class LabelLocator:
     """
-    Pipeline-aware locator: detects allowed labels in a pre-loaded image array.
+    Pipeline-aware label locator: detects allowed labels in a pre-loaded image array.
     Returns a simple mapping from label→bbox tuples.
     """
 
-    def __init__(self, gpu: bool = False, scale_x: float = 1.25):
+    def __init__(self, gpu: bool = False, scale_x: float = 1.25, debug: bool = False):
         """
         Initialize the Locator.
 
@@ -23,6 +23,7 @@ class Locator:
             gpu (bool): Whether to use GPU for OCR.
             debug (bool): Whether to enable debug output.
         """
+        self.debug = debug 
         self.reader = easyocr.Reader(['en'], gpu=gpu)
         self.scale_x = scale_x
         self.allowed_labels = self._build_allowed_labels()
@@ -277,7 +278,7 @@ class Locator:
         """
         # Preprocess
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        gray_upscaled = cv2.resize(image_gray, None, fx=self.scale_x, fy=1.0, interpolation=cv2.INTER_LINEAR)
+        gray_upscaled = cv2.resize(gray, None, fx=self.scale_x, fy=1.0, interpolation=cv2.INTER_LINEAR)
         results = self.reader.readtext(gray_upscaled, paragraph=False)
 
         recognized = {}
@@ -288,7 +289,7 @@ class Locator:
             x3, y3 = int(x3 / self.scale_x), int(y3 / self.scale_x)
             recognized[(x1, y1, x3, y3)] = text.strip()
 
-        filtered = self.filter_recognized_text(recognized)
+        filtered = self.filter_recognized_text(recognized, gray_upscaled)
 
         if self.debug:
             if output_debug_path:
