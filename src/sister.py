@@ -6,7 +6,7 @@ import numpy as np
 from src.locator import LabelLocator
 from src.classifier import Classifier
 from src.region import RegionDetector
-#from iconslot import IconSlotDetector
+from src.iconslot import IconSlotDetector
 
 
 # --- Core value objects ---
@@ -91,26 +91,27 @@ class RegionDetectionStage(Stage):
         report(self.name, 1.0)
         return StageResult(ctx, ctx.regions)
 
-# class IconSlotDetectionStage(Stage):
-#     name = "iconslot_detection"
+class IconSlotDetectionStage(Stage):
+    name = "iconslot_detection"
 
-#     def __init__(self, opts: Dict[str, Any]):
-#         self.opts = opts
-#         self.slot_detector = IconSlotDetector(**opts)
+    def __init__(self, opts: Dict[str, Any]):
+        self.opts = opts
+        self.slot_detector = IconSlotDetector(**opts)
 
-#     def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
-#         report(self.name, 0.0)
-#         slots_by_region: Dict[str, List[Slot]] = {}
-#         regions = ctx.regions
-#         for i, (label, bbox) in enumerate(regions.items()):
-#             # allow override of threshold via context config
-#             threshold = self.opts.get("threshold", ctx.config.get("iconslot", {}).get("threshold"))
-#             raw_slots = self.slot_detector.detect_slots(ctx.screenshot, bbox, threshold=threshold)  # type: ignore
-#             slots_by_region[label] = [Slot(label, idx, s) for idx, s in enumerate(raw_slots)]
-#             report(self.name, (i + 1) / max(len(regions), 1))
-#         ctx.slots = slots_by_region
-#         report(self.name, 1.0)
-#         return ctx
+    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
+        report(self.name, 0.0)
+        slots_by_region: Dict[str, List[Slot]] = {}
+
+        raw_slots = self.slot_detector.detect_slots(ctx.screenshot, ctx.regions)
+
+        regions = ctx.regions
+        for i, (label, bbox) in enumerate(regions.items()):
+            slots_by_region[label] = [Slot(label, idx, s) for idx, s in enumerate(raw_slots)]
+            report(self.name, (i + 1) / max(len(regions), 1))
+
+        ctx.slots = slots_by_region
+        report(self.name, 1.0)
+        return StageResult(ctx, ctx.slots) # ctx
 
 
 
@@ -178,7 +179,7 @@ def build_default_pipeline(
         LabelLocatorStage(config.get("locator", {"debug": True})),
         ClassifierStage(config.get("classifier", {})),
         RegionDetectionStage(config.get("region", {})),
-        # IconSlotDetectionStage(config.get("iconslot", {})),
+        IconSlotDetectionStage(config.get("iconslot", {})),
         # IconMatchingQualityDetectionStage(config.get("quality", {})),
         # IconMatchingPrefilterStage(config.get("prefilter", {})),
         # IconMatchingStage(
