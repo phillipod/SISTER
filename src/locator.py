@@ -204,11 +204,11 @@ class LabelLocator:
 
         for rect, text in recognized_texts.items():
             if len(text.strip()) > 64:
-                print(f"DROPPED: '{text}' (too long)")
+                logger.debug(f"DROPPED: '{text}' (too long)")
                 continue
 
             normalized_text = self.normalize_text(text)
-            print(f"OCR detected: '{text}' -> Normalized: '{normalized_text}'")
+            logger.debug(f"OCR detected: '{text}' -> Normalized: '{normalized_text}'")
 
             matched_label = None
             label_config = None
@@ -217,7 +217,7 @@ class LabelLocator:
                 if normalized_text == label_norm:
                     matched_label = info.get("real_label", info["label"])
                     label_config = info
-                    print(f"Exact match found: '{matched_label}'")
+                    logger.debug(f"Exact match found: '{matched_label}'")
                     break
 
             if not matched_label:
@@ -225,17 +225,17 @@ class LabelLocator:
                     if normalized_text.startswith(label_norm):
                         matched_label = info.get("real_label", info["label"])
                         label_config = info
-                        print("Startswith match found: '{matched_label}'")
+                        logger.debug("Startswith match found: '{matched_label}'")
                         break
                     elif self.is_single_char_off(normalized_text[:len(label_norm)], label_norm):
                         matched_label = info.get("real_label", info["label"])
                         label_config = info
-                        print("Fuzzy Startswith match found (1-char off): '{matched_label}'")
+                        logger.debug("Fuzzy Startswith match found (1-char off): '{matched_label}'")
                         break            
 
 
             if matched_label and label_config.get("split_words"):
-                print("Splitting label: '{matched_label}' for box {rect}")
+                logger.debug("Splitting label: '{matched_label}' for box {rect}")
                 expected_parts = []
                 if isinstance(matched_label, tuple):
                     for p in matched_label:
@@ -253,10 +253,10 @@ class LabelLocator:
             if matched_label:
                 keyword_matches.setdefault(matched_label, []).append((rect, text, matched_label))
             else:
-                print("No match found for: '{text}'")
+                logger.debug("No match found for: '{text}'")
 
         if additional_recognized:
-            print("Recursively processing {len(additional_recognized)} split results...")
+            logger.debug("Recursively processing {len(additional_recognized)} split results...")
             filtered.update(self.filter_recognized_text(additional_recognized, full_image))
 
         for label, matches in keyword_matches.items():
@@ -279,10 +279,10 @@ class LabelLocator:
         # Preprocess
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         gray_upscaled = cv2.resize(gray, None, fx=self.scale_x, fy=1.0, interpolation=cv2.INTER_LINEAR)
-        results = self.reader.readtext(gray_upscaled, paragraph=False)
+        results = self.reader.readtext(gray_upscaled, paragraph=True, height_ths=0.0)
 
         recognized = {}
-        for bbox, text, _ in results:
+        for bbox, text in results:
             x1, y1 = bbox[0]
             x3, y3 = bbox[2]
             x1, y1 = int(x1 / self.scale_x), int(y1 / self.scale_x)
