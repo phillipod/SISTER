@@ -5,7 +5,7 @@ import numpy as np
 # --- Import your existing modules (adjust names as needed) ---
 from src.locator import LabelLocator
 from src.classifier import Classifier
-#from region import RegionDetector
+from src.region import RegionDetector
 #from iconslot import IconSlotDetector
 
 
@@ -77,19 +77,19 @@ class ClassifierStage(Stage):
         report(self.name, 1.0)
         return StageResult(ctx, ctx.classification)
 
-# class RegionDetectionStage(Stage):
-#     name = "region_detection"
-#     interactive = True  # allow UI confirmation
+class RegionDetectionStage(Stage):
+    name = "region_detection"
+    interactive = True  # allow UI confirmation
 
-#     def __init__(self, opts: Dict[str, Any]):
-#         self.opts = opts
-#         self.detector = RegionDetector(**opts)
+    def __init__(self, opts: Dict[str, Any]):
+        self.opts = opts
+        self.detector = RegionDetector(**opts)
 
-#     def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
-#         report(self.name, 0.0)
-#         ctx.regions = self.detector.detect_regions(ctx.screenshot)
-#         report(self.name, 1.0)
-#         return ctx
+    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
+        report(self.name, 0.0)
+        ctx.regions = self.detector.detect_regions(ctx.screenshot, ctx.labels, ctx.classification)
+        report(self.name, 1.0)
+        return StageResult(ctx, ctx.regions)
 
 # class IconSlotDetectionStage(Stage):
 #     name = "iconslot_detection"
@@ -175,9 +175,9 @@ def build_default_pipeline(
     config: Dict[str, Any] = {}
 ) -> SISTER:
     stages: List[Stage] = [
-        LabelLocatorStage(config.get("locator", {})),
+        LabelLocatorStage(config.get("locator", {"debug": True})),
         ClassifierStage(config.get("classifier", {})),
-        # RegionDetectionStage(config.get("region", {})),
+        RegionDetectionStage(config.get("region", {})),
         # IconSlotDetectionStage(config.get("iconslot", {})),
         # IconMatchingQualityDetectionStage(config.get("quality", {})),
         # IconMatchingPrefilterStage(config.get("prefilter", {})),

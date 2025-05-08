@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class IconSlotDetector:
     """
-    Detects icon slot candidates globally, then tags them into known regions based on region_data.
+    Pipeline aware icon slot detector. Detects icon slot candidates globally, then tags them into known regions based on region_data.
 
     Attributes:
         debug (bool): If True, enables debug output and writes annotated images.
@@ -24,7 +24,8 @@ class IconSlotDetector:
 
         self.debug = debug
 
-    def detect_inventory(self, screenshot_color, debug_output_path=None):
+    #def detect_inventory(self, screenshot_color, debug_output_path=None):
+    def detect_inventory(self, image: np.ndarray, region_bbox: Tuple[int, int, int, int]) -> List[Tuple[int, int, int, int]]
         """
         Detect icon slot candidates globally.
 
@@ -58,7 +59,8 @@ class IconSlotDetector:
 
         return region_candidates
 
-    def detect(self, screenshot_color, build_info, region_data, debug_output_path=None):
+    #def detect(self, screenshot_color, build_info, region_data, debug_output_path=None):
+    def detect_slots(self, image: np.ndarray, region_bbox: Tuple[int, int, int, int]) -> List[Tuple[int, int, int, int]]:
         """
         Detect icon slot candidates globally and assign them to labeled regions.
 

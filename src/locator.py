@@ -23,7 +23,7 @@ class LabelLocator:
             gpu (bool): Whether to use GPU for OCR.
             debug (bool): Whether to enable debug output.
         """
-        self.debug = debug 
+        self.debug = debug
         self.reader = easyocr.Reader(['en'], gpu=gpu)
         self.scale_x = scale_x
         self.allowed_labels = self._build_allowed_labels()
@@ -204,11 +204,11 @@ class LabelLocator:
 
         for rect, text in recognized_texts.items():
             if len(text.strip()) > 64:
-                logger.debug(f"DROPPED: '{text}' (too long)")
+                print(f"DROPPED: '{text}' (too long)")
                 continue
 
             normalized_text = self.normalize_text(text)
-            logger.debug(f"OCR detected: '{text}' -> Normalized: '{normalized_text}'")
+            print(f"OCR detected: '{text}' -> Normalized: '{normalized_text}'")
 
             matched_label = None
             label_config = None
@@ -217,7 +217,7 @@ class LabelLocator:
                 if normalized_text == label_norm:
                     matched_label = info.get("real_label", info["label"])
                     label_config = info
-                    logger.debug(f"Exact match found: '{matched_label}'")
+                    print(f"Exact match found: '{matched_label}'")
                     break
 
             if not matched_label:
@@ -225,17 +225,17 @@ class LabelLocator:
                     if normalized_text.startswith(label_norm):
                         matched_label = info.get("real_label", info["label"])
                         label_config = info
-                        logger.debug("Startswith match found: '{matched_label}'")
+                        print("Startswith match found: '{matched_label}'")
                         break
                     elif self.is_single_char_off(normalized_text[:len(label_norm)], label_norm):
                         matched_label = info.get("real_label", info["label"])
                         label_config = info
-                        logger.debug("Fuzzy Startswith match found (1-char off): '{matched_label}'")
+                        print("Fuzzy Startswith match found (1-char off): '{matched_label}'")
                         break            
 
 
             if matched_label and label_config.get("split_words"):
-                logger.debug("Splitting label: '{matched_label}' for box {rect}")
+                print("Splitting label: '{matched_label}' for box {rect}")
                 expected_parts = []
                 if isinstance(matched_label, tuple):
                     for p in matched_label:
@@ -253,10 +253,10 @@ class LabelLocator:
             if matched_label:
                 keyword_matches.setdefault(matched_label, []).append((rect, text, matched_label))
             else:
-                logger.debug("No match found for: '{text}'")
+                print("No match found for: '{text}'")
 
         if additional_recognized:
-            logger.debug("Recursively processing {len(additional_recognized)} split results...")
+            print("Recursively processing {len(additional_recognized)} split results...")
             filtered.update(self.filter_recognized_text(additional_recognized, full_image))
 
         for label, matches in keyword_matches.items():
@@ -291,13 +291,18 @@ class LabelLocator:
 
         filtered = self.filter_recognized_text(recognized, gray_upscaled)
 
-        if self.debug:
-            if output_debug_path:
-                self.draw_debug_output(input_image, filtered_texts, output_debug_path)
+        #if self.debug:
+        #    if self.output_debug_path:
+        #        self.draw_debug_output(image, filtered, self.output_debug_path)
 
         label_dict = {}
         for (x1, y1, x2, y2), label in filtered.items():
-            label_dict[label] = (x1, y1, x2, y2)
+            label_dict[label] = {
+                "top_left": [int(x1), int(y1)],
+                "top_right": [int(x2), int(y1)],
+                "bottom_left": [int(x1), int(y2)],
+                "bottom_right": [int(x2), int(y2)]
+            }
         return label_dict
 
     def draw_debug_output(
