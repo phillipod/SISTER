@@ -285,8 +285,8 @@ class LabelLocator:
         for bbox, text in results:
             x1, y1 = bbox[0]
             x3, y3 = bbox[2]
-            x1, y1 = int(x1 / self.scale_x), int(y1 / self.scale_x)
-            x3, y3 = int(x3 / self.scale_x), int(y3 / self.scale_x)
+            x1, y1 = int(x1 / self.scale_x), int(y1)
+            x3, y3 = int(x3 / self.scale_x), int(y3)
             recognized[(x1, y1, x3, y3)] = text.strip()
 
         filtered = self.filter_recognized_text(recognized, gray_upscaled)

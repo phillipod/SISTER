@@ -100,16 +100,9 @@ class IconSlotDetectionStage(Stage):
 
     def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
         report(self.name, 0.0)
-        slots_by_region: Dict[str, List[Slot]] = {}
 
-        raw_slots = self.slot_detector.detect_slots(ctx.screenshot, ctx.regions)
+        ctx.slots = self.slot_detector.detect_slots(ctx.screenshot, ctx.regions)
 
-        regions = ctx.regions
-        for i, (label, bbox) in enumerate(regions.items()):
-            slots_by_region[label] = [Slot(label, idx, s) for idx, s in enumerate(raw_slots)]
-            report(self.name, (i + 1) / max(len(regions), 1))
-
-        ctx.slots = slots_by_region
         report(self.name, 1.0)
         return StageResult(ctx, ctx.slots) # ctx
 

@@ -78,37 +78,39 @@ class IconSlotDetector:
         _, binary = cv2.threshold(gray, 63, 255, cv2.THRESH_BINARY)
 
         candidates = self._find_slot_candidates(binary, image) #, debug_output_path)
-        print(f"Region bbox: {region_bbox}")
-        print(f"Found {len(candidates)} candidates")
+
         # Tag into regions
         region_candidates = {label: [] for label in region_bbox}
         for (x, y, w, h) in candidates:
             cx, cy = x + w // 2, y + h // 2
             for label, entry in region_bbox.items():
+                #print(f"Entry: {entry}")
                 x1, y1 = entry["Region"]["top_left"]
                 x2, y2 = entry["Region"]["bottom_right"]
                 if x1 <= cx <= x2 and y1 <= cy <= y2:
+                    #print(f"Adding to {label}")
                     region_candidates[label].append((x, y, w, h))
                     break
 
         # Debug drawing
-        if self.debug and debug_output_path:
-            debug_image = image.copy()
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            for label, boxes in region_candidates.items():
-                color = tuple(np.random.randint(50, 255, size=3).tolist())
-                for (x, y, w, h) in boxes:
-                    cv2.rectangle(debug_image, (x, y), (x + w, y + h), color, 1)
+        # if self.debug and debug_output_path:
+        #     debug_image = image.copy()
+        #     font = cv2.FONT_HERSHEY_SIMPLEX
+        #     for label, boxes in region_candidates.items():
+        #         color = tuple(np.random.randint(50, 255, size=3).tolist())
+        #         for (x, y, w, h) in boxes:
+        #             cv2.rectangle(debug_image, (x, y), (x + w, y + h), color, 1)
 
-                if label in region_bbox:
-                    lx, ly = region_bbox[label]["Label"]["top_left"]
-                    cv2.putText(debug_image, label, (lx + 5, ly + 20), font, 0.6, color, 2, cv2.LINE_AA)
+        #         if label in region_bbox:
+        #             lx, ly = region_bbox[label]["Label"]["top_left"]
+        #             cv2.putText(debug_image, label, (lx + 5, ly + 20), font, 0.6, color, 2, cv2.LINE_AA)
 
-            base, _ = os.path.splitext(debug_output_path)
-            os.makedirs(os.path.dirname(base), exist_ok=True)
-            cv2.imwrite(f"{base}_candidates.png", debug_image)
+        #     base, _ = os.path.splitext(debug_output_path)
+        #     os.makedirs(os.path.dirname(base), exist_ok=True)
+        #     cv2.imwrite(f"{base}_candidates.png", debug_image)
 
         # Do not apply normalization yet
+        
         # Convert all box values to native Python int to avoid JSON serialization issues
         region_candidates = {
             label: [tuple(int(v) for v in box) for box in boxes]
@@ -249,5 +251,6 @@ class IconSlotDetector:
         if current_row:
             rows.append(sorted(current_row, key=lambda b: b[0]))
 
-        return [box for row in rows for box in row]
+
+        return {i: box for row in rows for i, box in enumerate(row)}
 

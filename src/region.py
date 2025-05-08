@@ -355,14 +355,14 @@ class RegionDetector:
         dilated = self._apply_dilation(gray)
         contours = self._find_contours(dilated)
 
-        if self.debug and debug_output_path:
-            base, _ = os.path.splitext(debug_output_path)
-            os.makedirs(os.path.dirname(base), exist_ok=True)
-            cv2.imwrite(f"{base}_gray.png", gray)
-            cv2.imwrite(f"{base}_dilated.png", dilated)
-            debug_contours = cv2.cvtColor(dilated.copy(), cv2.COLOR_GRAY2BGR)
-            cv2.drawContours(debug_contours, contours, -1, (0, 255, 0), 1)
-            cv2.imwrite(f"{base}_contours.png", debug_contours)
+        # if self.debug and debug_output_path:
+        #     base, _ = os.path.splitext(debug_output_path)
+        #     os.makedirs(os.path.dirname(base), exist_ok=True)
+        #     cv2.imwrite(f"{base}_gray.png", gray)
+        #     cv2.imwrite(f"{base}_dilated.png", dilated)
+        #     debug_contours = cv2.cvtColor(dilated.copy(), cv2.COLOR_GRAY2BGR)
+        #     cv2.drawContours(debug_contours, contours, -1, (0, 255, 0), 1)
+        #     cv2.imwrite(f"{base}_contours.png", debug_contours)
 
         build_type = build_info.get("build_type", "Unknown")
         region_boxes = {}
@@ -518,7 +518,7 @@ class RegionDetector:
             elif prop == 'right': val = box['bottom_right'][0]
             elif prop == 'top': val = box['top_left'][1]
             elif prop == 'bottom': val = box['bottom_left'][1]
-            elif prop == 'mid_y': val = (box['top_left'][1] + box['bottom_left'][1]) // 2
+            elif prop == 'mid_y': val = (box['top_left'][1] + box['bottom_right'][1]) // 2
             else: raise ValueError(f"Unsupported property: {prop}")
 
             if self.debug:
@@ -707,7 +707,12 @@ class RegionDetector:
         debug_image = image.copy()
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
+        print(f"Drawing {len(regions)} regions")
+        print(f"image.shape: {image.shape}")
+        print(f"Regions: {regions}")
         for label, entry in regions.items():
+            print(f"Label: {label}")
+            print(f"Entry: {entry}")
             x1, y1 = entry["Region"]["top_left"]
             x2, y2 = entry["Region"]["bottom_right"]
             color = [random.randint(0, 255) for _ in range(3)]
