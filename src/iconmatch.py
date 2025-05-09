@@ -5,24 +5,16 @@ import cv2
 
 # Import available engines
 from .engines.ssim import SSIMEngine
-#from .engines.akaze import AKAZEEngine
-#from .engines.phash import PHashEngine
-#from .engines.ncc import NCCEngine
-#from .engines.edgehistogram import EdgeHistogramEngine
-#from .engines.hog import HOGEngine
+from .engines.prefilter import PHashEngine
 
-# from engines.orb import ORBEngine  # (future engines)
+# from .engines.dhash import DHashEngine  # future support
 
 logger = logging.getLogger(__name__)
 
 ENGINE_CLASSES = {
     "ssim": SSIMEngine,
- #   "akaze": AKAZEEngine,
- #   "phash": PHashEngine,
- #   "ncc": NCCEngine,
- #   "edgehistogram": EdgeHistogramEngine,
- #   "hog": HOGEngine,
-    # "orb": ORBEngine,  # placeholder
+    "phash": PHashEngine,
+    # "dhash": DHashEngine,
 }
 
 
@@ -33,7 +25,7 @@ class IconMatcher:
 
         Args:
             debug (bool): Enable debug mode.
-            engine_type (str): Engine backend to use. Options: 'ssim', 'orb', etc.
+            engine_type (str): Engine backend to use. Options: 'ssim', 'phash', etc.
         """
         self.debug = debug
         self.predicted_qualities = None

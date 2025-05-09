@@ -7,7 +7,7 @@ from src.locator import LabelLocator
 from src.classifier import Classifier
 from src.region import RegionDetector
 from src.iconslot import IconSlotDetector
-
+from src.iconmatch import IconMatcher
 
 # --- Core value objects ---
 @dataclass(frozen=True)
@@ -24,6 +24,10 @@ class PipelineContext:
     regions: Dict[str, Tuple[int, int, int, int]] = field(default_factory=dict)
     slots: Dict[str, List[Slot]] = field(default_factory=dict)
     classification: Dict[Slot, Any] = field(default_factory=dict)
+    predicted_qualities: Any = None
+    predicted_icons: Any = None
+    found_icons: Any = None
+    filtered_icons: Any = None
 
 @dataclass
 class StageResult:
@@ -57,9 +61,9 @@ class LabelLocatorStage(Stage):
         self.opts = opts
         self.locator = LabelLocator(**opts)
 
-    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
+    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
         report(self.name, 0.0)
-        ctx.labels = self.locator.locate(ctx.screenshot)    
+        ctx.labels = self.locator.locate(ctx.screenshot)
         report(self.name, 1.0)
         return StageResult(ctx, ctx.labels)
 
@@ -71,11 +75,12 @@ class ClassifierStage(Stage):
         self.opts = opts
         self.classifier = Classifier(**opts)
 
-    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
+    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
         report(self.name, 0.0)
         ctx.classification = self.classifier.classify(ctx.labels)
         report(self.name, 1.0)
         return StageResult(ctx, ctx.classification)
+
 
 class RegionDetectionStage(Stage):
     name = "region_detection"
@@ -85,11 +90,12 @@ class RegionDetectionStage(Stage):
         self.opts = opts
         self.detector = RegionDetector(**opts)
 
-    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
+    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
         report(self.name, 0.0)
         ctx.regions = self.detector.detect_regions(ctx.screenshot, ctx.labels, ctx.classification)
         report(self.name, 1.0)
         return StageResult(ctx, ctx.regions)
+
 
 class IconSlotDetectionStage(Stage):
     name = "iconslot_detection"
@@ -98,14 +104,94 @@ class IconSlotDetectionStage(Stage):
         self.opts = opts
         self.slot_detector = IconSlotDetector(**opts)
 
-    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> PipelineContext:
+    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
         report(self.name, 0.0)
-
         ctx.slots = self.slot_detector.detect_slots(ctx.screenshot, ctx.regions)
-
         report(self.name, 1.0)
-        return StageResult(ctx, ctx.slots) # ctx
+        return StageResult(ctx, ctx.slots)
 
+
+class IconMatchingQualityDetectionStage(Stage):
+    name = "icon_quality_detection"
+
+    def __init__(self, opts: Dict[str, Any]):
+        self.opts = opts
+        self.matcher = IconMatcher(
+            hash_index=opts.get("hash_index"),
+            debug=opts.get("debug", False),
+            engine_type=opts.get("engine_type", "ssim")
+        )
+
+    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
+        report(self.name, 0.0)
+        icon_dir_map = ctx.config.get("icon_dirs", {})
+        overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_folder", ""))
+        ctx.predicted_qualities = self.matcher.quality_predictions(
+            ctx.screenshot,
+            ctx.classification,
+            ctx.slots,
+            icon_dir_map,
+            overlays,
+            threshold=self.opts.get("threshold", 0.8)
+        )
+        report(self.name, 1.0)
+        return StageResult(ctx, ctx.predicted_qualities)
+
+
+class IconMatchingPrefilterStage(Stage):
+    name = "icon_prefilter"
+
+    def __init__(self, opts: Dict[str, Any]):
+        self.opts = opts
+        self.matcher = IconMatcher(
+            hash_index=opts.get("hash_index"),
+            debug=opts.get("debug", False),
+            engine_type=opts.get("engine_type", "ssim")
+        )
+
+    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
+        report(self.name, 0.0)
+        icon_dir_map = ctx.config.get("icon_dirs", {})
+        overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_folder", ""))
+        ctx.predicted_icons = self.matcher.icon_predictions(
+            ctx.screenshot,
+            ctx.classification,
+            ctx.slots,
+            icon_dir_map,
+            overlays,
+            threshold=self.opts.get("threshold", 0.8)
+        )
+        ctx.found_icons = self.matcher.found_icons
+        ctx.filtered_icons = self.matcher.filtered_icons
+        report(self.name, 1.0)
+        return StageResult(ctx, ctx.predicted_icons)
+
+
+class IconMatchingStage(Stage):
+    name = "icon_matching"
+
+    def __init__(self, opts: Dict[str, Any]):
+        self.opts = opts
+        self.matcher = IconMatcher(
+            hash_index=opts.get("hash_index"),
+            debug=opts.get("debug", False),
+            engine_type=opts.get("engine_type", "ssim")
+        )
+
+    def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
+        report(self.name, 0.0)
+        icon_dir_map = ctx.config.get("icon_dirs", {})
+        overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_folder", ""))
+        matches = self.matcher.match_all(
+            ctx.screenshot,
+            ctx.classification,
+            ctx.slots,
+            icon_dir_map,
+            overlays,
+            threshold=self.opts.get("threshold", 0.8)
+        )
+        report(self.name, 1.0)
+        return StageResult(ctx, matches)
 
 
 # --- The Pipeline Orchestrator ---
@@ -116,15 +202,14 @@ class SISTER:
         on_progress: Callable[[str, float, PipelineContext], None],
         on_interactive: Callable[[str, PipelineContext], PipelineContext],
         config: Dict[str, Any],
-        on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,  # Callable[[str, PipelineContext, Any], None],
-        on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None] ] = None  # Callable[[PipelineContext, Dict[str, Any]], None]
+        on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
+        on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None]] = None
     ):
         self.stages = stages
         self.on_progress = on_progress
         self.on_interactive = on_interactive
         self.on_stage_complete = on_stage_complete
         self.on_pipeline_complete = on_pipeline_complete
-
         self.config = config
 
     def run(self, screenshot: np.ndarray) -> PipelineContext:
@@ -134,8 +219,6 @@ class SISTER:
         for stage in self.stages:
             # notify start
             self.on_progress(stage.name, 0.0, ctx)
-
-            # execute stage
             stage_result = stage.run(
                 ctx,
                 lambda pct, name=stage.name: self.on_progress(name, pct, ctx)
@@ -160,12 +243,12 @@ class SISTER:
             self.on_pipeline_complete(ctx, results)
 
         return ctx, results
-    
+
 def build_default_pipeline(
     on_progress: Callable[[str, float, PipelineContext], None],
     on_interactive: Callable[[str, PipelineContext], PipelineContext],
     on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
-    on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None] ] = None,
+    on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None]] = None,
     config: Dict[str, Any] = {}
 ) -> SISTER:
     stages: List[Stage] = [
@@ -173,11 +256,15 @@ def build_default_pipeline(
         ClassifierStage(config.get("classifier", {})),
         RegionDetectionStage(config.get("region", {})),
         IconSlotDetectionStage(config.get("iconslot", {})),
-        # IconMatchingQualityDetectionStage(config.get("quality", {})),
-        # IconMatchingPrefilterStage(config.get("prefilter", {})),
-        # IconMatchingStage(
-        #     workers=config.get("matching_workers", 8),
-        #     opts=config.get("matching", {})
-        # ),
+        IconMatchingQualityDetectionStage(config.get("quality", {})),
+        IconMatchingPrefilterStage(config.get("prefilter", {})),
+        IconMatchingStage(config.get("matching", {})),
     ]
-    return SISTER(stages, on_progress, on_interactive, config=config, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
+    return SISTER(
+        stages,
+        on_progress,
+        on_interactive,
+        config=config,
+        on_stage_complete=on_stage_complete,
+        on_pipeline_complete=on_pipeline_complete
+    )
