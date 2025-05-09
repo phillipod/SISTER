@@ -8,7 +8,7 @@ from pathlib import Path
 
 from src.sister import build_default_pipeline, PipelineContext
 from src.hashindex import HashIndex
-
+from src.iconmap import IconDirectoryMap
 from log_config import setup_logging
 
 setup_logging()
@@ -30,9 +30,9 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'classifier':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.classification)} matches")   
     elif stage == 'iconslot_detection':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.slots)} slots: {ctx.slots}")
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.slots)}") # slots: {ctx.slots}")
     elif stage == 'icon_quality_detection':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)} predicted qualities: {ctx.predicted_qualities}")
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)}") # predicted qualities: {ctx.predicted_qualities}")
     else:
         print(f"[Callback] [on_stage_complete] [{stage}] complete") 
 
@@ -41,61 +41,7 @@ def on_interactive(stage, ctx): return ctx  # no-op
 
 
 def on_pipeline_complete(ctx, output): 
-    print(f"[Callback] [on_pipeline_complete] Pipeline is complete. Output: {output}")
-
-
-def build_icon_dir_map(images_root):
-    """
-    Build a mapping of label names (from LabelLocator) to image subdirectories.
-
-    Handles special cases:
-      - Fore and Aft Weapons map to unrestricted weapons
-      - Tactical, Engineering, and Science Consoles also include universal consoles
-
-    Args:
-        images_root (Path): Root directory where icons are stored.
-
-    Returns:
-        dict: Mapping from region label to list of directories.
-    """
-    return {
-        "ship": {
-            "Fore Weapon": [images_root / 'space/weapons/fore', images_root / 'space/weapons/unrestricted'],
-            "Aft Weapon": [images_root / 'space/weapons/aft', images_root / 'space/weapons/unrestricted'],
-            "Experimental Weapon": [images_root / 'space/weapons/experimental'],
-            "Shield": [images_root / 'space/shield'],
-            "Secondary Deflector": [images_root / 'space/secondary_deflector'],
-            "Deflector": [images_root / 'space/deflector', images_root / 'space/secondary_deflector'], # Console doesn't have a specific label for Secondary Deflector, it's located under the Deflector label.
-            "Impulse": [images_root / 'space/impulse'],
-            "Warp": [images_root / 'space/warp'],
-            "Singularity": [images_root / 'space/singularity'],
-            "Hangar": [images_root / 'space/hangar'],
-            "Devices": [images_root / 'space/device'],
-            "Universal Console": [images_root / 'space/consoles/universal', images_root / 'space/consoles/engineering', images_root / 'space/consoles/tactical', images_root / 'space/consoles/science'],
-            "Engineering Console": [images_root / 'space/consoles/engineering', images_root / 'space/consoles/universal'],
-            "Tactical Console": [images_root / 'space/consoles/tactical', images_root / 'space/consoles/universal'],
-            "Science Console": [images_root / 'space/consoles/science', images_root / 'space/consoles/universal']
-        },
-        "pc_ground": {
-            "Body": [images_root / 'ground/armor'],
-            "Shield": [images_root / 'ground/shield'],
-            "EV Suit": [images_root / 'ground/ev_suit'],
-            "Kit Modules": [images_root / 'ground/kit_module'],
-            "Kit": [images_root / 'ground/kit'],
-            "Devices": [images_root / 'ground/device'],
-            "Weapon": [images_root / 'ground/weapon'],
-        },
-        "console_ground": {
-            "Body": [images_root / 'ground/armor'],
-            "Shield": [images_root / 'ground/shield'],
-            "EV Suit": [images_root / 'ground/ev_suit'],
-            "Kit": [images_root / 'ground/kit_module'], # Console swaps "Kit Modules" to "Kit"
-            "Kit Frame": [images_root / 'ground/kit'], # And "Kit" becomes "Kit Frame"
-            "Devices": [images_root / 'ground/device'],
-            "Weapon": [images_root / 'ground/weapon'],
-        }
-    }
-
+    print(f"[Callback] [on_pipeline_complete] Pipeline is complete.") # Output: {output}")
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
@@ -116,16 +62,58 @@ if __name__ == "__main__":
 
 
     icon_root = Path(args.icons)
-    hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
+    #hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
     
-    icon_dir_map_master = build_icon_dir_map(Path(args.icons))
-
+    
     # 2. assemble config dict
     config = {
         "debug": True,
-        "icon_dirs": icon_dir_map_master,
-        "hash_index": hash_index,
-        "overlay_dir": args.overlays
+        
+        "prefilter": {
+            "hash_index_dir": icon_root,
+            "hash_index_file": "hash_index.json",
+        },
+
+        "icon_dir": args.icons,
+        "overlay_dir": args.overlays,
+
+        "icon_sets": IconDirectoryMap({
+            "ship": {
+                "Fore Weapon": [icon_root / 'space/weapons/fore', icon_root / 'space/weapons/unrestricted'],
+                "Aft Weapon": [icon_root / 'space/weapons/aft', icon_root / 'space/weapons/unrestricted'],
+                "Experimental Weapon": [icon_root / 'space/weapons/experimental'],
+                "Shield": [icon_root / 'space/shield'],
+                "Secondary Deflector": [icon_root / 'space/secondary_deflector'],
+                "Deflector": [icon_root / 'space/deflector', icon_root / 'space/secondary_deflector' ], # Console doesn't have a specific label for Secondary Deflector, it's located under the Deflector label.
+                "Impulse": [icon_root / 'space/impulse'],
+                "Warp": [icon_root / 'space/warp'],
+                "Singularity": [icon_root / 'space/singularity'],
+                "Hangar": [icon_root / 'space/hangar'],
+                "Devices": [icon_root / 'space/device'],
+                "Universal Console": [icon_root / 'space/consoles/universal', icon_root / 'space/consoles/engineering', icon_root / 'space/consoles/tactical', icon_root / 'space/consoles/science'],
+                "Engineering Console": [icon_root / 'space/consoles/engineering', icon_root / 'space/consoles/universal'],
+                "Tactical Console": [icon_root / 'space/consoles/tactical', icon_root / 'space/consoles/universal'],
+                "Science Console": [icon_root / 'space/consoles/science', icon_root / 'space/consoles/universal']
+            },
+            "pc_ground": {
+                "Body": [icon_root / 'ground/armor'],
+                "Shield": [icon_root / 'ground/shield'],
+                "EV Suit": [icon_root / 'ground/ev_suit'],
+                "Kit Modules": [icon_root / 'ground/kit_module'],
+                "Kit": [icon_root / 'ground/kit'],
+                "Devices": [icon_root / 'ground/device'],
+                "Weapon": [icon_root / 'ground/weapon'],
+            },
+            "console_ground": {
+                "Body": [icon_root / 'ground/armor'],
+                "Shield": [icon_root / 'ground/shield'],
+                "EV Suit": [icon_root / 'ground/ev_suit'],
+                "Kit": [icon_root / 'ground/kit_module'], # Console swaps "Kit Modules" to "Kit"
+                "Kit Frame": [icon_root / 'ground/kit'], # And "Kit" becomes "Kit Frame"
+                "Devices": [icon_root / 'ground/device'],
+                "Weapon": [icon_root / 'ground/weapon'],
+            }
+        }),
     }
 
     # 3. build & run
