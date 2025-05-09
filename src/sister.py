@@ -8,6 +8,7 @@ from src.classifier import Classifier
 from src.region import RegionDetector
 from src.iconslot import IconSlotDetector
 from src.iconmatch import IconMatcher
+from src.hashindex import HashIndex
 
 # --- Core value objects ---
 @dataclass(frozen=True)
@@ -78,6 +79,17 @@ class ClassifierStage(Stage):
     def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
         report(self.name, 0.0)
         ctx.classification = self.classifier.classify(ctx.labels)
+
+        if ctx.classification['build_type'] == 'PC Ship Build' or ctx.classification['build_type'] == 'Console Ship Build':
+            ctx.classification['icon_set'] = 'ship'
+        
+        elif ctx.classification['build_type'] == 'PC Ground Build':
+            ctx.classification['icon_set'] = 'pc_ground'
+
+        elif ctx.classification['build_type'] == 'Console Ground Build':
+            ctx.classification['icon_set'] = 'console_ground'
+
+
         report(self.name, 1.0)
         return StageResult(ctx, ctx.classification)
 
@@ -143,68 +155,38 @@ class IconMatchingPrefilterStage(Stage):
 
     def __init__(self, opts: Dict[str, Any]):
         self.opts = opts
+
+        hash_index = HashIndex(opts.get("hash_index_dir"), "phash", output_file=opts.get("hash_index_file", "hash_index.json"))
+        
         self.matcher = IconMatcher(
-            hash_index=opts.get("hash_index"),
+            hash_index=hash_index,
             debug=opts.get("debug", False),
             engine_type=opts.get("engine_type", "ssim")
         )
 
     def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
         report(self.name, 0.0)
-        icon_dir_map = ctx.config.get("icon_dirs", {})
+        icon_sets = ctx.config.get("icon_sets", {})
         overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_folder", ""))
+        #print(f"[Prefilter] Icon sets: {icon_sets}")
+        #print(f"[Prefilter] Overlays: {overlays}")
+        
         ctx.predicted_icons = self.matcher.icon_predictions(
             ctx.screenshot,
             ctx.classification,
             ctx.slots,
-            icon_dir_map,
+            icon_sets,
             overlays,
             threshold=self.opts.get("threshold", 0.8)
         )
         ctx.found_icons = self.matcher.found_icons
         ctx.filtered_icons = self.matcher.filtered_icons
+
+        #print(f"[Prefilter] Found icons: {ctx.found_icons}")
+        #print(f"[Prefilter] Filtered icons: {ctx.filtered_icons}")
         report(self.name, 1.0)
         return StageResult(ctx, ctx.predicted_icons)
 
-
-class IconDirectoryMappingStage(Stage):
-    name = "icon_dir_map"
-
-    def __init__(
-        self,
-        opts: Dict[str, Any]
-    ):
-        """
-        Initialize the stage.
-
-        opts["config_path"]: Path to JSON config file for icon directories.
-        opts["images_root"]: Root folder where icon images reside.
-        opts["default_set"]: Fallback icon_set if none provided in ctx.config.
-        """
-        self.opts = opts
-        cfg_path = Path(opts.get("config_path", "icon_dirs.json"))
-        images_root = Path(opts.get("images_root", "."))
-        self.mapper = IconDirectoryMapper(cfg_path, images_root)
-
-    def run(
-        self,
-        ctx: PipelineContext,
-        report: Callable[[str, float], None]
-    ) -> StageResult:
-        report(self.name, 0.0)
-
-        # Determine which icon_set to use (e.g. 'ship', 'pc_ground', etc.)
-        icon_set = ctx.config.get("icon_set", self.opts.get("default_set", "ship"))
-
-        # Use the set of region labels detected earlier
-        all_labels = list(getattr(ctx, "regions", {}).keys())
-
-        # Build and store the region-scoped icon_dir_map
-        icon_dir_map = self.mapper.for_prefilter(icon_set, all_labels)
-        ctx.config["icon_dirs"] = icon_dir_map
-
-        report(self.name, 1.0)
-        return StageResult(ctx, icon_dir_map)
 
 class IconMatchingStage(Stage):
     name = "icon_matching"
@@ -295,9 +277,9 @@ def build_default_pipeline(
         ClassifierStage(config.get("classifier", {})),
         RegionDetectionStage(config.get("region", {})),
         IconSlotDetectionStage(config.get("iconslot", {})),
-        IconMatchingQualityDetectionStage(config.get("quality", {})),
-        IconMatchingPrefilterStage(config.get("prefilter", {})),
-        IconMatchingStage(config.get("matching", {})),
+        IconMatchingPrefilterStage(config.get("prefilter", { "debug": True})),
+        #IconMatchingQualityDetectionStage(config.get("quality", {})),
+        #IconMatchingStage(config.get("matching", {})),
     ]
     return SISTER(
         stages,

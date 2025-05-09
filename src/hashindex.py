@@ -55,7 +55,10 @@ class HashIndex:
     """
 
     def __init__(self, base_dir, hasher, output_file="hash_index.json", recursive=True, match_size=(32, 32)):
+        #print(f"[HashIndex] base_dir: {base_dir}, hasher: {hasher}, output_file: {output_file}, recursive: {recursive}, match_size: {match_size}")
         self.base_dir = Path(base_dir)
+        #print(f"[HashIndex] base_dir: {self.base_dir}")
+        #print(f"[HashIndex] output_file: {self.base_dir / output_file}")
         self.hasher_name = None
 
         hasher_key = hasher.lower()
