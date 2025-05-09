@@ -125,7 +125,7 @@ class IconMatchingQualityDetectionStage(Stage):
     def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
         report(self.name, 0.0)
         icon_dir_map = ctx.config.get("icon_dirs", {})
-        overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_folder", ""))
+        overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_dir", ""))
         ctx.predicted_qualities = self.matcher.quality_predictions(
             ctx.screenshot,
             ctx.classification,
@@ -166,6 +166,45 @@ class IconMatchingPrefilterStage(Stage):
         report(self.name, 1.0)
         return StageResult(ctx, ctx.predicted_icons)
 
+
+class IconDirectoryMappingStage(Stage):
+    name = "icon_dir_map"
+
+    def __init__(
+        self,
+        opts: Dict[str, Any]
+    ):
+        """
+        Initialize the stage.
+
+        opts["config_path"]: Path to JSON config file for icon directories.
+        opts["images_root"]: Root folder where icon images reside.
+        opts["default_set"]: Fallback icon_set if none provided in ctx.config.
+        """
+        self.opts = opts
+        cfg_path = Path(opts.get("config_path", "icon_dirs.json"))
+        images_root = Path(opts.get("images_root", "."))
+        self.mapper = IconDirectoryMapper(cfg_path, images_root)
+
+    def run(
+        self,
+        ctx: PipelineContext,
+        report: Callable[[str, float], None]
+    ) -> StageResult:
+        report(self.name, 0.0)
+
+        # Determine which icon_set to use (e.g. 'ship', 'pc_ground', etc.)
+        icon_set = ctx.config.get("icon_set", self.opts.get("default_set", "ship"))
+
+        # Use the set of region labels detected earlier
+        all_labels = list(getattr(ctx, "regions", {}).keys())
+
+        # Build and store the region-scoped icon_dir_map
+        icon_dir_map = self.mapper.for_prefilter(icon_set, all_labels)
+        ctx.config["icon_dirs"] = icon_dir_map
+
+        report(self.name, 1.0)
+        return StageResult(ctx, icon_dir_map)
 
 class IconMatchingStage(Stage):
     name = "icon_matching"
@@ -268,3 +307,4 @@ def build_default_pipeline(
         on_stage_complete=on_stage_complete,
         on_pipeline_complete=on_pipeline_complete
     )
+we will call this 
