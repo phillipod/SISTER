@@ -30,15 +30,24 @@ class PHashEngine:
         found_icons = {}
 
         for region_label, candidate_regions in icon_slots.items():
-            folders = icon_dir_map.get(region_label, [])
+            print(f"[Prefilter] Pre-filtering {build_info} icons for region '{region_label}'")
+            #print(f"[Prefilter] {icon_dir_map}")
+            folders = icon_dir_map.get(region_label, [])            
             if not folders:
                 logger.warning(f"No icon directories found for region '{region_label}'")
                 continue
+            print(f"[Prefilter] Number of icon directories: {len(folders)}")
+            print(f"[Prefilter] Icon directories: {folders}")
             folders = [Path(f) for f in folders]
 
             filtered_icons[region_label] = {}
             similar_icons[region_label] = {}
             found_icons[region_label] = {}
+            print(f"[Prefilter] Pre-filtering icons for region '{region_label}'")
+            #print(f"[Prefilter] Number of candidate regions: {len(candidate_regions)}")
+            #print(f"[Prefilter] Number of icon directories: {len(folders)}")
+            #print(f"[Prefilter] Number of icon slots: {len(icon_slots)}")
+            print(f"[Prefilter] Icon directories: {folders}")
 
             for idx, (x, y, w, h) in enumerate(candidate_regions):
                 logger.debug(f"Predicting icons for region '{region_label}' at slot {idx}")

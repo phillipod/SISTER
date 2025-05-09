@@ -307,4 +307,3 @@ def build_default_pipeline(
         on_stage_complete=on_stage_complete,
         on_pipeline_complete=on_pipeline_complete
     )
-we will call this 
