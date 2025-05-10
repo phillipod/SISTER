@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple, Optional
 import numpy as np
 
-# --- Import your existing modules (adjust names as needed) ---
+# --- Import modules ---
 from src.locator import LabelLocator
 from src.classifier import Classifier
 from src.region import RegionDetector
@@ -161,6 +161,7 @@ class IconPrefilterStage(Stage):
         
         self.prefilterer = IconPrefilter(
             hash_index=hash_index,
+            icon_root=opts.get("icon_root"),
             debug=opts.get("debug", False),
             engine_type=opts.get("engine_type", "phash")
         )
@@ -175,8 +176,7 @@ class IconPrefilterStage(Stage):
             ctx.screenshot,
             ctx.classification,
             ctx.slots,
-            icon_sets,
-            threshold=self.opts.get("threshold", 0.8)
+            icon_sets
         )
         ctx.found_icons = self.prefilterer.found_icons
         ctx.filtered_icons = self.prefilterer.filtered_icons
@@ -203,7 +203,7 @@ class IconMatchingStage(Stage):
         icon_sets = ctx.config.get("icon_sets", {})
         ctx.overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_dir", ""))
         #print(f"[Matching] ctx.filtered_icons: {ctx.filtered_icons}")
-        matches = self.matcher.match_all(
+        ctx.matches = self.matcher.match_all(
            ctx.screenshot,
             ctx.classification,
             ctx.slots,
@@ -215,7 +215,7 @@ class IconMatchingStage(Stage):
             threshold=self.opts.get("threshold", 0.7)
         )
         report(self.name, 1.0)
-        return StageResult(ctx, matches)
+        return StageResult(ctx, ctx.matches)
 
 
 # --- The Pipeline Orchestrator ---

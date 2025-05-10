@@ -33,6 +33,8 @@ def on_stage_complete(stage, ctx, output):
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.slots)}") # slots: {ctx.slots}")
     elif stage == 'icon_quality_detection':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)} predicted qualities: {ctx.predicted_qualities}")
+    elif stage == 'icon_matching':
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.matches)} matches matches: {ctx.matches}")
     else:
         print(f"[Callback] [on_stage_complete] [{stage}] complete") 
 
@@ -70,6 +72,7 @@ if __name__ == "__main__":
         "debug": True,
         
         "prefilter": {
+            "icon_root": icon_root,
             "hash_index_dir": icon_root,
             "hash_index_file": "hash_index.json",
         },

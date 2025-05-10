@@ -1,6 +1,7 @@
 import os
 import logging
 from collections import Counter
+from pathlib import Path
 import cv2
 
 # Import available engines
@@ -17,7 +18,7 @@ ENGINE_CLASSES = {
 
 
 class IconPrefilter:
-    def __init__(self, hash_index=None, debug=False, engine_type="phash"):
+    def __init__(self, icon_root=None, hash_index=None, debug=False, engine_type="phash"):
         """
         IconPrefilter runner that delegates to a selected engine.
 
@@ -26,9 +27,10 @@ class IconPrefilter:
             engine_type (str): Engine backend to use. Options: 'phash', etc.
         """
         self.debug = debug
+        self.icon_root = Path(icon_root) if icon_root else None
         self.found_icons = None
         self.filtered_icons = None
-
+        
         self.engine_type = engine_type.lower()
 
         if self.engine_type not in ENGINE_CLASSES:
@@ -37,7 +39,8 @@ class IconPrefilter:
         self.engine = ENGINE_CLASSES[self.engine_type](
             debug=debug,
             icon_loader=self.load_icons,
-            hash_index=hash_index
+            hash_index=hash_index,
+            icon_root=icon_root
         )
         logger.info(f"[IconPrefilter] Using engine: {self.engine_type}")
 
@@ -54,7 +57,7 @@ class IconPrefilter:
                         icons[filename] = icon
         return icons
 
-    def icon_predictions(self, screenshot_color, build_info, icon_slots, icon_dir_map, threshold=0.8):
+    def icon_predictions(self, screenshot_color, build_info, icon_slots, icon_dir_map):
         """
         Run icon matching using the selected engine.
         """
@@ -62,8 +65,7 @@ class IconPrefilter:
             screenshot_color,
             build_info,
             icon_slots,
-            icon_dir_map,
-            threshold
+            icon_dir_map
         )
 
         logger.info(f"[IconPrefilter] Total icon predictions: {len(self.predicted_icons)}")

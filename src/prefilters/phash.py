@@ -5,6 +5,8 @@ import statistics
 import traceback
 from pathlib import Path
 from multiprocessing import shared_memory
+from collections import Counter
+
 import logging
 
 from ..utils.image import apply_overlay, apply_mask
@@ -17,13 +19,13 @@ class PHashEngine:
     Prefiltering engine using perceptual hash.
     """
 
-    def __init__(self, debug=False, icon_loader=None, hash_index=None):
+    def __init__(self, debug=False, icon_root=None, icon_loader=None, hash_index=None):
         self.debug = debug
+        self.icon_root = icon_root
         self.load_icons = icon_loader
         self.hash_index = hash_index 
 
     def dynamic_hamming_score_cutoff(self, scores, best_score, max_next_ranks=2, max_allowed_gap=4):
-        from collections import Counter
         freqs = Counter(scores)
         sorted_scores = sorted(freqs.items())
 
@@ -48,7 +50,7 @@ class PHashEngine:
 
         return threshold
 
-    def icon_predictions(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, threshold=0.8):
+    def icon_predictions(self, screenshot_color, build_info, icon_slots, icon_dir_map):
         predictions = []
         similar_icons = {}
         filtered_icons = {}
@@ -90,15 +92,15 @@ class PHashEngine:
 
                     #print(f"[Prefilter] Found icon '{path_part}' at distance {dist} with quality {quality}")
 
-                    full_path = self.hash_index.base_dir / path_part
+                    full_path = self.icon_root / path_part
                     filename = os.path.basename(path_part)
                     name = os.path.splitext(filename)[0]
                     normalized_path = os.path.normpath(path_part)
 
-                    
+                    #print(f"full_path: {full_path} filename: {filename} name: {name} normalized_path: {normalized_path}")
    #                 print(f"[Prefilter] Full path: {full_path}, path_part: {path_part} -> relative to hash_index.base_dir: {self.hash_index.base_dir}")
                     base_dir = self.hash_index.base_dir.resolve()
-                    candidate_dir = full_path.parent.resolve()
+                    candidate = full_path.resolve()
   #                  print(f"[Prefilter] Base dir: {base_dir}")
  #                   print(f"[Prefilter] Candidate dir: {candidate_dir}")
 
@@ -106,12 +108,30 @@ class PHashEngine:
                     for folder in folders:
                         folder = Path(folder).resolve()
 
-                        if candidate_dir.is_relative_to(folder):
+                        if candidate.is_relative_to(folder):
                             allowed = True
                             break
 
+                    #print(f"folders: {folders}")
+                    # allowed = False
+                    # for folder in folders:
+                    #     normalized_folder = Path(os.path.normpath(path_part)) 
+
+                    #     #print(f"[Prefilter] Checking {full_path} against {self.icon_root}")
+                    #     print(Path(full_path).relative_to(self.icon_root))
+                    #     try:
+                    #         relative_folder = full_path.relative_to(self.icon_root).parent
+                    #         #print(f"[Prefilter] Relative folder: {relative_folder}")
+                    #         if normalized_path.startswith(os.path.normpath(str(relative_folder))):
+                    #           #  print(f"{normalized_path} starts with {os.path.normpath(str(relative_folder))}")
+                    #             allowed = True
+                    #             break
+                    #     except ValueError:
+                    #         continue
+
+
                     if not allowed or not full_path.exists():
-                        # print(f"[Prefilter] Icon '{full_path}' not allowed")
+#                        print(f"[Prefilter] Icon '{full_path}' not allowed")
                         continue
                     # print(f"[Prefilter] Icon '{full_path}' allowed")
                     box_icons = found_icons[region_label][box]
@@ -120,16 +140,17 @@ class PHashEngine:
                             "dist": dist,
                             "quality": quality,
                             "name": name,
+                            "file": path_part
                         }
 
-                    if filename not in filtered_icons[region_label]:
-                        #print(f"[Prefilter] Selecting icon '{full_path}' for load")
-                        filtered_icons[region_label][path_part] = None
+                    #if filename not in filtered_icons[region_label]:
+                    #    print(f"[Prefilter] Selecting icon '{full_path}' for load")
+                    #    filtered_icons[region_label][path_part] = None
                         #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
                         #if icon is not None:
                         #    filtered_icons[region_label][idx][filename] = icon
 
-        # print(f"[Prefilter] Found icons: {found_icons}")
+        print(f"[Prefilter] Found icons: {found_icons}")
         # print(f"[Prefilter] Filtered icons: {filtered_icons}")
 
         # Second pass for thresholding
@@ -145,7 +166,7 @@ class PHashEngine:
                 best_score = min(dists)
                 stddev = statistics.stdev(dists) if len(dists) > 1 else 0
                 stddev_threshold = best_score + (2 * stddev)
-                dm_threshold = self.dynamic_hamming_score_cutoff(dists, best_score, max_next_ranks=1, max_allowed_gap=6)
+                dm_threshold = self.dynamic_hamming_score_cutoff(dists, best_score, max_next_ranks=1, max_allowed_gap=4)
                 threshold_val = np.ceil(max(dm_threshold, stddev_threshold)).astype(int)
 
                 candidate_predictions = {}
@@ -167,7 +188,7 @@ class PHashEngine:
                         "quality_scale": 1.0,
                         "quality_score": 0.0,
                         "scale": 1.0,
-                        "skipped": info["dist"] > threshold_val
+                        #"skipped": info["dist"] > threshold_val
                     })
                     filtered_slot_icons[filename] = info
 
@@ -178,8 +199,8 @@ class PHashEngine:
                 for filename in filtered_slot_icons:
                     # print(f"[Prefilter] Loading icon '{filename}'")
 
-                    if filename not in filtered_icons[region_label]:
-                         print(f"[Prefilter] Icon not in filtered_icons")
+                    # if filename not in filtered_icons[region_label]:
+                    #      print(f"[Prefilter] Icon not in filtered_icons")
 
                     if filtered_slot_icons[filename] is not None:
                         # print(f"[Prefilter] Icon not in filtered_slot_icons")
