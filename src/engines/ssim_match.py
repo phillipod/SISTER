@@ -70,6 +70,7 @@ class SSIMMatchEngine:
                 for idx_region, (x, y, w, h) in candidate_regions.items():
                     region_key = (x, y, w, h)
                     icons_for_slot = found_icons[region_label].get(region_key, {})
+                    print(f"icons_for_slot: {icons_for_slot}")
 
                     if not icons_for_slot:
                         continue
@@ -78,7 +79,7 @@ class SSIMMatchEngine:
 
                     logger.info(f"Matching {len(icons_for_slot)} icons against 1 candidate for label '{region_label}' at slot {idx_region} with quality {predicted_quality}")
     
-                    #print(f"icons_for_slot: {icons_for_slot}") 
+                    print(f"icons_for_slot: {icons_for_slot}") 
                     #print(f"region_filtered_icons: {region_filtered_icons}" )
                     for idx_icon, (name, icon_color) in enumerate(region_filtered_icons.items(), 1):
                         #print(f"Matching {name} against {len(icons_for_slot)} icons for label '{region_label}' at slot {idx_region} with quality {predicted_quality}")
