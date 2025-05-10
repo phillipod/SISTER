@@ -8,6 +8,7 @@ from src.classifier import Classifier
 from src.region import RegionDetector
 from src.iconslot import IconSlotDetector
 from src.iconmatch import IconMatcher
+from src.prefilter import IconPrefilter
 from src.hashindex import HashIndex
 
 # --- Core value objects ---
@@ -150,7 +151,7 @@ class IconMatchingQualityDetectionStage(Stage):
         return StageResult(ctx, ctx.predicted_qualities)
 
 
-class IconMatchingPrefilterStage(Stage):
+class IconPrefilterStage(Stage):
     name = "icon_prefilter"
 
     def __init__(self, opts: Dict[str, Any]):
@@ -158,29 +159,27 @@ class IconMatchingPrefilterStage(Stage):
 
         hash_index = HashIndex(opts.get("hash_index_dir"), "phash", output_file=opts.get("hash_index_file", "hash_index.json"))
         
-        self.matcher = IconMatcher(
+        self.prefilterer = IconPrefilter(
             hash_index=hash_index,
             debug=opts.get("debug", False),
-            engine_type=opts.get("engine_type", "ssim")
+            engine_type=opts.get("engine_type", "phash")
         )
 
     def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
         report(self.name, 0.0)
         icon_sets = ctx.config.get("icon_sets", {})
-        overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_folder", ""))
         #print(f"[Prefilter] Icon sets: {icon_sets}")
         #print(f"[Prefilter] Overlays: {overlays}")
         
-        ctx.predicted_icons = self.matcher.icon_predictions(
+        ctx.predicted_icons = self.prefilterer.icon_predictions(
             ctx.screenshot,
             ctx.classification,
             ctx.slots,
             icon_sets,
-            overlays,
             threshold=self.opts.get("threshold", 0.8)
         )
-        ctx.found_icons = self.matcher.found_icons
-        ctx.filtered_icons = self.matcher.filtered_icons
+        ctx.found_icons = self.prefilterer.found_icons
+        ctx.filtered_icons = self.prefilterer.filtered_icons
 
         #print(f"[Prefilter] Found icons: {ctx.found_icons}")
         #print(f"[Prefilter] Filtered icons: {ctx.filtered_icons}")
@@ -277,8 +276,8 @@ def build_default_pipeline(
         ClassifierStage(config.get("classifier", {})),
         RegionDetectionStage(config.get("region", {})),
         IconSlotDetectionStage(config.get("iconslot", {})),
-        IconMatchingPrefilterStage(config.get("prefilter", { "debug": True})),
-        #IconMatchingQualityDetectionStage(config.get("quality", {})),
+        IconPrefilterStage(config.get("prefilter", { "debug": True})),
+        IconMatchingQualityDetectionStage(config.get("quality", {})),
         #IconMatchingStage(config.get("matching", {})),
     ]
     return SISTER(

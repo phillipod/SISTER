@@ -5,16 +5,11 @@ import cv2
 
 # Import available engines
 from .engines.ssim import SSIMEngine
-from .engines.prefilter import PHashEngine
-
-# from .engines.dhash import DHashEngine  # future support
 
 logger = logging.getLogger(__name__)
 
 ENGINE_CLASSES = {
-    "ssim": SSIMEngine,
-    "phash": PHashEngine,
-    # "dhash": DHashEngine,
+    "ssim": SSIMEngine
 }
 
 
@@ -121,28 +116,3 @@ class IconMatcher:
         #     cv2.imwrite("output/debug_matched_icons.png", debug_img)
 
         return self.predicted_qualities
-
-
-    def icon_predictions(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, threshold=0.8):
-        """
-        Run icon matching using the selected engine.
-        """
-        self.predicted_icons, self.found_icons, self.filtered_icons = self.engine.icon_predictions(
-            screenshot_color,
-            build_info,
-            icon_slots,
-            icon_dir_map,
-            overlays,
-            threshold
-        )
-
-        logger.info(f"[IconMatcher] Total icon predictions: {len(self.predicted_icons)}")
-
-        # if self.debug:
-        #     debug_img = screenshot_color.copy()
-        #     for match in matches:
-        #         cv2.rectangle(debug_img, match["top_left"], match["bottom_right"], (0, 255, 0), 2)
-        #     os.makedirs("output", exist_ok=True)
-        #     cv2.imwrite("output/debug_matched_icons.png", debug_img)
-
-        return self.predicted_icons

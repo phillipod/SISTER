@@ -8,7 +8,6 @@ from multiprocessing import shared_memory
 import logging
 
 from ..utils.image import apply_overlay, apply_mask
-from .ssim_common import dynamic_hamming_cutoff
 #from ..iconmap import IconDirectoryMap
 
 logger = logging.getLogger(__name__)
@@ -18,12 +17,36 @@ class PHashEngine:
     Prefiltering engine using perceptual hash.
     """
 
-    def __init__(self, debug=False, icon_loader=None, overlay_loader=None, hash_index=None):
+    def __init__(self, debug=False, icon_loader=None, hash_index=None):
         self.debug = debug
         self.load_icons = icon_loader
-        self.load_quality_overlays = overlay_loader
         self.hash_index = hash_index 
 
+    def dynamic_hamming_score_cutoff(self, scores, best_score, max_next_ranks=2, max_allowed_gap=4):
+        from collections import Counter
+        freqs = Counter(scores)
+        sorted_scores = sorted(freqs.items())
+
+        threshold = best_score
+        previous = best_score
+
+        rank_count = 0
+        for score, count in sorted_scores:
+            if score == best_score:
+                continue
+
+            # if this next tier is a massive jump from the best, break
+            if score - previous > max_allowed_gap:
+                break
+
+            threshold = score
+            previous = score
+            rank_count += 1
+
+            if rank_count >= max_next_ranks:
+                break
+
+        return threshold
     def icon_predictions(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, threshold=0.8):
         predictions = []
         similar_icons = {}
@@ -99,10 +122,11 @@ class PHashEngine:
                         }
 
                     if filename not in filtered_icons[region_label][idx]:
-                        # print(f"[Prefilter] Loading icon '{full_path}'")
-                        icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
-                        if icon is not None:
-                            filtered_icons[region_label][idx][filename] = icon
+                        print(f"[Prefilter] Selecting icon '{full_path}' for load")
+                        filtered_icons[region_label][idx][filename] = None
+                        #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
+                        #if icon is not None:
+                        #    filtered_icons[region_label][idx][filename] = icon
 
         # print(f"[Prefilter] Found icons: {found_icons}")
         # print(f"[Prefilter] Filtered icons: {filtered_icons}")
@@ -110,8 +134,8 @@ class PHashEngine:
         # Second pass for thresholding
         for region_label, candidate_regions in icon_slots.items():
             for idx_region, (x, y, w, h) in candidate_regions.items():
-                print(f"Running thresholding for region '{region_label}' at slot {idx_region}")
-                print(f"Found icons: {found_icons[region_label]}")
+                #print(f"Running thresholding for region '{region_label}' at slot {idx_region}")
+                #print(f"Found icons: {found_icons[region_label]}")
                 candidates = found_icons[region_label].get((x, y, w, h), {})
                 dists = [info["dist"] for info in candidates.values()]
                 if not dists:
@@ -120,7 +144,7 @@ class PHashEngine:
                 best_score = min(dists)
                 stddev = statistics.stdev(dists) if len(dists) > 1 else 0
                 stddev_threshold = best_score + (2 * stddev)
-                dm_threshold = dynamic_hamming_cutoff(dists, best_score, max_next_ranks=1, max_allowed_gap=6)
+                dm_threshold = self.dynamic_hamming_score_cutoff(dists, best_score, max_next_ranks=1, max_allowed_gap=6)
                 threshold_val = np.ceil(max(dm_threshold, stddev_threshold)).astype(int)
 
                 candidate_predictions = {}
@@ -149,12 +173,14 @@ class PHashEngine:
                 for region, preds in candidate_predictions.items():
                     predictions.extend(preds)
                 # update filtered_icons for final slots
+                print(f"filtered_slot_icons: {filtered_slot_icons}")
                 for filename in filtered_slot_icons:
-                    if filename not in filtered_icons[region_label]:
-                        full_path = self.hash_index.base_dir / filename
-                        icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
-                        if icon is not None:
-                            filtered_icons[region_label][filename] = icon
+                    if filename not in filtered_icons[region_label][idx_region]:
+                        if filtered_slot_icons[region_label][filename] is None:
+                            full_path = self.hash_index.base_dir / filename
+                            icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
+                            if icon is not None:
+                                filtered_icons[region_label][idx][filename] = icon
 
         logger.info(f"Prefilter predictions complete: {len(predictions)} entries.")
         return predictions, found_icons, filtered_icons

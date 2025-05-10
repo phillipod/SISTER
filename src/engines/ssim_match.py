@@ -53,7 +53,7 @@ class SSIMMatchEngine:
             args_list = []
 
             for region_label, candidate_regions in icon_slots.items():
-                region_filtered_icons = filtered_icons.get(region_label, {})
+                folders = icon_dir_map.allowed_dirs(region_label)    
                 if not region_filtered_icons:
                     logger.warning(f"No filtered icons available for region '{region_label}'")
                     continue
@@ -62,7 +62,7 @@ class SSIMMatchEngine:
                 if len(predicted_qualities) != len(candidate_regions):
                     logger.warning(f"Mismatch between candidate regions and predicted qualities for '{region_label}'")
 
-                for idx_region, (x, y, w, h) in enumerate(candidate_regions):
+                for idx_region, (x, y, w, h) in candidate_regions.items():
                     region_key = (x, y, w, h)
                     icons_for_slot = found_icons[region_label].get(region_key, {})
 
@@ -107,7 +107,7 @@ class SSIMMatchEngine:
 
                 predicted_qualities = predicted_qualities_by_region.get(region_label, [])
 
-                for (x, y, w, h) in candidate_regions:
+                for original_idx, (x, y, w, h) in candidate_regions.items():
                     original_idx = candidate_regions.index((x, y, w, h))
                     if (region_label, original_idx) in matched_indexes_global:
                         continue
