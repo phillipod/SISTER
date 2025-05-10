@@ -59,7 +59,7 @@ class IconMatcher:
                 overlays[name.split('.')[0]] = overlay
         return overlays
 
-    def match_all(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, predicted_qualities, filtered_icons, found_icons, threshold=0.8):
+    def match_all(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, predicted_qualities, filtered_icons, found_icons, threshold=0.7):
         """
         Run icon matching using the selected engine.
         """

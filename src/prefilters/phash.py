@@ -72,7 +72,7 @@ class PHashEngine:
                 roi = screenshot_color[y:y+h, x:x+w]
                 found_icons[region_label][box] = {}
                 similar_icons[region_label][box] = {}
-                filtered_icons[region_label][idx] = {}
+                filtered_icons[region_label] = {}
 
                 try:
                     results = self.hash_index.find_similar_to_image(roi, max_distance=18, top_n=None, grayscale=False)
@@ -122,9 +122,9 @@ class PHashEngine:
                             "name": name,
                         }
 
-                    if filename not in filtered_icons[region_label][idx]:
+                    if filename not in filtered_icons[region_label]:
                         #print(f"[Prefilter] Selecting icon '{full_path}' for load")
-                        filtered_icons[region_label][idx][path_part] = None
+                        filtered_icons[region_label][path_part] = None
                         #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
                         #if icon is not None:
                         #    filtered_icons[region_label][idx][filename] = icon
@@ -178,8 +178,8 @@ class PHashEngine:
                 for filename in filtered_slot_icons:
                     # print(f"[Prefilter] Loading icon '{filename}'")
 
-                    # if filename not in filtered_icons[region_label][idx_region] or filtered_icons[region_label][idx_region][filename] is None:
-                    #     print(f"[Prefilter] Icon not in filtered_icons")
+                    if filename not in filtered_icons[region_label]:
+                         print(f"[Prefilter] Icon not in filtered_icons")
 
                     if filtered_slot_icons[filename] is not None:
                         # print(f"[Prefilter] Icon not in filtered_slot_icons")
@@ -188,7 +188,7 @@ class PHashEngine:
                         icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
                         if icon is not None:
                             # print(f"[Prefilter] Icon {filename} loaded")
-                            filtered_icons[region_label][idx_region][filename] = icon
+                            filtered_icons[region_label][filename] = icon
 
         logger.info(f"Prefilter predictions complete: {len(predictions)} entries.")
         return predictions, found_icons, filtered_icons

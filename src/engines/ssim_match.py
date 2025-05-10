@@ -22,7 +22,7 @@ class SSIMMatchEngine:
         self.load_quality_overlays = overlay_loader
         self.hash_index = hash_index 
 
-    def match_all(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, predicted_qualities_by_region, filtered_icons, found_icons, threshold=0.8):
+    def match_all(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, predicted_qualities_by_region, filtered_icons, found_icons, threshold=0.7):
         """
         Run icon matching using the selected engine.
         """
@@ -80,7 +80,7 @@ class SSIMMatchEngine:
     
                     #print(f"icons_for_slot: {icons_for_slot}") 
                     #print(f"region_filtered_icons: {region_filtered_icons}" )
-                    for idx_icon, (name, icon_color) in enumerate(region_filtered_icons[idx_region].items(), 1):
+                    for idx_icon, (name, icon_color) in enumerate(region_filtered_icons.items(), 1):
                         #print(f"Matching {name} against {len(icons_for_slot)} icons for label '{region_label}' at slot {idx_region} with quality {predicted_quality}")
                         if name not in icons_for_slot:
                             #print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{region_label}' at slot {idx_region} with quality {predicted_quality}")
