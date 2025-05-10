@@ -4,6 +4,7 @@ import cv2
 
 from pathlib import Path
 
+from pprint import pprint
 
 
 from src.sister import build_default_pipeline, PipelineContext
@@ -34,7 +35,8 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'icon_quality_detection':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)} predicted qualities: {ctx.predicted_qualities}")
     elif stage == 'icon_matching':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.matches)} matches matches: {ctx.matches}")
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.matches)} matches") # 
+        #pprint(ctx.matches, indent=4)
     else:
         print(f"[Callback] [on_stage_complete] [{stage}] complete") 
 
