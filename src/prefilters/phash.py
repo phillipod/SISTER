@@ -47,6 +47,7 @@ class PHashEngine:
                 break
 
         return threshold
+
     def icon_predictions(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, threshold=0.8):
         predictions = []
         similar_icons = {}
@@ -114,16 +115,16 @@ class PHashEngine:
                         continue
                     # print(f"[Prefilter] Icon '{full_path}' allowed")
                     box_icons = found_icons[region_label][box]
-                    if filename not in box_icons or box_icons[filename]["dist"] > dist:
-                        box_icons[filename] = {
+                    if filename not in box_icons or box_icons[path_part]["dist"] > dist:
+                        box_icons[path_part] = {
                             "dist": dist,
                             "quality": quality,
                             "name": name,
                         }
 
                     if filename not in filtered_icons[region_label][idx]:
-                        print(f"[Prefilter] Selecting icon '{full_path}' for load")
-                        filtered_icons[region_label][idx][filename] = None
+                        #print(f"[Prefilter] Selecting icon '{full_path}' for load")
+                        filtered_icons[region_label][idx][path_part] = None
                         #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
                         #if icon is not None:
                         #    filtered_icons[region_label][idx][filename] = icon
@@ -173,14 +174,21 @@ class PHashEngine:
                 for region, preds in candidate_predictions.items():
                     predictions.extend(preds)
                 # update filtered_icons for final slots
-                print(f"filtered_slot_icons: {filtered_slot_icons}")
+                # print(f"filtered_slot_icons: {filtered_slot_icons}")
                 for filename in filtered_slot_icons:
-                    if filename not in filtered_icons[region_label][idx_region]:
-                        if filtered_slot_icons[region_label][filename] is None:
-                            full_path = self.hash_index.base_dir / filename
-                            icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
-                            if icon is not None:
-                                filtered_icons[region_label][idx][filename] = icon
+                    # print(f"[Prefilter] Loading icon '{filename}'")
+
+                    # if filename not in filtered_icons[region_label][idx_region] or filtered_icons[region_label][idx_region][filename] is None:
+                    #     print(f"[Prefilter] Icon not in filtered_icons")
+
+                    if filtered_slot_icons[filename] is not None:
+                        # print(f"[Prefilter] Icon not in filtered_slot_icons")
+                        full_path = self.hash_index.base_dir / filename
+                        # print(f"[Prefilter] Loading icon '{full_path}'")
+                        icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
+                        if icon is not None:
+                            # print(f"[Prefilter] Icon {filename} loaded")
+                            filtered_icons[region_label][idx_region][filename] = icon
 
         logger.info(f"Prefilter predictions complete: {len(predictions)} entries.")
         return predictions, found_icons, filtered_icons

@@ -92,6 +92,7 @@ def multi_scale_match(region_color, template_color, scales=np.linspace(0.6, 0.8,
     best_loc = None
     best_scale = 1.0
 
+    # print(f"Region shape: {region_color.shape}, template shape: {template_color.shape}, scales: {scales}, threshold: {threshold}")    
     region_color = apply_mask(cv2.GaussianBlur(region_color, (3, 3), 0))
     template_color = apply_mask(cv2.GaussianBlur(template_color, (3, 3), 0))
 

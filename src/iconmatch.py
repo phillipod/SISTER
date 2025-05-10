@@ -23,10 +23,7 @@ class IconMatcher:
             engine_type (str): Engine backend to use. Options: 'ssim', 'phash', etc.
         """
         self.debug = debug
-        self.predicted_qualities = None
-        self.found_icons = None
-        self.filtered_icons = None
-
+       
         self.engine_type = engine_type.lower()
 
         if self.engine_type not in ENGINE_CLASSES:
@@ -62,7 +59,7 @@ class IconMatcher:
                 overlays[name.split('.')[0]] = overlay
         return overlays
 
-    def match_all(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, threshold=0.8):
+    def match_all(self, screenshot_color, build_info, icon_slots, icon_dir_map, overlays, predicted_qualities, filtered_icons, found_icons, threshold=0.8):
         """
         Run icon matching using the selected engine.
         """
@@ -72,9 +69,9 @@ class IconMatcher:
             icon_slots,
             icon_dir_map,
             overlays,
-            self.predicted_qualities,
-            self.filtered_icons,
-            self.found_icons,
+            predicted_qualities,
+            filtered_icons,
+            found_icons,
             threshold
         )
 

@@ -68,6 +68,8 @@ class IconPrefilter:
 
         logger.info(f"[IconPrefilter] Total icon predictions: {len(self.predicted_icons)}")
 
+        #print(f"[IconPrefilter] Total icon predictions: {len(self.predicted_icons)}")
+        #print(f"[IconPrefilter] Filtered icons: {self.filtered_icons}")
         # if self.debug:
         #     debug_img = screenshot_color.copy()
         #     for match in matches:

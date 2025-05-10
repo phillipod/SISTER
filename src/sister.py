@@ -200,15 +200,19 @@ class IconMatchingStage(Stage):
 
     def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
         report(self.name, 0.0)
-        icon_dir_map = ctx.config.get("icon_dirs", {})
-        overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_folder", ""))
+        icon_sets = ctx.config.get("icon_sets", {})
+        ctx.overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_dir", ""))
+        #print(f"[Matching] ctx.filtered_icons: {ctx.filtered_icons}")
         matches = self.matcher.match_all(
-            ctx.screenshot,
+           ctx.screenshot,
             ctx.classification,
             ctx.slots,
-            icon_dir_map,
-            overlays,
-            threshold=self.opts.get("threshold", 0.8)
+            icon_sets,
+            ctx.overlays,
+            ctx.predicted_qualities,
+            ctx.filtered_icons,
+            ctx.found_icons,
+            threshold=self.opts.get("threshold", 0.7)
         )
         report(self.name, 1.0)
         return StageResult(ctx, matches)
@@ -278,7 +282,7 @@ def build_default_pipeline(
         IconSlotDetectionStage(config.get("iconslot", {})),
         IconPrefilterStage(config.get("prefilter", { "debug": True})),
         IconMatchingQualityDetectionStage(config.get("quality", {})),
-        #IconMatchingStage(config.get("matching", {})),
+        IconMatchingStage(config.get("matching", {})),
     ]
     return SISTER(
         stages,

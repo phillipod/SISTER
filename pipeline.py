@@ -32,7 +32,7 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'iconslot_detection':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.slots)}") # slots: {ctx.slots}")
     elif stage == 'icon_quality_detection':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)}") # predicted qualities: {ctx.predicted_qualities}")
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)} predicted qualities: {ctx.predicted_qualities}")
     else:
         print(f"[Callback] [on_stage_complete] [{stage}] complete") 
 
