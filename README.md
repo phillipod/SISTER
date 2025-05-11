@@ -67,13 +67,29 @@ python sister.py --screenshot path/to/screenshot.png
 
 ## 🧠 Pipeline Overview
 
-1. **Label Detection**: Uses EasyOCR to locate known labels like "Fore Weapon", "Shield", etc.
-2. **Build Classification**: Determines build type using a rule-based scoring engine.
-3. **Region Detection**: Applies layout-specific DSL rules to compute icon regions.
-4. **Slot Detection**: Detects potential icon slots inside regions via contour filtering.
-5. **Candidate Filtering**: Uses PHash + BK-tree to pre-filter matching icons.
-6. **SSIM Matching**: Performs high-accuracy visual matching with overlays.
-7. **Quality Matching**: Determines icon rarity (e.g., Ultra Rare) via overlay comparison.
+- **Pipeline Orchestrator** via `SISTER` class and `build_default_pipeline()`
+  - Compose stages:
+    1. Label Detection (OCR)
+    2. Build Classification (heuristic rules)
+    3. Region Detection (rule-based DSL)
+    4. Slot Detection (contour analysis)
+    5. Candidate Prefilter (PHash + BK-Tree)
+    6. Quality Overlay Detection (e.g., Rare, Epic)
+    7. Icon Matching (SSIM)
+
+- **Callback Hooks** for integration or UI:
+  - `on_progress(stage, pct, ctx)` — start/end of each stage
+  - `on_stage_complete(stage, ctx, output)` — access raw stage output
+  - `on_interactive(stage, ctx)` — inspect/adjust mid-pipeline
+  - `on_pipeline_complete(ctx, results)` — final summary
+
+- **Modular Codebase**:
+  - `LabelLocator`: OCR and label extraction
+  - `BuildClassifier`: Heuristic rules for layout type
+  - `RegionDetector`: DSL interpreter for layout rules
+  - `IconSlotDetector`: Slot extraction using entropy and standard deviation
+  - `IconMatcher`: SSIM matching pipeline with pHash prefilter
+  - `HashIndex`: Persistent hash cache using BK-tree
 
 ---
 
@@ -97,19 +113,7 @@ Build a perceptual hash index (used for pre-filtering):
 python sister.py --build-phash-cache
 ```
 
-This will overlay each icon with rarity color bands and hash the result.
-
----
-
-## 🛠 Developer Notes
-
-- All major components are modular:
-  - `LabelLocator`: OCR and label extraction
-  - `BuildClassifier`: Heuristic rules for layout type
-  - `RegionDetector`: DSL interpreter for layout rules
-  - `IconSlotDetector`: Slot extraction using entropy and standard deviation
-  - `IconMatcher`: SSIM matching pipeline with pHash prefilter
-  - `HashIndex`: Persistent hash cache using BK-tree
+This will overlay each icon with rarity color bands and hash the result along with the uncomposed icon.
 
 ---
 
