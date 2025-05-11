@@ -55,7 +55,10 @@ class HashIndex:
     """
 
     def __init__(self, base_dir, hasher, output_file="hash_index.json", recursive=True, match_size=(32, 32)):
+        #print(f"[HashIndex] base_dir: {base_dir}, hasher: {hasher}, output_file: {output_file}, recursive: {recursive}, match_size: {match_size}")
         self.base_dir = Path(base_dir)
+        #print(f"[HashIndex] base_dir: {self.base_dir}")
+        #print(f"[HashIndex] output_file: {self.base_dir / output_file}")
         self.hasher_name = None
 
         hasher_key = hasher.lower()
@@ -226,6 +229,6 @@ class HashIndex:
         resized = cv2.resize(masked, size, interpolation=cv2.INTER_AREA)
         pil_img = Image.fromarray(resized)
         target_hash = imagehash.phash(pil_img)
-        #print(f"Target hash: {target_hash}")
+        #print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
         return self.find_similar(target_hash, max_distance=max_distance, top_n=top_n)
 

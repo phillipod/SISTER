@@ -5,6 +5,8 @@ import random
 
 import json
 
+from typing import Any, Callable, Dict, List, Tuple, Optional
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -315,14 +317,14 @@ ROI_DETECTION_RULES = {
 
 class RegionDetector:
     """
-    Detects Regions of Interest (ROIs) in Star Trek Online screenshots based on detected label positions
+    Pipeline aware region detector. Detects Regions of Interest (ROIs) in Star Trek Online screenshots based on detected label positions
     and classified build types. Primarily focuses on narrowing search areas for icon detection.
 
     Attributes:
         debug (bool): If True, enables diagnostic image output.
     """
 
-    def __init__(self, debug=False):
+    def __init__(self, debug: bool = False):
         """
         Initialize the RegionDetector.
 
@@ -331,7 +333,12 @@ class RegionDetector:
         """
         self.debug = debug
 
-    def detect(self, screenshot_color, build_info, label_positions, debug_output_path=None):
+    def detect_regions(
+        self,
+        image: np.ndarray,
+        labels: Dict[str, Tuple[int, int, int, int]],
+        build_info: any = None
+    ) -> Dict[str, Tuple[int, int, int, int]]:
         """
         Main detection entry point. Based on build type, routes to appropriate detection logic.
 
@@ -344,18 +351,18 @@ class RegionDetector:
         Returns:
             dict: Mapping of label name to {'Label': <bbox>, 'Region': <roi bbox>}.
         """
-        gray = self._preprocess_grayscale(screenshot_color)
+        gray = self._preprocess_grayscale(image)
         dilated = self._apply_dilation(gray)
         contours = self._find_contours(dilated)
 
-        if self.debug and debug_output_path:
-            base, _ = os.path.splitext(debug_output_path)
-            os.makedirs(os.path.dirname(base), exist_ok=True)
-            cv2.imwrite(f"{base}_gray.png", gray)
-            cv2.imwrite(f"{base}_dilated.png", dilated)
-            debug_contours = cv2.cvtColor(dilated.copy(), cv2.COLOR_GRAY2BGR)
-            cv2.drawContours(debug_contours, contours, -1, (0, 255, 0), 1)
-            cv2.imwrite(f"{base}_contours.png", debug_contours)
+        # if self.debug and debug_output_path:
+        #     base, _ = os.path.splitext(debug_output_path)
+        #     os.makedirs(os.path.dirname(base), exist_ok=True)
+        #     cv2.imwrite(f"{base}_gray.png", gray)
+        #     cv2.imwrite(f"{base}_dilated.png", dilated)
+        #     debug_contours = cv2.cvtColor(dilated.copy(), cv2.COLOR_GRAY2BGR)
+        #     cv2.drawContours(debug_contours, contours, -1, (0, 255, 0), 1)
+        #     cv2.imwrite(f"{base}_contours.png", debug_contours)
 
         build_type = build_info.get("build_type", "Unknown")
         region_boxes = {}
@@ -374,7 +381,7 @@ class RegionDetector:
         #     return {}
 
         if build_type in ROI_DETECTION_RULES:
-            region_boxes = self.compute_regions(build_type, label_positions, contours)
+            region_boxes = self.compute_regions(build_type, labels, contours)
         else:
             logger.warning(f"Unsupported build type: {build_type}")
             return {}
@@ -382,7 +389,7 @@ class RegionDetector:
 
         merged = {}
         for label, region in region_boxes.items():
-            label_box = label_positions[label]
+            label_box = labels[label]
             merged[label] = {
                 "Label": {
                     key: [int(v[0]), int(v[1])] for key, v in label_box.items()
@@ -393,8 +400,8 @@ class RegionDetector:
                 }
             }
 
-        if self.debug and debug_output_path:
-            self._draw_debug_regions(screenshot_color, merged, debug_output_path)
+        #if self.debug and debug_output_path:
+        #    self._draw_debug_regions(image, merged, debug_output_path)
 
         return merged
 
@@ -456,13 +463,16 @@ class RegionDetector:
         Returns:
             Any: Result of the evaluation.
         """
-        if self.debug:
-            logger.debug(f"Evaluating expression: {expr} (current_label={current_label})")
+        #self.debug = True
+
+        #if self.debug:
+        logger.debug(f"Evaluating expression: {expr} (current_label={current_label})")
 
         if isinstance(expr, (int, float)):
             return expr
         if isinstance(expr, str):
             if expr in context:
+                #print(f"expr: {expr}, context: {context}")
                 val = context[expr]
                 if self.debug:
                     logger.debug(f"Resolved variable '{expr}' to {val}")
@@ -482,6 +492,7 @@ class RegionDetector:
                 label, prop = key.rsplit('.', 1)
                 if source == "label":
                     box = labels.get(label)
+                    #print(f"label: {label}, box: {box}") 
                     if not box:
                         raise ValueError(f"Unknown label reference: {label}")
                 elif source == "region":
@@ -496,6 +507,7 @@ class RegionDetector:
                     expr = f"{current_label}{expr}"
                 label, prop = expr.rsplit('.', 1)
                 box = labels.get(label)
+                #print(f"label: {label}, box: {box}") 
                 if not box and regions:
                     box = regions.get(label)
                 if not box:
@@ -506,7 +518,7 @@ class RegionDetector:
             elif prop == 'right': val = box['bottom_right'][0]
             elif prop == 'top': val = box['top_left'][1]
             elif prop == 'bottom': val = box['bottom_left'][1]
-            elif prop == 'mid_y': val = (box['top_left'][1] + box['bottom_left'][1]) // 2
+            elif prop == 'mid_y': val = (box['top_left'][1] + box['bottom_right'][1]) // 2
             else: raise ValueError(f"Unsupported property: {prop}")
 
             if self.debug:
@@ -624,7 +636,9 @@ class RegionDetector:
         context = {}
         context['regions'] = {}
         
+        #print(f"labels: {labels}")  
         for var, expr in rule.get("variables", {}).items():
+            #print(f"Computing variable '{var}'")
             try:
                 context[var] = self.evaluate_expression(expr, labels, context, contours)
             except Exception as e:
@@ -638,11 +652,14 @@ class RegionDetector:
                     if label not in labels:
                         continue
                     logger.debug(f"Computing looped region for {label}")
+                    #print(f"Computing looped region for {label}")
                     try:
                         defn = loop_cfg['loop']
+                        
                         x1 = self.evaluate_expression(defn['x1'], labels, context, contours, current_label=label, regions=context['regions'])
                         x2 = self.evaluate_expression(defn['x2'], labels, context, contours, current_label=label, regions=context['regions'])
                         y1 = self.evaluate_expression(defn['y1'], labels, context, contours, current_label=label, regions=context['regions'])
+
                         h  = self.evaluate_expression(defn['height'], labels, context, contours, current_label=label, regions=context['regions'])
                         region_box = {
                             "top_left": [int(x1), int(y1)],
@@ -690,7 +707,12 @@ class RegionDetector:
         debug_image = image.copy()
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
+        print(f"Drawing {len(regions)} regions")
+        print(f"image.shape: {image.shape}")
+        print(f"Regions: {regions}")
         for label, entry in regions.items():
+            print(f"Label: {label}")
+            print(f"Entry: {entry}")
             x1, y1 = entry["Region"]["top_left"]
             x2, y2 = entry["Region"]["bottom_right"]
             color = [random.randint(0, 255) for _ in range(3)]

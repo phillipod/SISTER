@@ -3,6 +3,7 @@ import easyocr
 import os
 import numpy as np
 from difflib import SequenceMatcher
+from typing import Dict, Tuple, Optional, List
 
 import logging
 
@@ -10,29 +11,24 @@ logger = logging.getLogger(__name__)
 
 class LabelLocator:
     """
-    Class for detecting known labels within screenshots to assist downstream build parsing.
-
-    Attributes:
-        reader (easyocr.Reader): OCR reader instance.
-        scale_x (float): Horizontal upscale factor for OCR.
-        debug (bool): If True, enables debug output.
-        allowed_labels (list): List of allowed label configurations.
+    Pipeline-aware label locator: detects allowed labels in a pre-loaded image array.
+    Returns a simple mapping from label→bbox tuples.
     """
-    
-    def __init__(self, gpu=False, debug=False):
+
+    def __init__(self, gpu: bool = False, scale_x: float = 1.25, debug: bool = False):
         """
-        Initialize the LabelLocator.
+        Initialize the Locator.
 
         Args:
             gpu (bool): Whether to use GPU for OCR.
             debug (bool): Whether to enable debug output.
         """
-        self.reader = easyocr.Reader(['en'], gpu=gpu)
-        self.scale_x = 1.25  # X-axis upscale factor, to handle certain fonts that have thin, tall characters
         self.debug = debug
+        self.reader = easyocr.Reader(['en'], gpu=gpu)
+        self.scale_x = scale_x
         self.allowed_labels = self._build_allowed_labels()
 
-    def _build_allowed_labels(self):
+    def _build_allowed_labels(self) -> list:
         """
         Build the list of allowed labels for matching.
 
@@ -85,7 +81,7 @@ class LabelLocator:
         ]
 
     @staticmethod
-    def is_single_char_off(str1, str2):
+    def is_single_char_off(str1: str, str2: str) -> bool:
         """
         Determine if two strings differ by at most one character.
 
@@ -101,7 +97,7 @@ class LabelLocator:
         return SequenceMatcher(None, str1, str2).ratio() >= 0.86
 
     @staticmethod
-    def normalize_text(text):
+    def normalize_text(text: str) -> str:
         """
         Normalize text by lowercasing and collapsing whitespace.
 
@@ -113,7 +109,12 @@ class LabelLocator:
         """
         return " ".join(text.lower().split())
 
-    def reocr_split_words(self, image, rect, expected_parts=None):
+    def reocr_split_words(
+        self,
+        image: np.ndarray,
+        rect: Tuple[int, int, int, int],
+        expected_parts: Optional[List[str]] = None
+        ) -> Dict[Tuple[int, int, int, int], str]:
         """
         Perform secondary OCR on a cropped region to split words.
 
@@ -172,7 +173,11 @@ class LabelLocator:
 
         return split_results
 
-    def filter_recognized_text(self, recognized_texts, full_image):
+    def filter_recognized_text(
+            self,
+            recognized_texts: Dict[Tuple[int, int, int, int], str],
+          full_image: np.ndarray
+        ) -> Dict[Tuple[int, int, int, int], str]:
         """
         Filter OCR recognized texts to match against allowed labels.
 
@@ -260,73 +265,52 @@ class LabelLocator:
 
         return filtered
 
-    def locate_labels(self, image_or_path, output_debug_path=None):
+
+    def locate(self, image: np.ndarray) -> Dict[str, Tuple[int, int, int, int]]:
         """
-        Locate allowed labels within a screenshot.
+        Locate allowed labels within an image array.
 
         Args:
-            image_or_path (np.array, bytes, or str): Image array, image bytes, or path to the image.
-            output_debug_path (str, optional): Path to save debug image.
+            image: np.ndarray (BGR screenshot)
 
         Returns:
-            dict: Detected labels as keys, with bounding box corners as sub-dicts.
-
-        Raises:
-            ValueError: If the image cannot be loaded.
+            dict: {label_str: (x1, y1, x2, y2)}
         """
-        input_image = None
+        # Preprocess
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray_upscaled = cv2.resize(gray, None, fx=self.scale_x, fy=1.0, interpolation=cv2.INTER_LINEAR)
+        results = self.reader.readtext(gray_upscaled, paragraph=True, height_ths=0.0)
 
-        if isinstance(image_or_path, str):
-            if not os.path.exists(image_or_path):
-                raise ValueError(f"Image path does not exist: {image_or_path}")
-            input_image = cv2.imread(image_or_path)
-            if input_image is None:
-                raise ValueError(f"Failed to load image from path: {image_or_path}")
+        recognized = {}
+        for bbox, text in results:
+            x1, y1 = bbox[0]
+            x3, y3 = bbox[2]
+            x1, y1 = int(x1 / self.scale_x), int(y1)
+            x3, y3 = int(x3 / self.scale_x), int(y3)
+            recognized[(x1, y1, x3, y3)] = text.strip()
 
-        elif isinstance(image_or_path, bytes):
-            nparr = np.frombuffer(image_or_path, np.uint8)
-            input_image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            if input_image is None:
-                raise ValueError("Failed to decode image from bytes.")
+        filtered = self.filter_recognized_text(recognized, gray_upscaled)
 
-        elif isinstance(image_or_path, np.ndarray):
-            input_image = image_or_path.copy()
+        #if self.debug:
+        #    if self.output_debug_path:
+        #        self.draw_debug_output(image, filtered, self.output_debug_path)
 
-        else:
-            raise ValueError("Invalid input type. Supported types: str (path), bytes, numpy array.")
-
-        image_gray = cv2.cvtColor(input_image, cv2.COLOR_BGR2GRAY)
-        image_upscaled = cv2.resize(image_gray, None, fx=self.scale_x, fy=1.0, interpolation=cv2.INTER_LINEAR)
-
-        results = self.reader.readtext(image_upscaled, paragraph=True, height_ths=0.0)
-        recognized_texts = {}
-        for detection in results:
-            bbox, text = detection[:2]
-            (startX, startY) = bbox[0]
-            (endX, endY) = bbox[2]
-            startX = int(startX / self.scale_x)
-            endX = int(endX / self.scale_x)
-            recognized_texts[(startX, int(startY), endX, int(endY))] = text.strip()
-
-        filtered_texts = self.filter_recognized_text(recognized_texts, image_upscaled)
-
-        if self.debug:
-            if output_debug_path:
-                self.draw_debug_output(input_image, filtered_texts, output_debug_path)
-
-        # Build formatted return structure
         label_dict = {}
-        for (x1, y1, x2, y2), label in filtered_texts.items():
+        for (x1, y1, x2, y2), label in filtered.items():
             label_dict[label] = {
                 "top_left": [int(x1), int(y1)],
                 "top_right": [int(x2), int(y1)],
                 "bottom_left": [int(x1), int(y2)],
                 "bottom_right": [int(x2), int(y2)]
             }
-
         return label_dict
 
-    def draw_debug_output(self, image, recognized_texts, output_path):
+    def draw_debug_output(
+        self,
+        image: np.ndarray,
+        recognized_texts: Dict[Tuple[int, int, int, int], str],
+        output_path: str
+    ) -> None:
         """
         Draw debug output by overlaying detected labels on the image.
 

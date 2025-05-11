@@ -12,11 +12,12 @@ from pathlib import Path
 
 from src.cargo import CargoDownloader
 from src.locator import LabelLocator
-from src.classifier import BuildClassifier
+from src.classifier import Classifier
 from src.region import RegionDetector
 from src.iconslot import IconSlotDetector
 from src.iconmatch import IconMatcher
 from src.hashindex import HashIndex
+from src.prefilter import IconPrefilter
 from src.utils.image import load_image, load_quality_overlays
 
 from log_config import setup_logging
@@ -156,19 +157,12 @@ def save_match_summary(output_dir, screenshot_path, slots, matches):
     
     matches_by_region_slot = defaultdict(lambda: defaultdict(list))
 
-    # Map each original region candidate to its index so we can group consistently
-    region_slot_index_map = {
-        region_label: {
-            tuple(slot): idx for idx, slot in enumerate(slots)
-        } for region_label, slots in slots.items()
-    }
-
     for match in matches:
         region = match["region"]
         top_left = match["top_left"]
         # Find the closest candidate region box and get its index
         candidate_idx = None
-        for box, idx in region_slot_index_map[region].items():
+        for idx, box in slots[region].items():
             x, y, w, h = box
             if x <= top_left[0] <= x + w and y <= top_left[1] <= y + h:
                 candidate_idx = idx
@@ -246,9 +240,10 @@ def main():
     screenshot = load_image(args.screenshot, resize_fullhd=not args.no_resize)
 
     locator = LabelLocator(gpu=args.gpu, debug=args.debug)
-    classifier = BuildClassifier(debug=args.debug)
+    classifier = Classifier(debug=args.debug)
     regioner = RegionDetector(debug=args.debug)
     slot_finder = IconSlotDetector(debug=args.debug)
+    prefilter = IconPrefilter(hash_index=hash_index, debug=args.debug)
     matcher = IconMatcher(hash_index=hash_index, debug=args.debug)
 
     icon_dir_map_master = build_icon_dir_map(Path(args.icons))
@@ -260,7 +255,7 @@ def main():
 
         # --- Label Location ---
         start = time.perf_counter()
-        labels = locator.locate_labels(screenshot, output_debug_path=os.path.join(args.output, "labels_debug.png") if args.debug else None)
+        labels = locator.locate(screenshot)
         timings["Label Detection"] = time.perf_counter() - start
         print(f"Found {len(labels)} labels")
 
@@ -280,12 +275,12 @@ def main():
 
         if "PC Ship Build" in build_info["build_type"] or "PC Ground Build" in build_info["build_type"] or "Console Ship Build" in build_info["build_type"] or "Console Ground Build" in build_info["build_type"]:       
             start = time.perf_counter()
-            regions = regioner.detect(screenshot, build_info, labels, debug_output_path=os.path.join(args.output, "regions_debug.png") if args.debug else None)
+            regions = regioner.detect_regions(screenshot, labels, build_info)
             timings["Region Detection"] = time.perf_counter() - start
             print(f"Found {len(regions)} regions")
 
             start = time.perf_counter()
-            slots = slot_finder.detect(screenshot, build_info, regions, debug_output_path=os.path.join(args.output, "slots_debug.png") if args.debug else None)
+            slots = slot_finder.detect_slots(screenshot, regions)
             timings["Slot Detection"] = time.perf_counter() - start
             print(f"Found {sum(len(v) for v in slots.values())} slots")
 
@@ -296,18 +291,17 @@ def main():
             }
 
             start = time.perf_counter()
+            predicted_icons = prefilter.icon_predictions(screenshot, slots, icon_dir_map)
+            timings["Icon Prefilter"] = time.perf_counter() - start
+            print(f"Found {len(predicted_icons)} icon predictions")
+
+            start = time.perf_counter()
             predicted_qualities = matcher.quality_predictions(screenshot, build_info, slots, icon_dir_map, overlays, threshold=args.threshold)
             timings["Quality Prediction"] = time.perf_counter() - start
             print(f"Found {len(predicted_qualities)} quality predictions")
 
             start = time.perf_counter()
-            predicted_icons = matcher.icon_predictions(screenshot, build_info, slots, icon_dir_map, overlays, threshold=args.threshold)
-            timings["Icon Prediction"] = time.perf_counter() - start
-            print(f"Found {len(predicted_icons)} icon predictions")
-
-
-            start = time.perf_counter()
-            matches = matcher.match_all(screenshot, build_info, slots, icon_dir_map, overlays, threshold=args.threshold)
+            matches = matcher.match_all(screenshot, build_info, slots, icon_dir_map, overlays, predicted_qualities, prefilter.filtered_icons, prefilter.found_icons, threshold=args.threshold)
             timings["Icon Matching"] = time.perf_counter() - start
             print(f"Found {len(matches)} matches")
 

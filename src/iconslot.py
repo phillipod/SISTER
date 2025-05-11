@@ -4,11 +4,13 @@ import numpy as np
 import logging
 from skimage.measure import shannon_entropy
 
+from typing import Any, Callable, Dict, List, Tuple, Optional
+
 logger = logging.getLogger(__name__)
 
 class IconSlotDetector:
     """
-    Detects icon slot candidates globally, then tags them into known regions based on region_data.
+    Pipeline aware icon slot detector. Detects icon slot candidates globally, then tags them into known regions based on region_data.
 
     Attributes:
         debug (bool): If True, enables debug output and writes annotated images.
@@ -24,7 +26,8 @@ class IconSlotDetector:
 
         self.debug = debug
 
-    def detect_inventory(self, screenshot_color, debug_output_path=None):
+    #def detect_inventory(self, screenshot_color, debug_output_path=None):
+    def detect_inventory(self, image: np.ndarray, region_bbox: Tuple[int, int, int, int]) -> List[Tuple[int, int, int, int]]:
         """
         Detect icon slot candidates globally.
 
@@ -35,10 +38,10 @@ class IconSlotDetector:
         Returns:
             list: List of (x, y, w, h) tuples.
         """
-        gray = cv2.cvtColor(screenshot_color, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         _, binary = cv2.threshold(gray, 63, 255, cv2.THRESH_BINARY)
 
-        candidates = self._find_slot_candidates(binary, screenshot_color, debug_output_path)
+        candidates = self._find_slot_candidates(binary, image)
 
         region_candidates = {
             "Inventory": []
@@ -58,53 +61,56 @@ class IconSlotDetector:
 
         return region_candidates
 
-    def detect(self, screenshot_color, build_info, region_data, debug_output_path=None):
+    #def detect(self, screenshot_color, build_info, region_data, debug_output_path=None):
+    def detect_slots(self, image: np.ndarray, region_bbox: Tuple[int, int, int, int]) -> List[Tuple[int, int, int, int]]:
         """
         Detect icon slot candidates globally and assign them to labeled regions.
 
         Args:
             screenshot_color (np.array): Full BGR screenshot.
-            build_info (dict): Build info from classifier (unused currently).
             region_data (dict): Output from RegionDetector.
             debug_output_path (str): If set, saves debug images.
 
         Returns:
             dict: Mapping of region label to list of (x, y, w, h) tuples.
         """
-        gray = cv2.cvtColor(screenshot_color, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         _, binary = cv2.threshold(gray, 63, 255, cv2.THRESH_BINARY)
 
-        candidates = self._find_slot_candidates(binary, screenshot_color, debug_output_path)
+        candidates = self._find_slot_candidates(binary, image) #, debug_output_path)
 
         # Tag into regions
-        region_candidates = {label: [] for label in region_data}
+        region_candidates = {label: [] for label in region_bbox}
         for (x, y, w, h) in candidates:
             cx, cy = x + w // 2, y + h // 2
-            for label, entry in region_data.items():
+            for label, entry in region_bbox.items():
+                #print(f"Entry: {entry}")
                 x1, y1 = entry["Region"]["top_left"]
                 x2, y2 = entry["Region"]["bottom_right"]
                 if x1 <= cx <= x2 and y1 <= cy <= y2:
+                    #print(f"Adding to {label}")
                     region_candidates[label].append((x, y, w, h))
                     break
 
         # Debug drawing
-        if self.debug and debug_output_path:
-            debug_image = screenshot_color.copy()
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            for label, boxes in region_candidates.items():
-                color = tuple(np.random.randint(50, 255, size=3).tolist())
-                for (x, y, w, h) in boxes:
-                    cv2.rectangle(debug_image, (x, y), (x + w, y + h), color, 1)
+        # if self.debug and debug_output_path:
+        #     debug_image = image.copy()
+        #     font = cv2.FONT_HERSHEY_SIMPLEX
+        #     for label, boxes in region_candidates.items():
+        #         color = tuple(np.random.randint(50, 255, size=3).tolist())
+        #         for (x, y, w, h) in boxes:
+        #             cv2.rectangle(debug_image, (x, y), (x + w, y + h), color, 1)
 
-                if label in region_data:
-                    lx, ly = region_data[label]["Label"]["top_left"]
-                    cv2.putText(debug_image, label, (lx + 5, ly + 20), font, 0.6, color, 2, cv2.LINE_AA)
+        #         if label in region_bbox:
+        #             lx, ly = region_bbox[label]["Label"]["top_left"]
+        #             cv2.putText(debug_image, label, (lx + 5, ly + 20), font, 0.6, color, 2, cv2.LINE_AA)
 
-            base, _ = os.path.splitext(debug_output_path)
-            os.makedirs(os.path.dirname(base), exist_ok=True)
-            cv2.imwrite(f"{base}_candidates.png", debug_image)
+        #     base, _ = os.path.splitext(debug_output_path)
+        #     os.makedirs(os.path.dirname(base), exist_ok=True)
+        #     cv2.imwrite(f"{base}_candidates.png", debug_image)
 
         # Do not apply normalization yet
+        
         # Convert all box values to native Python int to avoid JSON serialization issues
         region_candidates = {
             label: [tuple(int(v) for v in box) for box in boxes]
@@ -245,5 +251,6 @@ class IconSlotDetector:
         if current_row:
             rows.append(sorted(current_row, key=lambda b: b[0]))
 
-        return [box for row in rows for box in row]
+
+        return {i: box for row in rows for i, box in enumerate(row)}
 
