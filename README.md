@@ -83,14 +83,6 @@ python sister.py --screenshot path/to/screenshot.png
   - `on_interactive(stage, ctx)` — inspect/adjust mid-pipeline
   - `on_pipeline_complete(ctx, results)` — final summary
 
-- **Modular Codebase**:
-  - `LabelLocator`: OCR and label extraction
-  - `BuildClassifier`: Heuristic rules for layout type
-  - `RegionDetector`: DSL interpreter for layout rules
-  - `IconSlotDetector`: Slot extraction using entropy and standard deviation
-  - `IconMatcher`: SSIM matching pipeline with pHash prefilter
-  - `HashIndex`: Persistent hash cache using BK-tree
-
 ---
 
 ## 📥 Downloading Icons
