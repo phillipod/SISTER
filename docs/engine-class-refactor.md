@@ -1,20 +1,32 @@
-# SISTER - Engine Class Refactor
+# SISTER - Pipeline Refactor
 
-## Callbacks
+## Callbacks Overview
 
-| Event Name                   | When It Occurs                                                | Payload                                      | Emitted By Class       |     Notes
-|-----------------------------|---------------------------------------------------------------|----------------------------------------------|-------------------------|----------------
-| `on_image_loaded`           | After loading input image                                     | `{ shape, source_path }`                     | `SISTER`                |
-| `on_labels_detected`        | After OCR or label detection completes                        | `{ labels: {...} }`                          | `LabelLocator`          |
-| `on_build_classified`       | After identifying build type (e.g. ground vs space)           | `{ build_type, score }`                      | `BuildClassifier`       |
-| `on_regions_detected`       | After computing ROIs for icon slots                           | `{ regions: {...} }`                         | `RegionDetector`        |
-| `on_slots_detected`         | After detecting candidate icon slot boxes                     | `{ region: str, slots: List[Tuple] }`        | `IconSlotDetector`      |
-| `on_quality_predicted`      | After overlay prediction for each slot                        | `{ region, qualities: [...] }`               | `SSIMEngine`            |
-| `on_icon_candidates`        | After pHash filtering and candidate icon selection            | `{ region, num_filtered, best_score }`       | `SSIMEngine`            |
-| `on_icon_slot_match_complete` | After finishing all icon matching in a specific slot        | `{ region, slot_index, matches: [...] }`     | `SSIMEngine`           | 
-| `on_region_match_complete` | After finishing icon matching in a single region               | `{ region, matches: [...] }`                 | `IconMatcher`           |
-| `on_icon_match_complete`   | After icon matching for all regions completes                  | `{ matches: [...] }`                         | `SISTER`          |
-| `on_icon_match_progress`    | During SSIM matching of a single icon candidate               | `{ region, icon_name, slot_index, score }`   | `SSIMEngine`            | This could slow matching. 
-| `on_screenshot_complete`    | After full pipeline completion for one screenshot             | `{ matches: [...] }`                         | `SISTER`          |
-| `on_error`                  | On any exception                                              | `{ stage, error, traceback }`                | Any stage               |
+The SISTER pipeline exposes the following generic callbacks:
 
+| Callback Name         | Description                                    | Arguments                             | Emitted By          |
+|-----------------------|------------------------------------------------|---------------------------------------|---------------------|
+| `on_progress`         | Reports overall pipeline progress              | `percent_complete: float`             | Pipeline engine     |
+| `on_stage_complete`   | Notifies completion of each logical stage      | `stage_name: str`, `duration_ms: int` | Pipeline engine     |
+| `on_interactive`      | Allows interactive adjustment mid-pipeline     | `context: dict`                       | Interactive handler |
+| `on_pipeline_complete`| Delivers final results and summary stats       | `results: dict`, `metrics: dict`      | Pipeline engine     |
+
+## Pending Callback Extensions
+
+These hooks are pending implementation. 
+
+| Callback Name         | Description                                                          | Arguments                                  | Potential Emitted By |
+|-----------------------|----------------------------------------------------------------------|--------------------------------------------|----------------------|
+| `on_error`            | Centralized error notification for pipeline failures                 | `error: Exception`, `context: dict`        | Pipeline engine      |
+
+## Potential Callback Extensions
+
+These hooks are under consideration and have not been implemented. They may be refined or omitted for performance reasons.
+
+| Callback Name         | Description                                                          | Arguments                                  | Potential Emitted By |
+|-----------------------|----------------------------------------------------------------------|--------------------------------------------|----------------------|
+| `on_slot_ready`       | Indicates when an individual slot finishes threshold processing      | `slot_id: str`, `output: dict`             | Slot processor       |
+| `on_match_progress`   | Reports incremental matching progress within a slot                  | `slot_id: str`, `matches_found: int`       | Matcher engine       |
+| `on_region_processed` | Signals completion of region-based processing                        | `region_id: str`, `processed_count: int`   | Region handler       |
+| `on_cache_updated`    | Emits when internal caches are refreshed or invalidated              | `cache_name: str`, `new_size: int`         | Cache manager        |
+| `on_error`            | Centralized error notification for pipeline failures                 | `error: Exception`, `context: dict`        | Pipeline engine      |
