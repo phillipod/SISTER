@@ -1,6 +1,6 @@
 import logging
 import numpy as np
-from typing import Any, Callable, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +176,7 @@ class Classifier:
 
         best_match = max(scores.items(), key=lambda x: x[1])
 
-        logger.info(f"Scoring breakdown:")
+        logger.info("Scoring breakdown:")
         for build_type, score in scores.items():
             logger.info(f"  {build_type}: {score}")
 

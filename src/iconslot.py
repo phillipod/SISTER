@@ -4,7 +4,7 @@ import numpy as np
 import logging
 from skimage.measure import shannon_entropy
 
-from typing import Any, Callable, Dict, List, Tuple, Optional
+from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 

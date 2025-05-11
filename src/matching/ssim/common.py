@@ -2,10 +2,9 @@ import cv2
 import numpy as np
 from skimage.metrics import structural_similarity as ssim
 from collections import Counter
-from ...utils.image import apply_overlay, apply_mask
+from ...utils.image import apply_mask
 
 def dynamic_hamming_cutoff(scores, best_score, max_next_ranks=2, max_allowed_gap=4):
-    from collections import Counter
     freqs = Counter(scores)
     sorted_scores = sorted(freqs.items())
 

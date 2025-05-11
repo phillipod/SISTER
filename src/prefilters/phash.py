@@ -4,15 +4,11 @@ import numpy as np
 import statistics
 import traceback
 from pathlib import Path
-from multiprocessing import shared_memory
 from collections import Counter
-from pprint import pprint
 
-import sys
 
 import logging
 
-from ..utils.image import apply_overlay, apply_mask
 #from ..iconmap import IconDirectoryMap
 
 logger = logging.getLogger(__name__)
@@ -174,6 +170,6 @@ class PHashEngine:
                 logger.debug(f"Predicted {len(candidate_predictions)} icons for region '{region_label}' at slot {idx_region}.")
                 predictions.extend(candidate_predictions)
 
-        logger.info(f"Completed all candidate predictions.")
+        logger.info("Completed all candidate predictions.")
         return predictions, found_icons, filtered_icons
 

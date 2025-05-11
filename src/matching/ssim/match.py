@@ -1,8 +1,5 @@
-import os
 import cv2
 import numpy as np
-import tempfile
-from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import shared_memory
 import logging
@@ -174,7 +171,7 @@ class SSIMMatchEngine:
             shm.close()
             shm.unlink()
 
-        logger.info(f"Completed all region matches.")
+        logger.info("Completed all region matches.")
         return matches
 
     def match_single_icon(self, args):

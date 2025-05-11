@@ -18,7 +18,7 @@ The SISTER pipeline exposes the following generic callbacks:
 
 These hooks are pending implementation. 
 
-|
+
 ## Potential Callback Extensions
 
 These hooks are under consideration and have not been implemented. They may be refined or omitted for performance reasons.
@@ -29,4 +29,3 @@ These hooks are under consideration and have not been implemented. They may be r
 | `on_match_progress`   | Reports incremental matching progress within a slot                  | `slot_id: str`, `matches_found: int`       | Matcher engine       |
 | `on_region_processed` | Signals completion of region-based processing                        | `region_id: str`, `processed_count: int`   | Region handler       |
 | `on_cache_updated`    | Emits when internal caches are refreshed or invalidated              | `cache_name: str`, `new_size: int`         | Cache manager        |
-|

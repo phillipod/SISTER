@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 class SISTERError(Exception):
     """Base exception for all errors in the SISTER project."""

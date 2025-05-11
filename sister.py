@@ -1,9 +1,8 @@
 import os
 import argparse
-import json
 import time
 import traceback
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
 
 # C-ext fast-ssim

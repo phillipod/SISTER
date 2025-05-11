@@ -153,7 +153,7 @@ class LabelLocator:
             logger.debug(f"Re-OCR Split Word: '{text.strip()}' at ({sx}, {sy}, {ex}, {ey})")
 
         if expected_parts and len(split_results) > len(expected_parts):
-            logger.debug(f"Too many parts, merging extras into last expected part")
+            logger.debug("Too many parts, merging extras into last expected part")
 
             merged = []
             for i in range(len(expected_parts)):

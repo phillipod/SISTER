@@ -1,8 +1,5 @@
-import os
 import logging
-from collections import Counter
 from pathlib import Path
-import cv2
 
 # Import available engines
 from .prefilters.phash import PHashEngine

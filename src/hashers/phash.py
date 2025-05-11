@@ -3,8 +3,6 @@ from PIL import Image
 import cv2
 import numpy as np
 
-from ..utils.image import apply_mask
-
 class PHashHasher:
     """
     Computes perceptual hashes (pHash) from raw image bytes using the imagehash library.

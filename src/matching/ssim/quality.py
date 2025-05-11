@@ -1,7 +1,4 @@
-import os
-import cv2
 import numpy as np
-import tempfile
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import shared_memory
 import logging
@@ -82,6 +79,6 @@ class SSIMQualityEngine:
             shm.close()
             shm.unlink()
 
-        logger.info(f"Performed all quality predictions.")
+        logger.info("Performed all quality predictions.")
 
         return predicted_qualities_by_label
