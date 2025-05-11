@@ -56,6 +56,10 @@ def on_pipeline_complete(ctx, output):
 def on_error(err): 
     print(f"[Callback] [on_error] {err}")
 
+def on_metrics_complete(metrics): 
+    print(f"[Callback] [on_metrics] {metrics}")
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("image", help="Path to screenshot")
@@ -133,7 +137,7 @@ if __name__ == "__main__":
 
     # 3. build & run
     try:
-        pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
+        pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
         result: PipelineContext = pipeline.run(img)
     except SISTERError as e:
         print(e)

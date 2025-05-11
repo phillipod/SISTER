@@ -1,6 +1,9 @@
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple, Optional
+
+
+import time
 import numpy as np
 
 # --- Import modules ---
@@ -232,6 +235,7 @@ class SISTER:
         on_interactive: Callable[[str, PipelineContext], PipelineContext],
         on_error: Callable[[PipelineError], None],
         config: Dict[str, Any],
+        on_metrics_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
         on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
         on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None]] = None,
     ):
@@ -241,18 +245,26 @@ class SISTER:
         self.on_interactive = on_interactive
         self.on_error = on_error
 
+        self.on_metrics_complete = on_metrics_complete
+
         self.on_stage_complete = on_stage_complete
         self.on_pipeline_complete = on_pipeline_complete
 
         self.config = config
 
     def run(self, screenshot: np.ndarray) -> PipelineContext:
+        pipeline_start = time.time()
+        metrics: List[Dict[str, float]] = []
+
         ctx = PipelineContext(screenshot=screenshot, config=self.config)
         results: Dict[str, Any] = {}
 
         for stage in self.stages:
+            metric = {}
+
             # notify start
             with self._handle_errors(stage.name, ctx):
+                stage_start = time.time()
                 self.on_progress(stage.name, 0.0, ctx)
 
 
@@ -269,21 +281,33 @@ class SISTER:
             # notify completion
             with self._handle_errors(stage.name, ctx):
                 self.on_progress(stage.name, 1.0, ctx)
+                metrics.append({stage.name: time.time() - stage_start}) 
 
             # on_stage_complete hook
+            hook_start = time.time()
             with self._handle_errors(stage.name, ctx):
                 if self.on_stage_complete:
                     self.on_stage_complete(stage.name, ctx, stage_result.output)
+                    metrics.append({"Callback: " + stage.name + "_stage_complete": time.time() - hook_start})
 
             # interactive hook
+            interactive_start = time.time()
             with self._handle_errors(stage.name, ctx):
                 if stage.interactive:
                     ctx = self.on_interactive(stage.name, ctx)
-
+                    metrics.append({"Callback: " + stage.name + "_interactive": time.time() - interactive_start})
+                    
         # on_pipeline_complete hook    
         with self._handle_errors("pipeline_complete", ctx):
             if self.on_pipeline_complete:
                 self.on_pipeline_complete(ctx, results)
+                metrics.append({"Callback: pipeline_complete": time.time() - pipeline_start})
+
+        # on_metrics_complete hook
+        with self._handle_errors("metrics_complete", ctx):
+            if self.on_metrics_complete:
+
+                self.on_metrics_complete(metrics)
 
         return ctx, results
     
@@ -306,6 +330,7 @@ def build_default_pipeline(
     on_progress: Callable[[str, float, PipelineContext], None],
     on_interactive: Callable[[str, PipelineContext], PipelineContext],
     on_error: Callable[[PipelineError], None],
+    on_metrics_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
     on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
     on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None]] = None,
     config: Dict[str, Any] = {}
@@ -325,6 +350,7 @@ def build_default_pipeline(
         on_interactive,
         on_error,
         config=config,
+        on_metrics_complete=on_metrics_complete,
         on_stage_complete=on_stage_complete,
         on_pipeline_complete=on_pipeline_complete
     )
