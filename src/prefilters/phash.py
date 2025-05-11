@@ -154,12 +154,11 @@ class PHashEngine:
                         "score": info["dist"],
                         "match_threshold": int(threshold_val),
                         "region": region_label,
-                        "method": "hash",
+                        "method": "hash-phash",
                         "quality": info["quality"],
                         "quality_scale": 1.0,
                         "quality_score": 0.0,
-                        "scale": 1.0,
-                        "skipped": info["dist"] > threshold_val
+                        "scale": 1.0
                     })
 
                     filtered_slot_icons[filename] = info
