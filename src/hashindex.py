@@ -229,6 +229,6 @@ class HashIndex:
         resized = cv2.resize(masked, size, interpolation=cv2.INTER_AREA)
         pil_img = Image.fromarray(resized)
         target_hash = imagehash.phash(pil_img)
-        #print(f"Target hash: {target_hash}")
+        print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
         return self.find_similar(target_hash, max_distance=max_distance, top_n=top_n)
 

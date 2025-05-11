@@ -8,6 +8,8 @@ from multiprocessing import shared_memory
 from collections import Counter
 from pprint import pprint
 
+import sys
+
 import logging
 
 from ..utils.image import apply_overlay, apply_mask
@@ -20,10 +22,10 @@ class PHashEngine:
     Prefiltering engine using perceptual hash.
     """
 
-    def __init__(self, debug=False, icon_root=None, icon_loader=None, hash_index=None):
+    def __init__(self, debug=False, icon_root=None, hash_index=None):
         self.debug = debug
         self.icon_root = icon_root
-        self.load_icons = icon_loader
+        #self.load_icons = icon_loader
         self.hash_index = hash_index 
 
     def dynamic_hamming_score_cutoff(self, scores, best_score, max_next_ranks=2, max_allowed_gap=4):
@@ -51,7 +53,7 @@ class PHashEngine:
 
         return threshold
 
-    def icon_predictions(self, screenshot_color, build_info, icon_slots, icon_dir_map):
+    def icon_predictions(self, image, icon_slots, icon_set):
         predictions = []
         similar_icons = {}
         filtered_icons = {}
@@ -59,10 +61,11 @@ class PHashEngine:
 
 
         for region_label, candidate_regions in icon_slots.items():
-            folders = icon_dir_map.allowed_dirs(region_label)    
+            folders = icon_set.get(region_label)    
 
+            #print(f"region_label: {region_label} folders: {folders}")
             if not folders:
-                logger.warning(f"No icon directories found for region '{region_label}'")
+                print(f"No icon directories found for region '{region_label}'")
                 continue
 
             folders = [Path(f) for f in folders]
@@ -71,21 +74,29 @@ class PHashEngine:
             similar_icons[region_label] = {}
             found_icons[region_label] = {}
 
+            #print(f"candidate_regions: {candidate_regions}")
             for idx, (x, y, w, h) in candidate_regions.items():
-                logger.debug(f"Predicting icons for region '{region_label}' at slot {idx}")
+                #print(f"Predicting icons for region '{region_label}' at slot {idx}")
                 box = (x, y, w, h)
-                roi = screenshot_color[y:y+h, x:x+w]
+                roi = image[y:y+h, x:x+w]
                 found_icons[region_label][box] = {}
                 similar_icons[region_label][box] = {}
                 filtered_icons[region_label][box] = {}
 
                 try:
+                    #print(f"Hash prefiltering region '{region_label}' at {box}")
                     results = self.hash_index.find_similar_to_image(roi, max_distance=18, top_n=None, grayscale=False)
+                    #print(f"Hash prefilter complete for region '{region_label}' at {box}")
                 except Exception as e:
-                    logger.warning(f"Hash prefilter failed for region '{region_label}' at {box}: {e}")
+                    print(f"Hash prefilter failed for region '{region_label}' at {box}: {e}")
                     traceback.print_exc()
                     continue
 
+                if region_label == "Aft Weapon":
+                    print(f"results pre filter: {results}")
+#                    sys.exit(1)
+
+                #print(f"Found {len(results)} similar icons for region '{region_label}' at {box}")   
                 for rel_path, dist in results:
                     #print(f"[Prefilter] Found icon '{rel_path}' at distance {dist}")
                     if "::" in rel_path:
@@ -102,8 +113,8 @@ class PHashEngine:
 
                     #print(f"full_path: {full_path} filename: {filename} name: {name} normalized_path: {normalized_path}")
    #                 print(f"[Prefilter] Full path: {full_path}, path_part: {path_part} -> relative to hash_index.base_dir: {self.hash_index.base_dir}")
-                    base_dir = self.hash_index.base_dir.resolve()
-                    candidate = full_path.resolve()
+                    # base_dir = self.hash_index.base_dir.resolve()
+                    # candidate = full_path.resolve()
   #                  print(f"[Prefilter] Base dir: {base_dir}")
  #                   print(f"[Prefilter] Candidate dir: {candidate_dir}")
 
@@ -117,47 +128,27 @@ class PHashEngine:
                     #         break
 
                     #print(f"folders: {folders}")
-                    # allowed = False
-                    # for folder in folders:
-                    #     normalized_folder = Path(os.path.normpath(path_part)) 
+                    allowed = False
+                    for folder in folders:
+                        normalized_folder = Path(os.path.normpath(path_part)) 
 
-                    #     print(f"[Prefilter] Checking {full_path} against {self.icon_root}")
-                    #     print(Path(full_path).relative_to(self.icon_root))
-                    #     try:
-                    #         relative_folder = full_path.relative_to(self.icon_root)
-                    #         print(f"[Prefilter] Relative folder: {relative_folder}")
-                    #         if normalized_path.startswith(os.path.normpath(str(relative_folder))):
-                    #             print(f"{normalized_path} starts with {os.path.normpath(str(relative_folder))}")
-                    #             allowed = True
-                    #             break
-                    #     except ValueError:
-                    #         continue
+                     #   print(f"[Prefilter] Checking {full_path} against {self.icon_root}")
+                        # print(Path(full_path).relative_to(self.icon_root))
+                        try:
+                            relative_folder = folder.relative_to(self.icon_root)
+                      #      print(f"[Prefilter] Relative folder: {relative_folder}")
 
-                    anchored_folders = [
-                        (self.icon_root / f).resolve()
-                        for f in icon_dir_map.allowed_dirs(region_label)
-                    ]
-
-                    #print(f"[Prefilter] Anchored folders: {anchored_folders}")
-
-                    for allowed_dir in anchored_folders:
-                        if candidate.is_relative_to(allowed_dir):
-                            allowed = True
-                            break
-
-                    # for folder in folders:
-                    #     # get the icon’s subdirectory under icon_root
-                    #     rel_folder = (self.icon_root / folder).relative_to(self.icon_root)
-                    #     # compare against the normalized path_part
-                    #     if normalized_path.startswith(os.path.normpath(str(rel_folder))):
-                    #         allowed = True
-                    #         break
-
+                            if normalized_path.startswith(os.path.normpath(str(relative_folder))):
+                       #         print(f"{normalized_path} starts with {os.path.normpath(str(relative_folder))}")
+                                allowed = True
+                                break
+                        except ValueError:
+                            continue
 
                     if not allowed or not full_path.exists():
 #                        print(f"[Prefilter] Icon '{full_path}' not allowed")
                         continue
-                    # print(f"[Prefilter] Icon '{full_path}' allowed")
+                    #print(f"[Prefilter] Icon '{full_path}' allowed")
                     box_icons = found_icons[region_label][box]
                     if filename not in box_icons or box_icons[path_part]["dist"] > dist:
                         box_icons[path_part] = {
@@ -173,19 +164,22 @@ class PHashEngine:
                         #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
                         #if icon is not None:
                         #    filtered_icons[region_label][idx][filename] = icon
+                if region_label == "Aft Weapon":
+                    print(f"results post filter: {found_icons[region_label]}")
+                    sys.exit(1)
 
-        print(f"[Prefilter] Found icons: ")
-        for region_label, candidate_regions in found_icons.items():
-            print(f"[Prefilter] Region '{region_label}': \n")
-            pprint(candidate_regions, indent=4)
+        #print(f"[Prefilter] Found icons: ")
+        #for region_label, candidate_regions in found_icons.items():
+        #    print(f"[Prefilter] Region '{region_label}': \n")
+        #    pprint(candidate_regions, indent=4)
             
         # print(f"[Prefilter] Filtered icons: {filtered_icons}")
 
         # Second pass for thresholding
         for region_label, candidate_regions in icon_slots.items():
             for idx_region, (x, y, w, h) in candidate_regions.items():
-                #print(f"Running thresholding for region '{region_label}' at slot {idx_region}")
-                #print(f"Found icons: {found_icons[region_label]}")
+                print(f"Running thresholding for region '{region_label}' at slot {idx_region}")
+                print(f"Found icons: {found_icons[region_label]}")
                 candidates = found_icons[region_label].get((x, y, w, h), {})
 
                 dists = [info["dist"] for info in candidates.values()]

@@ -157,7 +157,7 @@ class IconPrefilterStage(Stage):
     def __init__(self, opts: Dict[str, Any]):
         self.opts = opts
 
-        hash_index = HashIndex(opts.get("hash_index_dir"), "phash", output_file=opts.get("hash_index_file", "hash_index.json"))
+        hash_index = HashIndex(opts.get("hash_index_dir"), "phash", match_size=opts.get("hash_max_size", (16, 16)), output_file=opts.get("hash_index_file", "hash_index.json"))
         
         self.prefilterer = IconPrefilter(
             hash_index=hash_index,
@@ -168,15 +168,17 @@ class IconPrefilterStage(Stage):
 
     def run(self, ctx: PipelineContext, report: Callable[[str, float], None]) -> StageResult:
         report(self.name, 0.0)
+        
         icon_sets = ctx.config.get("icon_sets", {})
+        icon_set = icon_sets[ctx.classification['icon_set']]
+
         #print(f"[Prefilter] Icon sets: {icon_sets}")
         #print(f"[Prefilter] Overlays: {overlays}")
         
         ctx.predicted_icons = self.prefilterer.icon_predictions(
             ctx.screenshot,
-            ctx.classification,
             ctx.slots,
-            icon_sets
+            icon_set
         )
         ctx.found_icons = self.prefilterer.found_icons
         ctx.filtered_icons = self.prefilterer.filtered_icons

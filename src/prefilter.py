@@ -38,40 +38,51 @@ class IconPrefilter:
 
         self.engine = ENGINE_CLASSES[self.engine_type](
             debug=debug,
-            icon_loader=self.load_icons,
             hash_index=hash_index,
             icon_root=icon_root
         )
         logger.info(f"[IconPrefilter] Using engine: {self.engine_type}")
 
-    def load_icons(self, icon_folders):
-        icons = {}
-        for folder in icon_folders:
-            if not os.path.exists(folder):
-                continue
-            for filename in os.listdir(folder):
-                if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    path = os.path.join(folder, filename)
-                    icon = cv2.imread(path, cv2.IMREAD_COLOR)
-                    if icon is not None:
-                        icons[filename] = icon
-        return icons
+    # def load_icons(self, icon_folders):
+    #     icons = {}
+    #     for folder in icon_folders:
+    #         if not os.path.exists(folder):
+    #             continue
+    #         for filename in os.listdir(folder):
+    #             if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+    #                 path = os.path.join(folder, filename)
+    #                 icon = cv2.imread(path, cv2.IMREAD_COLOR)
+    #                 if icon is not None:
+    #                     icons[filename] = icon
+    #     return icons
 
-    def icon_predictions(self, screenshot_color, build_info, icon_slots, icon_dir_map):
+    def icon_predictions(self, image, icon_slots, icon_set):
         """
         Run icon matching using the selected engine.
         """
         self.predicted_icons, self.found_icons, self.filtered_icons = self.engine.icon_predictions(
-            screenshot_color,
-            build_info,
+            image,
             icon_slots,
-            icon_dir_map
+            icon_set
         )
 
         logger.info(f"[IconPrefilter] Total icon predictions: {len(self.predicted_icons)}")
 
         #print(f"[IconPrefilter] Total icon predictions: {len(self.predicted_icons)}")
         #print(f"[IconPrefilter] Filtered icons: {self.filtered_icons}")
+        #print(f"[IconPrefilter] Found icons: {self.found_icons}")
+
+        i=0
+        for region_label, region in self.found_icons.items():
+            logger.info(f"[IconPrefilter] Found icons for region '{region_label}': {len(self.found_icons[region_label])}") 
+            for box, icons in region.items():
+                logger.info(f"[IconPrefilter] Found icons for region '{region_label}' at slot {box}: {len(icons)}")
+                i+=len(icons)
+
+        logger.info(f"[IconPrefilter] Total found icons: {i}")
+        for region_label, region in self.filtered_icons.items():
+            logger.info(f"[IconPrefilter] Filtered icons for region '{region_label}': {len(self.filtered_icons[region_label])}")
+
         # if self.debug:
         #     debug_img = screenshot_color.copy()
         #     for match in matches:

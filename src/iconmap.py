@@ -16,12 +16,12 @@ class IconDirectoryMap:
         # Normalize and resolve all folder paths once up-front
         self._mapping: Dict[str, Dict[str, List[Path]]] = {}
 
-        print(f"Resolving {len(nested)} icon_sets"
-              f" (nested: {nested})")
+        #print(f"Resolving {len(nested)} icon_sets"
+        #      f" (nested: {nested})")
         for set_name, regions in nested.items():
             resolved: Dict[str, List[Path]] = {}
-            print(f"Resolving {len(regions)} folders for icon_set '{set_name}'"
-                  f" (regions: {regions})")
+        #    print(f"Resolving {len(regions)} folders for icon_set '{set_name}'"
+        #          f" (regions: {regions})")
 
             for region_label, folders in regions.items():
                 resolved[region_label] = [Path(p).resolve() for p in folders]
