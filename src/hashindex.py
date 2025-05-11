@@ -11,6 +11,7 @@ from imagehash import hex_to_hash
 import cv2
 import numpy as np
 
+from .exceptions import HashIndexError, HashIndexNotFoundError
 from .hashers.phash import PHashHasher
 from .utils.image import apply_overlay, apply_mask  # Adjust if needed
 
@@ -78,17 +79,22 @@ class HashIndex:
     def _load_cache(self):
         if not self.output_file.exists():
             logger.info(f"No existing hash index at {self.output_file}")
-            return
+            raise HashIndexNotFoundError(f"No existing hash index at {self.output_file}")
 
         try:
             with open(self.output_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
+            
             cached_hasher = data.get("hasher")
+            
             if cached_hasher != self.hasher_name:
                 logger.info(f"Hash method changed from '{cached_hasher}' to '{self.hasher_name}'; discarding old index.")
                 return
+            
             self.hashes = data.get("hashes", {})
+            
             logger.verbose(f"Loaded hash index from {self.output_file} with {len(self.hashes)} entries.")
+            
             for rel_path, entry in self.hashes.items():
                 try:
                     hash_obj = hex_to_hash(entry["hash"])
@@ -97,8 +103,10 @@ class HashIndex:
                     #self.bktree_map[hash_obj] = rel_path
                 except Exception as e:
                     logger.warning(f"Failed to rehydrate BKTree for {rel_path}: {e}")
+                    raise HashIndexError(f"Failed to rehydrate BKTree for {rel_path}: {e}") from e
         except Exception as e:
             logger.warning(f"Failed to load hash index: {e}")
+            raise HashIndexError("Failed to load hash index") from e
 
     def _save_cache(self):
         try:
@@ -112,6 +120,7 @@ class HashIndex:
             logger.info(f"Saved hash index to {self.output_file} with {len(self.hashes)} entries.")
         except Exception as e:
             logger.error(f"Failed to write hash index: {e}")
+            raise HashIndexError("Failed to write hash index") from e
 
 
     def build_or_update(self):
@@ -138,6 +147,7 @@ class HashIndex:
 
             except Exception as e:
                 logger.warning(f"Failed to hash {rel_path}: {e}")
+                raise HashIndexError(f"Failed to hash {rel_path}: {e}") from e
 
         stale_keys = set(self.hashes.keys()) - found_files
         for key in stale_keys:
@@ -181,6 +191,7 @@ class HashIndex:
                     logger.verbose(f"Hashed {key}")
             except Exception as e:
                 logger.warning(f"Failed to hash overlays for {rel_path}: {e}")
+                raise HashIndexError(f"Failed to hash overlays for {rel_path}: {e}") from e
 
         all_existing = set(self.hashes.keys())
         stale_keys = all_existing - found_keys

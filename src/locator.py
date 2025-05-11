@@ -320,10 +320,13 @@ class LabelLocator:
             output_path (str): Path to save output image.
         """
         debug_image = image.copy()
+
         for (startX, startY, endX, endY), text in recognized_texts.items():
             cv2.rectangle(debug_image, (startX, startY), (endX, endY), (0, 255, 0), 2)
             cv2.putText(debug_image, text, (startX, max(0, startY - 5)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         cv2.imwrite(output_path, debug_image)
+        
         logger.info(f"Debug output saved to {output_path}")

@@ -8,8 +8,11 @@ from pprint import pprint
 
 
 from src.sister import build_default_pipeline, PipelineContext
+from src.exceptions import SISTERError, PipelineError, StageError
 from src.hashindex import HashIndex
 from log_config import setup_logging
+
+import traceback
 
 setup_logging()
 
@@ -129,8 +132,13 @@ if __name__ == "__main__":
     }
 
     # 3. build & run
-    pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
-    result: PipelineContext = pipeline.run(img)
+    try:
+        pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
+        result: PipelineContext = pipeline.run(img)
+    except SISTERError as e:
+        print(e)
+        import sys
+        sys.exit(1)
 
     # 4. dump
     #for slot, match in result.icon_matches.items():

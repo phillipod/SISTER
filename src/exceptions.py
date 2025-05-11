@@ -31,7 +31,7 @@ class RegionDetectionError(StageError):
     """Raised when the region detector stage fails."""
     pass
 
-class RegionDetectionComputeRegionError(StageError):
+class RegionDetectionComputeRegionError(RegionDetectionError):
     """Raised when the region detector stage fails with a compute_region error."""
     pass
 
@@ -59,7 +59,11 @@ class HashIndexError(DomainError):
     """Raised for failures in the hash index subsystem."""
     pass
 
-class PhashError(DomainError):
+class HashIndexNotFoundError(HashIndexError):
+    """Raised when the hash index file cannot be found."""
+    pass
+
+class PHashError(DomainError):
     """Raised for failures in perceptual hashing operations."""
     pass
 
@@ -85,7 +89,7 @@ __all__ = [
     "CargoError",
     "DomainError",
     "HashIndexError",
-    "PhashError",
+    "PHashError",
     "SSIMError",
     "ImageProcessingError",
 ]
