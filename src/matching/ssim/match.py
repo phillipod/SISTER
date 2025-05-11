@@ -7,8 +7,8 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import shared_memory
 import logging
 
-from .ssim_common import multi_scale_match
-from ..utils.image import apply_overlay
+from .common import multi_scale_match
+from ...utils.image import apply_overlay
 
 logger = logging.getLogger(__name__)
 

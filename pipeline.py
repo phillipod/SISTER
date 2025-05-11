@@ -9,7 +9,6 @@ from pprint import pprint
 
 from src.sister import build_default_pipeline, PipelineContext
 from src.hashindex import HashIndex
-from src.iconmap import IconDirectoryMap
 from log_config import setup_logging
 
 setup_logging()

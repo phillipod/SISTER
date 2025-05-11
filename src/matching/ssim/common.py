@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from skimage.metrics import structural_similarity as ssim
 from collections import Counter
-from ..utils.image import apply_overlay, apply_mask
+from ...utils.image import apply_overlay, apply_mask
 
 def dynamic_hamming_cutoff(scores, best_score, max_next_ranks=2, max_allowed_gap=4):
     from collections import Counter
@@ -30,7 +30,7 @@ def dynamic_hamming_cutoff(scores, best_score, max_next_ranks=2, max_allowed_gap
 
     return threshold
 
-def identify_overlay(region_crop, overlays, step=1, scales=np.linspace(0.6, 1.0, 40)):
+def identify_overlay(region_crop, overlays, step=1, scales=np.linspace(0.6, 0.8, 20)):
     if "common" in overlays:
         base_overlay = overlays["common"]
         oh, ow = base_overlay.shape[:2]

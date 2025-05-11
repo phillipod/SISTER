@@ -4,7 +4,7 @@ from collections import Counter
 import cv2
 
 # Import available engines
-from .engines.ssim import SSIMEngine
+from .matching.ssim import SSIMEngine
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class IconMatcher:
 
     def load_quality_overlays(self, overlay_folder):
         overlays = {}
-        for name in ["common.png", "uncommon.png", "rare.png", "very rare.png", "ultra rare.png", "epic.png"]:
+        for name in ["common.png", "uncommon.png", "very rare.png", "ultra rare.png", "epic.png"]:
             path = os.path.join(overlay_folder, name)
             if os.path.exists(path):
                 overlay = cv2.imread(path, cv2.IMREAD_UNCHANGED)

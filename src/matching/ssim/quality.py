@@ -6,7 +6,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import shared_memory
 import logging
 
-from .ssim_common import identify_overlay
+from .common import identify_overlay
 
 logger = logging.getLogger(__name__)
 

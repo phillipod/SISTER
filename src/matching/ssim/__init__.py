@@ -1,5 +1,5 @@
-from .ssim_quality import SSIMQualityEngine
-from .ssim_match import SSIMMatchEngine
+from .quality import SSIMQualityEngine
+from .match import SSIMMatchEngine
 
 class SSIMEngine:
     def __init__(self, debug=False, icon_loader=None, overlay_loader=None, hash_index=None):
