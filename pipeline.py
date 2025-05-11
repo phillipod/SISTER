@@ -39,7 +39,7 @@ def on_stage_complete(stage, ctx, output):
         #pprint(ctx.matches, indent=4)
     elif stage == 'icon_prefilter':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_icons)} matches")
-        pprint(ctx.predicted_icons, indent=4)
+        #pprint(ctx.predicted_icons, indent=4)
     else:
         print(f"[Callback] [on_stage_complete] [{stage}] complete") 
 
@@ -80,12 +80,13 @@ if __name__ == "__main__":
             "icon_root": icon_root,
             "hash_index_dir": icon_root,
             "hash_index_file": "hash_index.json",
+            "hash_max_size": (16, 16),
         },
 
         "icon_dir": args.icons,
         "overlay_dir": args.overlays,
 
-        "icon_sets": IconDirectoryMap({
+        "icon_sets": {
             "ship": {
                 "Fore Weapon": [icon_root / 'space/weapons/fore', icon_root / 'space/weapons/unrestricted'],
                 "Aft Weapon": [icon_root / 'space/weapons/aft', icon_root / 'space/weapons/unrestricted'],
@@ -121,7 +122,7 @@ if __name__ == "__main__":
                 "Devices": [icon_root / 'ground/device'],
                 "Weapon": [icon_root / 'ground/weapon'],
             }
-        }),
+        },
     }
 
     # 3. build & run
