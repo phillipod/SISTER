@@ -8,7 +8,7 @@ from typing import Dict, Tuple
 
 import logging
 
-from .exceptions import RegionDetectionError, RegionDetectionComputeRegionError
+from .exceptions import RegionDetectionError, RegionDetectionComputeRegionError, RegionDetectionExpressionParseError, RegionDetectionExpressionEvaluationError
 
 logger = logging.getLogger(__name__)
 
@@ -465,149 +465,153 @@ class RegionDetector:
         Returns:
             Any: Result of the evaluation.
         """
-        #self.debug = True
-
-        #if self.debug:
-        logger.debug(f"Evaluating expression: {expr} (current_label={current_label})")
-
-        if isinstance(expr, (int, float)):
-            return expr
-        if isinstance(expr, str):
-            if expr in context:
-                #print(f"expr: {expr}, context: {context}")
-                val = context[expr]
-                if self.debug:
-                    logger.debug(f"Resolved variable '{expr}' to {val}")
-                return val
-            if expr.isdigit():
-                return int(expr)
-            try:
-                return float(expr)
-            except ValueError:
-                pass
-
-            # Explicit source (label: or region:)
-            if ':' in expr:
-                source, key = expr.split(':', 1)
-                if key.startswith(".") and current_label:
-                    key = f"{current_label}.{key[1:]}"
-                label, prop = key.rsplit('.', 1)
-                if source == "label":
+        try:
+            #self.debug = True
+    
+            #if self.debug:
+            logger.debug(f"Evaluating expression: {expr} (current_label={current_label})")
+    
+            if isinstance(expr, (int, float)):
+                return expr
+            if isinstance(expr, str):
+                if expr in context:
+                    #print(f"expr: {expr}, context: {context}")
+                    val = context[expr]
+                    if self.debug:
+                        logger.debug(f"Resolved variable '{expr}' to {val}")
+                    return val
+                if expr.isdigit():
+                    return int(expr)
+                try:
+                    return float(expr)
+                except ValueError:
+                    pass
+    
+                # Explicit source (label: or region:)
+                if ':' in expr:
+                    source, key = expr.split(':', 1)
+                    if key.startswith(".") and current_label:
+                        key = f"{current_label}.{key[1:]}"
+                    label, prop = key.rsplit('.', 1)
+                    if source == "label":
+                        box = labels.get(label)
+                        #print(f"label: {label}, box: {box}") 
+                        if not box:
+                            raise ValueError(f"Unknown label reference: {label}")
+                    elif source == "region":
+                        box = context.get('regions', {}).get(label)
+                        if not box:
+                            raise ValueError(f"Unknown region reference: {label}")
+                    else:
+                        raise ValueError(f"Unknown source prefix: {source}")
+                else:
+                    # Implicit, default to labels then regions
+                    if expr.startswith(".") and current_label:
+                        expr = f"{current_label}{expr}"
+                    label, prop = expr.rsplit('.', 1)
                     box = labels.get(label)
                     #print(f"label: {label}, box: {box}") 
+                    if not box and regions:
+                        box = regions.get(label)
                     if not box:
-                        raise ValueError(f"Unknown label reference: {label}")
-                elif source == "region":
-                    box = context.get('regions', {}).get(label)
-                    if not box:
-                        raise ValueError(f"Unknown region reference: {label}")
-                else:
-                    raise ValueError(f"Unknown source prefix: {source}")
-            else:
-                # Implicit, default to labels then regions
-                if expr.startswith(".") and current_label:
-                    expr = f"{current_label}{expr}"
-                label, prop = expr.rsplit('.', 1)
-                box = labels.get(label)
-                #print(f"label: {label}, box: {box}") 
-                if not box and regions:
-                    box = regions.get(label)
-                if not box:
-                    raise ValueError(f"Unknown reference: {expr}")
-
-            val = None
-            if prop == 'left': val = box['top_left'][0]
-            elif prop == 'right': val = box['bottom_right'][0]
-            elif prop == 'top': val = box['top_left'][1]
-            elif prop == 'bottom': val = box['bottom_left'][1]
-            elif prop == 'mid_y': val = (box['top_left'][1] + box['bottom_right'][1]) // 2
-            else: raise ValueError(f"Unsupported property: {prop}")
-
-            if self.debug:
-                logger.debug(f"Resolved '{expr}' to {val}")
-            return val
-
-        if isinstance(expr, dict):
-            if 'add' in expr:
-                values = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['add']]
-                result = sum(values)
+                        raise ValueError(f"Unknown reference: {expr}")
+    
+                val = None
+                if prop == 'left': val = box['top_left'][0]
+                elif prop == 'right': val = box['bottom_right'][0]
+                elif prop == 'top': val = box['top_left'][1]
+                elif prop == 'bottom': val = box['bottom_left'][1]
+                elif prop == 'mid_y': val = (box['top_left'][1] + box['bottom_right'][1]) // 2
+                else: raise ValueError(f"Unsupported property: {prop}")
+    
                 if self.debug:
-                    logger.debug(f"add {values} = {result}")
-                return result
-            if 'subtract' in expr:
-                values = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['subtract']]
-                result = values[0] - sum(values[1:])
-                if self.debug:
-                    logger.debug(f"subtract {values} = {result}")
-                return result
-            if 'divide' in expr:
-                a, b = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['divide']]
-                result = a // b if isinstance(a, int) and isinstance(b, int) else a / b
-                if self.debug:
-                    logger.debug(f"divide {a} / {b} = {result}")
-                return result
-            if 'multiply' in expr:
-                result = 1
-                values = []
-                for v in expr['multiply']:
-                    val = self.evaluate_expression(v, labels, context, contours, current_label, regions)
-                    values.append(val)
-                    result *= val
-                if self.debug:
-                    logger.debug(f"multiply {values} = {result}")
-                return result
-            if 'midpoint' in expr:
-                a, b = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['midpoint']]
-                result = (a + b) // 2
-                if self.debug:
-                    logger.debug(f"midpoint of {a} and {b} = {result}")
-                return result
-            if 'distance' in expr:
-                a, b = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['distance']]
-                result = abs(a - b)
-                if self.debug:
-                    logger.debug(f"distance between {a} and {b} = {result}")
-                return result
-            if 'first_of' in expr:
-                for key in expr['first_of']:
-                    try:
-                        result = self.evaluate_expression(key, labels, context, contours, current_label, regions)
-                        if self.debug:
-                            logger.debug(f"first_of picked {key} = {result}")
-                        return result
-                    except Exception:
-                        continue
-                raise ValueError(f"No valid option found in first_of: {expr['first_of']}")
-            if 'contour_right_of' in expr and contours is not None:
-                label, y_ref = expr['contour_right_of']
-                y_value = self.evaluate_expression(y_ref, labels, context, contours, current_label, regions)
-                label_box = labels[label]
-                base_right = label_box['top_right'][0]
-                max_right = base_right
-                for cnt in contours:
-                    x, y, w, h = cv2.boundingRect(cnt)
-                    if y <= y_value <= y + h and x > base_right:
-                        max_right = max(max_right, x + w)
-                if self.debug:
-                    logger.debug(f"contour_right_of for {label} at y={y_value} = {max_right}")
-                return max_right
-            if 'maximum_of' in expr:
-                values = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['maximum_of']]
-                result = max(values)
-                if self.debug:
-                    logger.debug(f"maximum_of {values} = {result}")
-                return result
-            if 'minimum_of' in expr:
-                values = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['minimum_of']]
-                result = min(values)
-                if self.debug:
-                    logger.debug(f"minimum_of {values} = {result}")
-                return result
-
-            raise ValueError(f"Unsupported expression: {expr}")
-
-        raise TypeError(f"Unsupported type: {type(expr)}")
-
+                    logger.debug(f"Resolved '{expr}' to {val}")
+                return val
+    
+            if isinstance(expr, dict):
+                if 'add' in expr:
+                    values = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['add']]
+                    result = sum(values)
+                    if self.debug:
+                        logger.debug(f"add {values} = {result}")
+                    return result
+                if 'subtract' in expr:
+                    values = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['subtract']]
+                    result = values[0] - sum(values[1:])
+                    if self.debug:
+                        logger.debug(f"subtract {values} = {result}")
+                    return result
+                if 'divide' in expr:
+                    a, b = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['divide']]
+                    result = a // b if isinstance(a, int) and isinstance(b, int) else a / b
+                    if self.debug:
+                        logger.debug(f"divide {a} / {b} = {result}")
+                    return result
+                if 'multiply' in expr:
+                    result = 1
+                    values = []
+                    for v in expr['multiply']:
+                        val = self.evaluate_expression(v, labels, context, contours, current_label, regions)
+                        values.append(val)
+                        result *= val
+                    if self.debug:
+                        logger.debug(f"multiply {values} = {result}")
+                    return result
+                if 'midpoint' in expr:
+                    a, b = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['midpoint']]
+                    result = (a + b) // 2
+                    if self.debug:
+                        logger.debug(f"midpoint of {a} and {b} = {result}")
+                    return result
+                if 'distance' in expr:
+                    a, b = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['distance']]
+                    result = abs(a - b)
+                    if self.debug:
+                        logger.debug(f"distance between {a} and {b} = {result}")
+                    return result
+                if 'first_of' in expr:
+                    for key in expr['first_of']:
+                        try:
+                            result = self.evaluate_expression(key, labels, context, contours, current_label, regions)
+                            if self.debug:
+                                logger.debug(f"first_of picked {key} = {result}")
+                            return result
+                        except Exception:
+                            continue
+                    raise ValueError(f"No valid option found in first_of: {expr['first_of']}")
+                if 'contour_right_of' in expr and contours is not None:
+                    label, y_ref = expr['contour_right_of']
+                    y_value = self.evaluate_expression(y_ref, labels, context, contours, current_label, regions)
+                    label_box = labels[label]
+                    base_right = label_box['top_right'][0]
+                    max_right = base_right
+                    for cnt in contours:
+                        x, y, w, h = cv2.boundingRect(cnt)
+                        if y <= y_value <= y + h and x > base_right:
+                            max_right = max(max_right, x + w)
+                    if self.debug:
+                        logger.debug(f"contour_right_of for {label} at y={y_value} = {max_right}")
+                    return max_right
+                if 'maximum_of' in expr:
+                    values = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['maximum_of']]
+                    result = max(values)
+                    if self.debug:
+                        logger.debug(f"maximum_of {values} = {result}")
+                    return result
+                if 'minimum_of' in expr:
+                    values = [self.evaluate_expression(v, labels, context, contours, current_label, regions) for v in expr['minimum_of']]
+                    result = min(values)
+                    if self.debug:
+                        logger.debug(f"minimum_of {values} = {result}")
+                    return result
+    
+                raise ValueError(f"Unsupported expression: {expr}")
+    
+            raise TypeError(f"Unsupported type: {type(expr)}")
+        except ValueError as e:
+            raise RegionDetectionExpressionParseError(f"Parsing error in expression '{expr}': {e}") from e
+        except Exception as e:
+            raise RegionDetectionExpressionEvaluationError(f"Evaluation error in expression '{expr}': {e}") from e
 
     def compute_regions(self, build_type, labels, contours=None):
         """

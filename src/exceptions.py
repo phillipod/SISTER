@@ -35,6 +35,14 @@ class RegionDetectionComputeRegionError(RegionDetectionError):
     """Raised when the region detector stage fails with a compute_region error."""
     pass
 
+class RegionDetectionExpressionParseError(RegionDetectionComputeRegionError):
+    """Raised when the region detector stage fails with an expression parse error."""
+    pass
+
+class RegionDetectionExpressionEvaluationError(RegionDetectionComputeRegionError):
+    """Raised when the region detector stage fails with an expression evaluation error."""
+    pass
+
 class IconSlotError(StageError):
     """Raised when the icon slot detection stage fails."""
     pass
