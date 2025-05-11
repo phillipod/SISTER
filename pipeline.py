@@ -49,6 +49,10 @@ def on_interactive(stage, ctx): return ctx  # no-op
 def on_pipeline_complete(ctx, output): 
     print(f"[Callback] [on_pipeline_complete] Pipeline is complete.") # Output: {output}")
 
+
+def on_error(err): 
+    print(f"[Callback] [on_error] {err}")
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("image", help="Path to screenshot")
@@ -125,7 +129,7 @@ if __name__ == "__main__":
     }
 
     # 3. build & run
-    pipeline = build_default_pipeline(on_progress, on_interactive, config=config, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
+    pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
     result: PipelineContext = pipeline.run(img)
 
     # 4. dump

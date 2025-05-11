@@ -1,8 +1,11 @@
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple, Optional
 import numpy as np
 
 # --- Import modules ---
+from src.exceptions import *
+
 from src.locator import LabelLocator
 from src.classifier import Classifier
 from src.region import RegionDetector
@@ -227,15 +230,19 @@ class SISTER:
         stages: List[Stage],
         on_progress: Callable[[str, float, PipelineContext], None],
         on_interactive: Callable[[str, PipelineContext], PipelineContext],
+        on_error: Callable[[PipelineError], None],
         config: Dict[str, Any],
         on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
-        on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None]] = None
+        on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None]] = None,
     ):
         self.stages = stages
+
         self.on_progress = on_progress
         self.on_interactive = on_interactive
         self.on_stage_complete = on_stage_complete
         self.on_pipeline_complete = on_pipeline_complete
+        self.on_error = on_error
+
         self.config = config
 
     def run(self, screenshot: np.ndarray) -> PipelineContext:
@@ -244,35 +251,53 @@ class SISTER:
 
         for stage in self.stages:
             # notify start
-            self.on_progress(stage.name, 0.0, ctx)
-            stage_result = stage.run(
-                ctx,
-                lambda pct, name=stage.name: self.on_progress(name, pct, ctx)
-            )
-            # update context and results
-            ctx = stage_result.context
-            results[stage.name] = stage_result.output
+            with self._handle_errors(stage.name, ctx):
+                self.on_progress(stage.name, 0.0, ctx)
+                stage_result = stage.run(
+                    ctx,
+                    lambda pct, name=stage.name: self.on_progress(name, pct, ctx)
+                )
+                # update context and results
+                ctx = stage_result.context
+                results[stage.name] = stage_result.output
 
-            # notify completion
-            self.on_progress(stage.name, 1.0, ctx)
+                # notify completion
+                self.on_progress(stage.name, 1.0, ctx)
 
-            # on_stage_complete hook
-            if self.on_stage_complete:
-                self.on_stage_complete(stage.name, ctx, stage_result.output)
+                # on_stage_complete hook
+                if self.on_stage_complete:
+                    self.on_stage_complete(stage.name, ctx, stage_result.output)
 
-            # interactive hook
-            if stage.interactive:
-                ctx = self.on_interactive(stage.name, ctx)
+                # interactive hook
+                if stage.interactive:
+                    ctx = self.on_interactive(stage.name, ctx)
 
         # on_pipeline_complete hook    
-        if self.on_pipeline_complete:
-            self.on_pipeline_complete(ctx, results)
+        with self._handle_errors("pipeline_complete", ctx):
+            if self.on_pipeline_complete:
+                self.on_pipeline_complete(ctx, results)
 
         return ctx, results
+    
+    @contextmanager
+    def _handle_errors(self, stage_name: str, ctx: PipelineContext):
+        try:
+            yield
+        except Exception as e:
+            err = PipelineError(stage_name, e, ctx)
+            if self.on_error:
+                try:
+                    self.on_error(err)
+                except Exception as hook_exc:
+                    logging.error(f"on_error hook failed: {hook_exc}")
+            else:
+                # no on_error -> re-raise so non-pipeline callers still see it
+                raise
 
 def build_default_pipeline(
     on_progress: Callable[[str, float, PipelineContext], None],
     on_interactive: Callable[[str, PipelineContext], PipelineContext],
+    on_error: Callable[[PipelineError], None],
     on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
     on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None]] = None,
     config: Dict[str, Any] = {}
@@ -290,6 +315,7 @@ def build_default_pipeline(
         stages,
         on_progress,
         on_interactive,
+        on_error,
         config=config,
         on_stage_complete=on_stage_complete,
         on_pipeline_complete=on_pipeline_complete

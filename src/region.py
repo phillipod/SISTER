@@ -9,6 +9,8 @@ from typing import Any, Callable, Dict, List, Tuple, Optional
 
 import logging
 
+from .exceptions import RegionDetectionError, RegionDetectionComputeRegionError
+
 logger = logging.getLogger(__name__)
 
 """
@@ -384,6 +386,7 @@ class RegionDetector:
             region_boxes = self.compute_regions(build_type, labels, contours)
         else:
             logger.warning(f"Unsupported build type: {build_type}")
+            raise RegionDetectionError(f"Unsupported build type: {build_type}")
             return {}
 
 
@@ -642,7 +645,8 @@ class RegionDetector:
             try:
                 context[var] = self.evaluate_expression(expr, labels, context, contours)
             except Exception as e:
-                logger.warning(f"Failed to compute variable '{var}': {e}")
+                #logger.warning(f"Failed to compute variable '{var}': {e}")
+                raise RegionDetectionComputeRegionError(f"Failed to compute variable [{build_type}]::'{var}': {e}") from e
 
         regions = {}
 
@@ -668,7 +672,8 @@ class RegionDetector:
                         context['regions'][label] = region_box
                         regions[label] = region_box
                     except Exception as e:
-                        logger.warning(f"Failed to compute looped region for {label}: {e}")
+                        #logger.warning(f"Failed to compute looped region for {label}: {e}")
+                        raise RegionDetectionComputeRegionError(f"Failed to compute looped region [{build_type}]::'{label}': {e}") from e
 
         if 'regions' in rule:
             for entry in rule['regions']:
@@ -688,7 +693,8 @@ class RegionDetector:
                         "bottom_right": [int(x2), int(y1 + h)]
                     }
                 except Exception as e:
-                    logger.warning(f"Failed to compute region for {label}: {e}")
+                    #logger.warning(f"Failed to compute region for {label}: {e}")
+                    raise RegionDetectionComputeRegionError(f"Failed to compute region [{build_type}]::'{label}': {e}") from e
 
         return context['regions']
 
