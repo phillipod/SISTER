@@ -239,9 +239,10 @@ class SISTER:
 
         self.on_progress = on_progress
         self.on_interactive = on_interactive
+        self.on_error = on_error
+
         self.on_stage_complete = on_stage_complete
         self.on_pipeline_complete = on_pipeline_complete
-        self.on_error = on_error
 
         self.config = config
 
@@ -253,6 +254,10 @@ class SISTER:
             # notify start
             with self._handle_errors(stage.name, ctx):
                 self.on_progress(stage.name, 0.0, ctx)
+
+
+            # run stage
+            with self._handle_errors(stage.name, ctx):
                 stage_result = stage.run(
                     ctx,
                     lambda pct, name=stage.name: self.on_progress(name, pct, ctx)
@@ -261,14 +266,17 @@ class SISTER:
                 ctx = stage_result.context
                 results[stage.name] = stage_result.output
 
-                # notify completion
+            # notify completion
+            with self._handle_errors(stage.name, ctx):
                 self.on_progress(stage.name, 1.0, ctx)
 
-                # on_stage_complete hook
+            # on_stage_complete hook
+            with self._handle_errors(stage.name, ctx):
                 if self.on_stage_complete:
                     self.on_stage_complete(stage.name, ctx, stage_result.output)
 
-                # interactive hook
+            # interactive hook
+            with self._handle_errors(stage.name, ctx):
                 if stage.interactive:
                     ctx = self.on_interactive(stage.name, ctx)
 
