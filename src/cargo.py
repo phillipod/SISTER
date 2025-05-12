@@ -182,10 +182,12 @@ class CargoDownloader:
                 response = requests.get(url, timeout=10)
                 response.raise_for_status()
                 batch = response.json()
-            except Exception as e:
-                raise CargoDownloadError(f"Network error downloading {cargo_type}") from e
             except (ValueError, json.JSONDecodeError) as e:
                 raise CargoError(f"Invalid JSON for {cargo_type}") from e
+            except Exception as e:
+                raise CargoDownloadError(
+                    f"Network error downloading {cargo_type}"
+                ) from e
 
             if not batch:
                 break
@@ -237,6 +239,10 @@ class CargoDownloader:
             raise CargoCacheIOError(f"Cache file not found for {cargo_type}") from e
         except json.JSONDecodeError as e:
             raise CargoCacheIOError(f"Cache file corrupted for {cargo_type}") from e
+        except (OSError, Exception) as e:
+            raise CargoCacheIOError(
+                f"Failed to read cache file for {cargo_type}"
+            ) from e
 
     def get_unique_equipment_types(self):
         """
@@ -299,8 +305,15 @@ class CargoDownloader:
 
         with cache_lock:
             if image_cache_path.exists():
-                with image_cache_path.open("r", encoding="utf-8") as f:
-                    cache_entries = json.load(f)
+                # with image_cache_path.open("r", encoding="utf-8") as f:
+                #    cache_entries = json.load(f)
+                try:
+                    with image_cache_path.open("r", encoding="utf-8") as f:
+                        cache_entries = json.load(f)
+                except (OSError, json.JSONDecodeError) as e:
+                    # either unreadable or invalid JSON
+                    raise CargoCacheIOError("Failed to read icon metadata cache") from e
+
             else:
                 cache_entries = []
 
@@ -352,8 +365,12 @@ class CargoDownloader:
             try:
                 response = requests.get(url)
                 if response.ok:
-                    with open(dest_path, "wb") as f:
-                        f.write(response.content)
+                    try:
+                        with open(dest_path, "wb") as f:
+                            f.write(response.content)
+                    except Exception as e:
+                        raise CargoCacheIOError(f"Failed to write {filename}") from e
+
                     logger.verbose(f"  [Downloaded] {filename}")
                 else:
                     logger.warning(f"  [Failed] {filename} ({response.status_code})")
@@ -391,5 +408,5 @@ class CargoDownloader:
         try:
             with cache_path.open("w", encoding="utf-8") as f:
                 json.dump(entries, f, ensure_ascii=False, indent=2)
-        except OSError as e:
+        except Exception as e:
             raise CargoCacheIOError("Failed to write icon cache") from e
