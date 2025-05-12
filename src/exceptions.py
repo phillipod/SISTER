@@ -59,6 +59,10 @@ class CargoError(StageError):
     """Raised when the cargo (asset loading) stage fails."""
     pass
 
+class CargoCacheIOError(CargoError):
+    """Raised when cargo cache I/O fails."""
+    pass
+
 class DomainError(SISTERError):
     """Base class for domain-specific or utility errors."""
     pass
@@ -88,10 +92,16 @@ __all__ = [
     "SISTERError",
     "PipelineError",
     "StageError",
+
+    "CargoError",
     "LocatorError",
     "ClassificationError",
     "RegionDetectionError",
+    "RegionDetectionComputeRegionError",
+    "RegionDetectionExpressionParseError",
+    "RegionDetectionExpressionEvaluationError",
     "IconSlotError",
+    "PrefilterError",    
     "IconMatchError",
     "PrefilterError",
     "CargoError",
@@ -100,4 +110,5 @@ __all__ = [
     "PHashError",
     "SSIMError",
     "ImageProcessingError",
+    
 ]

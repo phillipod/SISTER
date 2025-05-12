@@ -7,6 +7,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import requests
 
+from .exceptions import CargoError, CargoCacheIOError
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
@@ -164,11 +166,17 @@ class CargoDownloader:
         offset = 0
         while True:
             url = self.build_url(cargo_type, offset)
-            response = requests.get(url)
-            if not response.ok:
-                raise Exception(f"Failed to download {cargo_type} at offset {offset}: {response.status_code}")
+            batch = None
 
-            batch = response.json()
+            try:
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+                batch = response.json()
+            except requests.RequestException as e:
+                raise CargoError(f"Network error downloading {cargo_type}") from e
+            except (ValueError, json.JSONDecodeError) as e:
+                raise CargoError(f"Invalid JSON for {cargo_type}") from e
+
             if not batch:
                 break
 
@@ -209,8 +217,16 @@ class CargoDownloader:
         path = self.cache_file(cargo_type)
         if not path.exists():
             raise FileNotFoundError(f"No cached file found for {cargo_type}")
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        # with open(path, 'r', encoding='utf-8') as f:
+        #     return json.load(f)
+        
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError as e:
+            raise CargoCacheIOError(f"Cache file not found for {cargo_type}") from e
+        except json.JSONDecodeError as e:
+            raise CargoCacheIOError(f"Cache file corrupted for {cargo_type}") from e
 
     def get_unique_equipment_types(self):
         """
@@ -345,5 +361,8 @@ class CargoDownloader:
             cache_path (Path): Path to the icon cache file.
             entries (list): Metadata entries to write.
         """
-        with cache_path.open('w', encoding='utf-8') as f:
-            json.dump(entries, f, ensure_ascii=False, indent=2)
+        try:
+            with cache_path.open('w', encoding='utf-8') as f:
+                json.dump(entries, f, ensure_ascii=False, indent=2)
+        except OSError as e:
+            raise CargoCacheIOError("Failed to write icon cache") from e
