@@ -25,6 +25,10 @@ def on_progress(stage, pct, ctx):
     elif stage == 'classifier':
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.classification}%")
 
+
+def on_stage_start(stage, ctx): 
+    print(f"[Callback] [on_stage_start] [{stage}]")
+
 def on_stage_complete(stage, ctx, output):
     if stage == 'label_locator':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.labels)} labels")
@@ -50,7 +54,10 @@ def on_interactive(stage, ctx): return ctx  # no-op
 
 
 def on_pipeline_complete(ctx, output): 
-    print(f"[Callback] [on_pipeline_complete] Pipeline is complete.") # Output: {output}")
+    print(f"[Callback] [on_pipeline_complete] Pipeline is complete.")
+    #print(f"[Callback] [on_pipeline_complete] Output: {ctx}")
+    print(f"[Callback] [on_pipeline_complete] Output: {ctx.matches}")
+    print(f"[Callback] [on_pipeline_complete] Predicted: {ctx.predicted_icons}")
 
 
 def on_error(err): 
@@ -137,7 +144,7 @@ if __name__ == "__main__":
 
     # 3. build & run
     try:
-        pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
+        pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
         result: PipelineContext = pipeline.run(img)
     except SISTERError as e:
         print(e)

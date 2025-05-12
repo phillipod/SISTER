@@ -6,6 +6,7 @@ import traceback
 from pathlib import Path
 from collections import Counter
 
+from ..exceptions import PrefilterError
 
 import logging
 
@@ -78,10 +79,8 @@ class PHashEngine:
                 try:
                     results = self.hash_index.find_similar_to_image(roi, max_distance=18, top_n=None, grayscale=False)
                 except Exception as e:
-                    logger.warning(f"Hash prefilter failed for region '{region_label}' at {box}: {e}")
-                    traceback.print_exc()
-                    continue
-
+                    raise PrefilterError(f"Hash prefilter failed for region '{region_label}' at {box}: {e}") from e
+                    
                 for rel_path, dist in results:
                     if "::" in rel_path:
                         path_part, quality = rel_path.split("::", 1)
@@ -115,10 +114,13 @@ class PHashEngine:
                             "name": name,
                         }
 
-                    if filename not in filtered_icons[region_label]:
-                        icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
-                        if icon is not None:
-                            filtered_icons[region_label][filename] = icon
+                    try:
+                        if filename not in filtered_icons[region_label]:
+                            icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
+                            if icon is not None:
+                                filtered_icons[region_label][filename] = icon
+                    except Exception as e:
+                        raise PrefilterError(f"Hash prefilter failed for region '{region_label}' at {box}: {e}") from e
 
         for region_label, candidate_regions in icon_slots.items():
             for idx_region in candidate_regions:
@@ -160,12 +162,16 @@ class PHashEngine:
                     filtered_slot_icons[filename] = info
 
                 found_icons[region_label][(x, y, w, h)] = filtered_slot_icons
-                for filename in filtered_slot_icons:
-                    if filename not in filtered_icons[region_label]:
-                        full_path = self.hash_index.base_dir / filename
-                        icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
-                        if icon is not None:
-                            filtered_icons[region_label][filename] = icon
+                
+                try:
+                    for filename in filtered_slot_icons:
+                        if filename not in filtered_icons[region_label]:
+                            full_path = self.hash_index.base_dir / filename
+                            icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
+                            if icon is not None:
+                                filtered_icons[region_label][filename] = icon
+                except Exception as e:
+                    raise PrefilterError(f"Hash prefilter failed for region '{region_label}' at {box}: {e}") from e
 
                 logger.debug(f"Predicted {len(candidate_predictions)} icons for region '{region_label}' at slot {idx_region}.")
                 predictions.extend(candidate_predictions)

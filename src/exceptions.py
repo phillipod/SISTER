@@ -87,6 +87,9 @@ class ImageProcessingError(DomainError):
     """Raised for general image I/O or processing failures."""
     pass
 
+class ImageNotFoundError(ImageProcessingError):
+    """Raised when an image cannot be found."""
+    pass
 
 __all__ = [
     "SISTERError",

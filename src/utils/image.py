@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 
+from ..exceptions import ImageProcessingError, ImageNotFoundError
 
 #try:
 #    from .c_ext.fastssim import fast_ssim as ssim
@@ -25,22 +26,24 @@ def load_image(image_or_path, resize_fullhd=False):
     """
     if isinstance(image_or_path, str):
         if not os.path.exists(image_or_path):
-            raise ValueError(f"Image path does not exist: {image_or_path}")
-        image = cv2.imread(image_or_path)
-        if image is None:
-            raise ValueError(f"Failed to load image from path: {image_or_path}")
+            raise ImageNotFoundError(f"Image path does not exist: {image_or_path}")
+        
+        try:
+            image = cv2.imread(image_or_path)
+        except Exception as e:
+            raise ImageProcessingError(f"Failed to load image from path: {image_or_path}") from e
 
     elif isinstance(image_or_path, bytes):
-        nparr = np.frombuffer(image_or_path, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if image is None:
-            raise ValueError("Failed to decode image from bytes.")
+        try:
+            nparr = np.frombuffer(image_or_path, np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        except Exception as e:
+            raise ImageProcessingError("Failed to decode image from bytes.") from e
 
     elif isinstance(image_or_path, np.ndarray):
         image = image_or_path.copy()
-
     else:
-        raise ValueError("Unsupported input type. Use str, bytes, or numpy array.")
+        raise ImageProcessingError("Unsupported input type. Use str, bytes, or numpy array.")
 
     if resize_fullhd:
         image = resize_to_max_fullhd(image)
@@ -57,13 +60,17 @@ def load_quality_overlays(overlay_folder):
     for filename in filenames:
         path = os.path.join(overlay_folder, filename)
         if not os.path.exists(path):
-            print(f"[WARNING] Overlay not found: {filename}")
+            logger.warning(f"Overlay not found: {filename}")
             continue
 
-        overlay = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-        if overlay is None or overlay.shape[2] != 4:
-            print(f"[WARNING] Skipping {filename}: not a valid 4-channel PNG.")
-            continue
+        overlay = None
+        try:
+            overlay = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+            if overlay is None or overlay.shape[2] != 4:
+                logger.warning(f"Skipping {filename}: not a valid 4-channel PNG.")
+                continue
+        except Exception as e:
+            raise ImageProcessingError(f"Failed to load overlay from path: {path}") from e
 
         key = filename.rsplit(".", 1)[0]  # remove ".png"
         overlays[key] = overlay
@@ -95,7 +102,12 @@ def resize_to_max_fullhd(image, max_width=1920, max_height=1080):
     new_w = int(w * scale)
     new_h = int(h * scale)
 
-    return cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    try:
+        image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    except Exception as e:
+        raise ImageProcessingError("Failed to resize image.") from e
+    
+    return image
 
 def apply_overlay(template_color, overlay):
     """

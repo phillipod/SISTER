@@ -63,10 +63,12 @@ class HashIndex:
         self.hasher_name = None
 
         hasher_key = hasher.lower()
-        if hasher_key not in HASHER_FACTORY:
-            raise ValueError(f"Unknown hasher '{hasher_key}'. Available: {list(HASHER_FACTORY.keys())}")
-        self.hasher = HASHER_FACTORY[hasher_key]()
-        self.hasher_name = hasher_key
+
+        try:
+            self.hasher = HASHER_FACTORY[hasher_key]()
+            self.hasher_name = hasher_key
+        except KeyError as e:
+            raise HashIndexError(f"Unknown hasher '{hasher_key}'") from e
 
         self.output_file = self.base_dir / output_file
         self.recursive = recursive
@@ -225,21 +227,26 @@ class HashIndex:
             list of (rel_path, distance): Paths relative to the base dir, sorted by increasing distance.
         """
         if roi_bgr is None or roi_bgr.size == 0:
-            raise ValueError("ROI image is empty or invalid")
+            raise HashIndexError("ROI image is empty or invalid")
 
         if size is None:
             size = self.match_size
 
-        rgb = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2RGB)
+        try:
+            rgb = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2RGB)
 
-        masked = apply_mask(rgb)
+            masked = apply_mask(rgb)
 
-        if grayscale:
-            masked = cv2.cvtColor(masked, cv2.COLOR_BGR2GRAY)
+            if grayscale:
+                masked = cv2.cvtColor(masked, cv2.COLOR_BGR2GRAY)
 
-        resized = cv2.resize(masked, size, interpolation=cv2.INTER_AREA)
-        pil_img = Image.fromarray(resized)
-        target_hash = imagehash.phash(pil_img)
+            resized = cv2.resize(masked, size, interpolation=cv2.INTER_AREA)
+            pil_img = Image.fromarray(resized)
+            target_hash = imagehash.phash(pil_img)
+            pil_img.close()
+        except (Exception) as e:
+            raise HashIndexFindError("Failed to prepare image for hashing") from e
+            
         #print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
         return self.find_similar(target_hash, max_distance=max_distance, top_n=top_n)
 

@@ -27,17 +27,21 @@ class IconPrefilter:
         self.icon_root = Path(icon_root) if icon_root else None
         self.found_icons = None
         self.filtered_icons = None
-        
-        self.engine_type = engine_type.lower()
+               
+        engine_key = engine_type.lower()
 
-        if self.engine_type not in ENGINE_CLASSES:
-            raise ValueError(f"Unsupported engine type: '{engine_type}'. Supported: {list(ENGINE_CLASSES.keys())}")
+        try:
+            self.engine = ENGINE_CLASSES[engine_key](
+                debug=debug,
+                hash_index=hash_index,
+                icon_root=icon_root
+            )
 
-        self.engine = ENGINE_CLASSES[self.engine_type](
-            debug=debug,
-            hash_index=hash_index,
-            icon_root=icon_root
-        )
+            self.engine_type = engine_key
+        except KeyError as e:
+            raise HashIndexError(f"Unknown hasher '{hasher_key}'") from e
+
+
         logger.info(f"[IconPrefilter] Using engine: {self.engine_type}")
 
     # def load_icons(self, icon_folders):
@@ -71,9 +75,8 @@ class IconPrefilter:
 
         i=0
         for region_label, region in self.found_icons.items():
-            logger.info(f"[IconPrefilter] Found icons for region '{region_label}': {len(self.found_icons[region_label])}") 
-            for box, icons in region.items():
-                logger.info(f"[IconPrefilter] Found icons for region '{region_label}' at slot {box}: {len(icons)}")
+            for idx, (box, icons) in enumerate(region.items()):
+                logger.info(f"[IconPrefilter] Found {len(icons)} icons for region '{region_label}' at slot {idx}")
                 i+=len(icons)
 
         logger.info(f"[IconPrefilter] Total found icons: {i}")

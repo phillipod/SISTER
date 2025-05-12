@@ -236,6 +236,7 @@ class SISTER:
         on_error: Callable[[PipelineError], None],
         config: Dict[str, Any],
         on_metrics_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
+        on_stage_start: Optional[Callable[[str, PipelineContext], None]] = None,
         on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
         on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None]] = None,
     ):
@@ -247,6 +248,7 @@ class SISTER:
 
         self.on_metrics_complete = on_metrics_complete
 
+        self.on_stage_start = on_stage_start
         self.on_stage_complete = on_stage_complete
         self.on_pipeline_complete = on_pipeline_complete
 
@@ -266,7 +268,9 @@ class SISTER:
             with self._handle_errors(stage.name, ctx):
                 stage_start = time.time()
                 self.on_progress(stage.name, 0.0, ctx)
-
+               
+                if (self.on_stage_start):
+                    self.on_stage_start(stage.name, ctx)
 
             # run stage
             with self._handle_errors(stage.name, ctx):
@@ -331,6 +335,7 @@ def build_default_pipeline(
     on_interactive: Callable[[str, PipelineContext], PipelineContext],
     on_error: Callable[[PipelineError], None],
     on_metrics_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
+    on_stage_start: Optional[Callable[[str, PipelineContext, Any], None]] = None,
     on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
     on_pipeline_complete: Optional[Callable[[PipelineContext, Dict[str, Any]], None]] = None,
     config: Dict[str, Any] = {}
@@ -351,6 +356,7 @@ def build_default_pipeline(
         on_error,
         config=config,
         on_metrics_complete=on_metrics_complete,
+        on_stage_start=on_stage_start,
         on_stage_complete=on_stage_complete,
         on_pipeline_complete=on_pipeline_complete
     )
