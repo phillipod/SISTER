@@ -323,6 +323,8 @@ class SISTER:
             Callable[[PipelineContext, Dict[str, Any], Dict[str, Any]], None]
         ] = None,
     ):
+        self.metrics: Dict[str, Dict[str, float]] = {}
+
         self.stages = stages
 
         self.on_progress = on_progress
@@ -337,9 +339,19 @@ class SISTER:
 
         self.config = config
 
+    def start_metric(self, name: str) -> None:
+        self.metrics[name] = {
+            "start": time.time(),
+        }
+
+    def end_metric(self, name: str) -> None:
+        self.metrics[name]["end"] = time.time()
+
+    def get_metrics(self) -> List[Dict[str, float]]:
+        return [{"name": name, "duration": metric["end"] - metric["start"]} for name, metric in self.metrics.items()]
+
     def run(self, screenshot: np.ndarray) -> PipelineContext:
         pipeline_start = time.time()
-        metrics: List[Dict[str, float]] = []
 
         ctx = PipelineContext(screenshot=screenshot, config=self.config)
         results: Dict[str, Any] = {}
@@ -349,7 +361,7 @@ class SISTER:
 
             # notify start
             with self._handle_errors(stage.name, ctx):
-                stage_start = time.time()
+                self.start_metric(stage.name)
                 self.on_progress(stage.name, 0.0, ctx)
 
                 if self.on_stage_start:
@@ -367,50 +379,35 @@ class SISTER:
             # notify completion
             with self._handle_errors(stage.name, ctx):
                 self.on_progress(stage.name, 1.0, ctx)
-                metrics.append({stage.name: time.time() - stage_start})
+                self.end_metric(stage.name)
 
             # on_stage_complete hook
-            hook_start = time.time()
+            self.start_metric(stage.name + "_stage_complete")
             with self._handle_errors(stage.name, ctx):
                 if self.on_stage_complete:
                     self.on_stage_complete(stage.name, ctx, stage_result.output)
-                    metrics.append(
-                        {
-                            "Callback: "
-                            + stage.name
-                            + "_stage_complete": time.time()
-                            - hook_start
-                        }
-                    )
+            self.end_metric(stage.name + "_stage_complete")
 
             # interactive hook
-            interactive_start = time.time()
+            self.start_metric(stage.name + "_interactive")
             with self._handle_errors(stage.name, ctx):
                 if stage.interactive:
                     ctx = self.on_interactive(stage.name, ctx)
-                    metrics.append(
-                        {
-                            "Callback: "
-                            + stage.name
-                            + "_interactive": time.time()
-                            - interactive_start
-                        }
-                    )
+            self.end_metric(stage.name + "_interactive")
 
         # on_pipeline_complete hook
+        self.start_metric("pipeline_complete")
         with self._handle_errors("pipeline_complete", ctx):
             if self.on_pipeline_complete:
                 self.on_pipeline_complete(
                     ctx, ctx.output if ctx.output else {}, results
                 )
-                metrics.append(
-                    {"Callback: pipeline_complete": time.time() - pipeline_start}
-                )
+        self.end_metric("pipeline_complete")
 
         # on_metrics_complete hook
         with self._handle_errors("metrics_complete", ctx):
             if self.on_metrics_complete:
-                self.on_metrics_complete(metrics)
+                self.on_metrics_complete(self.get_metrics())
 
         return ctx, results
 
