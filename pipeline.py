@@ -49,10 +49,13 @@ def on_stage_complete(stage, ctx, output):
         return
     elif stage == 'icon_matching':
         print(f"[Callback] [on_stage_complete] [{stage}] ") #Found {len(ctx.matches)} matches") # 
-        #return
+        return
     elif stage == 'icon_prefilter':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_icons)} matches")
-        #return
+        return
+    elif stage == 'output_transformation':
+        print(f"[Callback] [on_stage_complete] [{stage}]")
+        return
     else:
         print(f"[Callback] [on_stage_complete] [{stage}] complete") 
     
@@ -64,13 +67,13 @@ def on_stage_complete(stage, ctx, output):
 def on_interactive(stage, ctx): return ctx  # no-op
 
 
-def on_pipeline_complete(ctx, output): 
+def on_pipeline_complete(ctx, output, all_results): 
     print(f"[Callback] [on_pipeline_complete] Pipeline is complete.")
     #print(f"[Callback] [on_pipeline_complete] Output: {ctx}")
-    return
-    print(f"[Callback] [on_pipeline_complete] Output: {ctx.matches}")
-    print(f"[Callback] [on_pipeline_complete] Predicted: {ctx.predicted_icons}")
 
+    print(f"[Callback] [on_pipeline_complete] Pretty output: ")
+    pprint(output['matches'])
+    #pprint(output['predicted_qualities'])
 
 def on_error(err): 
     print(f"[Callback] [on_error] {err}")

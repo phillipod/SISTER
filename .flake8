@@ -1,0 +1,28 @@
+[flake8]
+# Maximum line length (aligns with Black’s default)
+max-line-length = 88
+
+# Ignore these (E203 & W503 play badly with Black’s formatting)
+extend-ignore = E203, W503
+
+# Exclude files/folders that aren’t source-controlled code
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    docs,
+    log,
+    output,
+    .venv,
+    venv,
+    env,
+    *.egg-info
+
+# Plugins: B = bugbear, C4 = comprehensions, D = docstrings
+# (install flake8-bugbear, flake8-comprehensions, flake8-docstrings)
+extend-select = B,B9,C4,D
+
+# Allow missing docstrings in your test scripts
+per-file-ignores =
+    test/*.py: D101,D102,D103
