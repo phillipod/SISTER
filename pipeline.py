@@ -1,6 +1,7 @@
 # run_pipeline.py
 import argparse
 import cv2
+import traceback
 
 from pathlib import Path
 
@@ -32,22 +33,32 @@ def on_stage_start(stage, ctx):
 def on_stage_complete(stage, ctx, output):
     if stage == 'label_locator':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.labels)} labels")
-    elif stage == 'region_detector':
+        return;
+    elif stage == 'region_detection':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.regions)} regions")
+        return;
+        print(f"[Callback] [on_stage_complete] [{stage}] Regions: {ctx.regions}")
     elif stage == 'classifier':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.classification)} matches")   
+        return;
     elif stage == 'iconslot_detection':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.slots)}") # slots: {ctx.slots}")
-    # elif stage == 'icon_quality_detection':
-    #     print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)} predicted qualities: {ctx.predicted_qualities}")
+        return
+    elif stage == 'icon_quality_detection':
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)}")
+        return
     elif stage == 'icon_matching':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.matches)} matches") # 
-        #pprint(ctx.matches, indent=4)
+        print(f"[Callback] [on_stage_complete] [{stage}] ") #Found {len(ctx.matches)} matches") # 
+        #return
     elif stage == 'icon_prefilter':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_icons)} matches")
-        #pprint(ctx.predicted_icons, indent=4)
+        #return
     else:
         print(f"[Callback] [on_stage_complete] [{stage}] complete") 
+    
+    #print(f"[Callback] [on_stage_complete] [{stage}] Output: {output}")
+    print(f"[Callback] [on_stage_complete] [{stage}] Pretty output: ")
+    pprint(output)
 
 
 def on_interactive(stage, ctx): return ctx  # no-op
@@ -56,12 +67,14 @@ def on_interactive(stage, ctx): return ctx  # no-op
 def on_pipeline_complete(ctx, output): 
     print(f"[Callback] [on_pipeline_complete] Pipeline is complete.")
     #print(f"[Callback] [on_pipeline_complete] Output: {ctx}")
+    return
     print(f"[Callback] [on_pipeline_complete] Output: {ctx.matches}")
     print(f"[Callback] [on_pipeline_complete] Predicted: {ctx.predicted_icons}")
 
 
 def on_error(err): 
     print(f"[Callback] [on_error] {err}")
+    traceback.print_exc()
 
 def on_metrics_complete(metrics): 
     print(f"[Callback] [on_metrics] {metrics}")

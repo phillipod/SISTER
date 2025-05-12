@@ -92,9 +92,19 @@ class IconMatcher:
             threshold,
         )
 
-        logger.info(f"[IconMatcher] Total matches: {len(matches)}")
+        match_count = 0
+        methods = {}
+        for region in matches.keys():
+            for slot in matches[region].keys():
+                match_count += len(matches[region][slot])
+                for candidate in matches[region][slot]:
+                    method = candidate["method"]
+                    methods[candidate["method"]] = (
+                        methods.get(candidate["method"], 0) + 1
+                    )
 
-        methods = Counter(match["method"] for match in matches)
+        logger.info(f"[IconMatcher] Total matches: {match_count}")
+
         for method, count in methods.items():
             logger.info(f"Summary: {count} matches via {method}")
 

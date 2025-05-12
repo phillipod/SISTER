@@ -7,6 +7,8 @@ import logging
 from .common import multi_scale_match
 from ...utils.image import apply_overlay
 
+from ...exceptions import SISTERError
+
 logger = logging.getLogger(__name__)
 
 
@@ -37,7 +39,7 @@ class SSIMMatchEngine:
         """
         Run icon matching using the selected engine.
         """
-        matches = []
+        matches = {}
         matched_indexes_global = set()
         matched_icon_slot_pairs = set()
 
@@ -78,6 +80,9 @@ class SSIMMatchEngine:
             args_list = []
 
             for region_label, candidate_regions in icon_slots.items():
+                if region_label not in matches:
+                    matches[region_label] = {}
+
                 # print(f"Processing region '{region_label}'")
                 # print(f"filtered_icons: {filtered_icons}")
                 region_filtered_icons = filtered_icons.get(region_label, {})
@@ -96,6 +101,12 @@ class SSIMMatchEngine:
                     )
 
                 for idx_region, (x, y, w, h) in candidate_regions.items():
+                    if idx_region not in matches[region_label]:
+                        matches[region_label][idx_region] = []
+
+                    print(
+                        f"Matching {len(region_filtered_icons)} icons against {len(candidate_regions)} candidates for label '{region_label}' at slot {idx_region}"
+                    )
                     region_key = (x, y, w, h)
                     icons_for_slot = found_icons[region_label].get(region_key, {})
                     # print(f"icons_for_slot: {icons_for_slot}")
@@ -141,6 +152,7 @@ class SSIMMatchEngine:
                         )
                         args_list.append(args)
 
+            print(f"Number of args: {len(args_list)}")
             future_to_args = {}
             with ProcessPoolExecutor() as executor:
                 futures = [
@@ -152,89 +164,96 @@ class SSIMMatchEngine:
                 for future in as_completed(future_to_args):
                     args = future_to_args[future]
                     result, matched, slot_idx = future.result()
-                    matches.extend(result)
+
+                    # print(f"args: {args}")
+                    for item in result:
+                        matches[item["region"]][item["slot"]].append(item)
+
                     for idx in matched:
                         matched_indexes_global.add((args[-2], args[1]))
                         matched_icon_slot_pairs.add((args[-2], args[0], idx))
 
-            # print(f"Number of matches: {len(matches)}")
+            print(f"Number of matches: {len(matches)}")
 
             # Fallback pass
-            fallback_args_list = []
-            for region_label, candidate_regions in icon_slots.items():
-                region_filtered_icons = filtered_icons.get(region_label, {})
-                if not region_filtered_icons:
-                    continue
+            # fallback_args_list = []
+            # for region_label, candidate_regions in icon_slots.items():
+            #     region_filtered_icons = filtered_icons.get(region_label, {})
+            #     if not region_filtered_icons:
+            #         continue
 
-                predicted_qualities = predicted_qualities_by_region.get(
-                    region_label, []
-                )
+            #     predicted_qualities = predicted_qualities_by_region.get(
+            #         region_label, []
+            #     )
 
-                for original_idx, (x, y, w, h) in candidate_regions.items():
-                    # original_idx = candidate_regions.index((x, y, w, h))
-                    if (region_label, original_idx) in matched_indexes_global:
-                        continue
+            #     for original_idx, (x, y, w, h) in candidate_regions.items():
+            #         # original_idx = candidate_regions.index((x, y, w, h))
+            #         if (region_label, original_idx) in matched_indexes_global:
+            #             continue
 
-                    region_key = (x, y, w, h)
-                    icons_for_slot = found_icons[region_label].get(region_key, {})
-                    if not icons_for_slot:
-                        continue
+            #         region_key = (x, y, w, h)
+            #         icons_for_slot = found_icons[region_label].get(region_key, {})
+            #         if not icons_for_slot:
+            #             continue
 
-                    fallback_icons = list(icons_for_slot.keys())
-                    if not fallback_icons:
-                        continue
+            #         fallback_icons = list(icons_for_slot.keys())
+            #         if not fallback_icons:
+            #             continue
 
-                    logger.info(
-                        f"Fallback matching {len(fallback_icons)} icons against 1 candidate for label '{region_label}' at slot {original_idx}"
-                    )
+            #         logger.info(
+            #             f"Fallback matching {len(fallback_icons)} icons against 1 candidate for label '{region_label}' at slot {original_idx}"
+            #         )
 
-                    for idx_icon, name in enumerate(fallback_icons, 1):
-                        if (
-                            region_label,
-                            name,
-                            original_idx,
-                        ) in matched_icon_slot_pairs:
-                            continue
-                        #                        print(f"name: {name} region_label: {region_label} original_idx: {original_idx} ")
-                        icon_color = region_filtered_icons.get(name)
-                        if icon_color is None:
-                            # print(f"icon_color is None")
-                            continue
+            #         for idx_icon, name in enumerate(fallback_icons, 1):
+            #             if (
+            #                 region_label,
+            #                 name,
+            #                 original_idx,
+            #             ) in matched_icon_slot_pairs:
+            #                 continue
+            #             #                        print(f"name: {name} region_label: {region_label} original_idx: {original_idx} ")
+            #             icon_color = region_filtered_icons.get(name)
+            #             if icon_color is None:
+            #                 # print(f"icon_color is None")
+            #                 continue
 
-                        args = (
-                            name,
-                            original_idx,
-                            icon_color,
-                            shm_name,
-                            shape,
-                            dtype,
-                            [(x, y, w, h)],
-                            [predicted_qualities[original_idx]],
-                            threshold,
-                            overlays,
-                            idx_icon,
-                            len(fallback_icons),
-                            region_label,
-                            True,
-                        )
-                        fallback_args_list.append(args)
+            #             args = (
+            #                 name,
+            #                 original_idx,
+            #                 icon_color,
+            #                 shm_name,
+            #                 shape,
+            #                 dtype,
+            #                 [(x, y, w, h)],
+            #                 [predicted_qualities[original_idx]],
+            #                 threshold,
+            #                 overlays,
+            #                 idx_icon,
+            #                 len(fallback_icons),
+            #                 region_label,
+            #                 True,
+            #             )
+            #             fallback_args_list.append(args)
 
-            future_to_args = {}
-            with ProcessPoolExecutor() as executor:
-                futures = [
-                    executor.submit(self.match_single_icon, args)
-                    for args in fallback_args_list
-                ]
-                for future, args in zip(futures, fallback_args_list):
-                    future_to_args[future] = args
+            # future_to_args = {}
+            # with ProcessPoolExecutor() as executor:
+            #     futures = [
+            #         executor.submit(self.match_single_icon, args)
+            #         for args in fallback_args_list
+            #     ]
+            #     for future, args in zip(futures, fallback_args_list):
+            #         future_to_args[future] = args
 
-                for future in as_completed(future_to_args):
-                    args = future_to_args[future]
-                    result, matched, slot_idx = future.result()
-                    matches.extend(result)
-                    for idx in matched:
-                        matched_indexes_global.add((args[-2], args[1]))
-                        matched_icon_slot_pairs.add((args[-2], args[0], idx))
+            #     for future in as_completed(future_to_args):
+            #         args = future_to_args[future]
+            #         result, matched, slot_idx = future.result()
+            #         #matches.extend(result)
+            #         matches[result['region']][result['slot']] = result  # matches[(args[-2], args[1])].extend(result)
+            #         for idx in matched:
+            #             matched_indexes_global.add((args[-2], args[1]))
+            #             matched_icon_slot_pairs.add((args[-2], args[0], idx))
+        except SISTERError as e:
+            raise IconMatchingError(e) from e
         finally:
             shm.close()
             shm.unlink()
@@ -348,17 +367,20 @@ class SSIMMatchEngine:
 
                 found_matches.append(
                     {
+                        "region": region_label,
+                        "slot": slot_idx,
                         "name": f"{name}",
-                        "top_left": (x + gx, y + gy),
-                        "bottom_right": (x + gx + match_w, y + gy + match_h),
+                        # "top_left": (x + gx, y + gy),
+                        # "bottom_right": (x + gx + match_w, y + gy + match_h),
                         "score": score,
                         "scale": scale,
                         "quality_scale": quality_scale,
                         "quality": quality_used,
                         "method": method,
-                        "region": region_label,
                     }
                 )
                 matched_candidate_indexes.add(idx_region)
 
+        # print(f"Completed {name} against {total} icons for label '{region_label}' at slot {slot_idx}")
+        # print(f"found_matches: {found_matches}")
         return found_matches, matched_candidate_indexes, slot_idx

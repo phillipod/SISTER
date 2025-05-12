@@ -53,7 +53,7 @@ class PHashEngine:
         return threshold
 
     def icon_predictions(self, image, icon_slots, icon_set):
-        predictions = []
+        predictions = {}
 
         filtered_icons = {}
         similar_icons = {}
@@ -124,7 +124,7 @@ class PHashEngine:
                         box_icons[filename] = {
                             "dist": dist,
                             "quality": quality,
-                            "name": name,
+                            "name": filename,
                         }
 
                     try:
@@ -138,7 +138,11 @@ class PHashEngine:
                         ) from e
 
         for region_label, candidate_regions in icon_slots.items():
+            predictions[region_label] = {}
+
             for idx_region in candidate_regions:
+                predictions[region_label][idx_region] = []
+
                 x, y, w, h = candidate_regions[idx_region]
                 roi = image[y : y + h, x : x + w]
                 candidates = found_icons[region_label][(x, y, w, h)]
@@ -155,26 +159,27 @@ class PHashEngine:
                 )
                 threshold_val = np.ceil(max(dm_threshold, stddev_threshold)).astype(int)
 
-                candidate_predictions = []
+                # candidate_predictions = []
                 filtered_slot_icons = {}
 
                 for filename, info in candidates.items():
                     if info["dist"] > threshold_val:
                         continue
 
-                    candidate_predictions.append(
+                    predictions[region_label][idx_region].append(
                         {
                             "name": info["name"],
-                            "top_left": (x, y),
-                            "bottom_right": (x + w, y + h),
+                            # "top_left": (x, y),
+                            # "bottom_right": (x + w, y + h),
                             "score": info["dist"],
                             "match_threshold": int(threshold_val),
                             "region": region_label,
+                            "slot": idx_region,
                             "method": "hash-phash",
                             "quality": info["quality"],
-                            "quality_scale": 1.0,
-                            "quality_score": 0.0,
-                            "scale": 1.0,
+                            # "quality_scale": 1.0,
+                            # "quality_score": 0.0,
+                            # "scale": 1.0,
                         }
                     )
 
@@ -195,9 +200,9 @@ class PHashEngine:
                     ) from e
 
                 logger.debug(
-                    f"Predicted {len(candidate_predictions)} icons for region '{region_label}' at slot {idx_region}."
+                    f"Predicted {len(predictions[region_label][idx_region])} icons for region '{region_label}' at slot {idx_region}."
                 )
-                predictions.extend(candidate_predictions)
+                # predictions.extend(candidate_predictions)
 
         logger.info("Completed all candidate predictions.")
         return predictions, found_icons, filtered_icons
