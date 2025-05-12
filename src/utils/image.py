@@ -4,11 +4,13 @@ import numpy as np
 
 from ..exceptions import ImageProcessingError, ImageNotFoundError
 
-#try:
+# try:
 #    from .c_ext.fastssim import fast_ssim as ssim
-#except ImportError:
+# except ImportError:
 from skimage.metrics import structural_similarity as ssim
+
 #    print("[WARNING] fast_ssim C-extension not available, falling back to skimage SSIM.")
+
 
 def load_image(image_or_path, resize_fullhd=False):
     """
@@ -27,11 +29,13 @@ def load_image(image_or_path, resize_fullhd=False):
     if isinstance(image_or_path, str):
         if not os.path.exists(image_or_path):
             raise ImageNotFoundError(f"Image path does not exist: {image_or_path}")
-        
+
         try:
             image = cv2.imread(image_or_path)
         except Exception as e:
-            raise ImageProcessingError(f"Failed to load image from path: {image_or_path}") from e
+            raise ImageProcessingError(
+                f"Failed to load image from path: {image_or_path}"
+            ) from e
 
     elif isinstance(image_or_path, bytes):
         try:
@@ -43,18 +47,25 @@ def load_image(image_or_path, resize_fullhd=False):
     elif isinstance(image_or_path, np.ndarray):
         image = image_or_path.copy()
     else:
-        raise ImageProcessingError("Unsupported input type. Use str, bytes, or numpy array.")
+        raise ImageProcessingError(
+            "Unsupported input type. Use str, bytes, or numpy array."
+        )
 
     if resize_fullhd:
         image = resize_to_max_fullhd(image)
 
     return image
 
+
 def load_quality_overlays(overlay_folder):
     overlays = {}
     filenames = [
-        "common.png", "uncommon.png", "rare.png",
-        "very rare.png", "ultra rare.png", "epic.png"
+        "common.png",
+        "uncommon.png",
+        "rare.png",
+        "very rare.png",
+        "ultra rare.png",
+        "epic.png",
     ]
 
     for filename in filenames:
@@ -70,12 +81,15 @@ def load_quality_overlays(overlay_folder):
                 logger.warning(f"Skipping {filename}: not a valid 4-channel PNG.")
                 continue
         except Exception as e:
-            raise ImageProcessingError(f"Failed to load overlay from path: {path}") from e
+            raise ImageProcessingError(
+                f"Failed to load overlay from path: {path}"
+            ) from e
 
         key = filename.rsplit(".", 1)[0]  # remove ".png"
         overlays[key] = overlay
 
     return overlays
+
 
 def resize_to_max_fullhd(image, max_width=1920, max_height=1080):
     """
@@ -106,17 +120,18 @@ def resize_to_max_fullhd(image, max_width=1920, max_height=1080):
         image = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
     except Exception as e:
         raise ImageProcessingError("Failed to resize image.") from e
-    
+
     return image
+
 
 def apply_overlay(template_color, overlay):
     """
     Apply an overlay image onto a template image with alpha blending.
 
     Args:
-        template_color (np.array): The base image onto which the overlay is applied. 
+        template_color (np.array): The base image onto which the overlay is applied.
                                    It should be a 3-channel (BGR or RGB) image.
-        overlay (np.array): The overlay image with an alpha channel. 
+        overlay (np.array): The overlay image with an alpha channel.
                             It should be a 4-channel (BGR/RGB + Alpha) image.
 
     Returns:
@@ -126,13 +141,18 @@ def apply_overlay(template_color, overlay):
 
     overlay_rgb = overlay[:, :, :3]
     overlay_alpha = overlay[:, :, 3] / 255.0
-    overlay_rgb = cv2.resize(overlay_rgb, (template_color.shape[1], template_color.shape[0]))
-    overlay_alpha = cv2.resize(overlay_alpha, (template_color.shape[1], template_color.shape[0]))
+    overlay_rgb = cv2.resize(
+        overlay_rgb, (template_color.shape[1], template_color.shape[0])
+    )
+    overlay_alpha = cv2.resize(
+        overlay_alpha, (template_color.shape[1], template_color.shape[0])
+    )
 
     blended = np.zeros_like(template_color)
     for c in range(3):
-        blended[:, :, c] = (overlay_rgb[:, :, c] * overlay_alpha +
-                            template_color[:, :, c] * (1 - overlay_alpha))
+        blended[:, :, c] = overlay_rgb[:, :, c] * overlay_alpha + template_color[
+            :, :, c
+        ] * (1 - overlay_alpha)
     return blended.astype(np.uint8)
 
 
@@ -152,7 +172,7 @@ def create_mask(w, h):
         np.array: The mask image as a 2D array of float32 values.
     """
     mask = np.ones((h, w), dtype=np.float32)
-    mask[int(h*0.75):, int(w*0.5):] = 0.0
+    mask[int(h * 0.75) :, int(w * 0.5) :] = 0.0
     return mask
 
 

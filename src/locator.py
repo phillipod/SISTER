@@ -9,6 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class LabelLocator:
     """
     Pipeline-aware label locator: detects allowed labels in a pre-loaded image array.
@@ -24,7 +25,7 @@ class LabelLocator:
             debug (bool): Whether to enable debug output.
         """
         self.debug = debug
-        self.reader = easyocr.Reader(['en'], gpu=gpu)
+        self.reader = easyocr.Reader(["en"], gpu=gpu)
         self.scale_x = scale_x
         self.allowed_labels = self._build_allowed_labels()
 
@@ -36,7 +37,10 @@ class LabelLocator:
             list: List of dictionaries with label configurations.
         """
         return [
-            {"label": ("Shield", "Deflector", "Impulse", "Warp", "Hangar"), "split_words": True},
+            {
+                "label": ("Shield", "Deflector", "Impulse", "Warp", "Hangar"),
+                "split_words": True,
+            },
             {"label": ("Shield", "Deflector", "Impulse", "Warp"), "split_words": True},
             {"label": ("Body", ("EV", "Suit")), "split_words": True},
             {"label": "Kit Modules"},
@@ -69,15 +73,23 @@ class LabelLocator:
             {"label": "Active Space Reputation"},
             {"label": "Space Reputation"},
             {"label": "Other"},
-            
             # SETS special cases
             {"label": "Warp Core", "real_label": "Warp"},
             {"label": "Engines", "real_label": "Impulse"},
             {"label": "Sec-Def", "real_label": "Secondary Deflector"},
             {"label": "Sec Def", "real_label": "Secondary Deflector"},
-            {"label": "Personal Traits", "real_label": "SETS - Personal Traits"}, # Distinguish so we have a way to filter SETS builds
-            {"label": "Reputation Traits", "real_label": "SETS - Reputation Traits"}, # Distinguish so we have a way to filter SETS builds
-            {"label": "Active Reputation Traits", "real_label": "SETS - Active Reputation Traits"} # Distinguish so we have a way to filter SETS builds
+            {
+                "label": "Personal Traits",
+                "real_label": "SETS - Personal Traits",
+            },  # Distinguish so we have a way to filter SETS builds
+            {
+                "label": "Reputation Traits",
+                "real_label": "SETS - Reputation Traits",
+            },  # Distinguish so we have a way to filter SETS builds
+            {
+                "label": "Active Reputation Traits",
+                "real_label": "SETS - Active Reputation Traits",
+            },  # Distinguish so we have a way to filter SETS builds
         ]
 
     @staticmethod
@@ -113,8 +125,8 @@ class LabelLocator:
         self,
         image: np.ndarray,
         rect: Tuple[int, int, int, int],
-        expected_parts: Optional[List[str]] = None
-        ) -> Dict[Tuple[int, int, int, int], str]:
+        expected_parts: Optional[List[str]] = None,
+    ) -> Dict[Tuple[int, int, int, int], str]:
         """
         Perform secondary OCR on a cropped region to split words.
 
@@ -131,7 +143,9 @@ class LabelLocator:
         x2_scaled = int(x2 * self.scale_x)
         roi = image[y1:y2, x1_scaled:x2_scaled]
 
-        logger.debug(f"Re-OCR on ROI: ({x1_scaled}, {y1}, {x2_scaled}, {y2}) from original ({x1}, {y1}, {x2}, {y2})")
+        logger.debug(
+            f"Re-OCR on ROI: ({x1_scaled}, {y1}, {x2_scaled}, {y2}) from original ({x1}, {y1}, {x2}, {y2})"
+        )
 
         if self.debug:
             os.makedirs("output/debug_reocr", exist_ok=True)
@@ -150,7 +164,9 @@ class LabelLocator:
             sy += y1
             ey += y1
             split_results[(sx, sy, ex, ey)] = text.strip()
-            logger.debug(f"Re-OCR Split Word: '{text.strip()}' at ({sx}, {sy}, {ex}, {ey})")
+            logger.debug(
+                f"Re-OCR Split Word: '{text.strip()}' at ({sx}, {sy}, {ex}, {ey})"
+            )
 
         if expected_parts and len(split_results) > len(expected_parts):
             logger.debug("Too many parts, merging extras into last expected part")
@@ -174,10 +190,10 @@ class LabelLocator:
         return split_results
 
     def filter_recognized_text(
-            self,
-            recognized_texts: Dict[Tuple[int, int, int, int], str],
-          full_image: np.ndarray
-        ) -> Dict[Tuple[int, int, int, int], str]:
+        self,
+        recognized_texts: Dict[Tuple[int, int, int, int], str],
+        full_image: np.ndarray,
+    ) -> Dict[Tuple[int, int, int, int], str]:
         """
         Filter OCR recognized texts to match against allowed labels.
 
@@ -194,10 +210,14 @@ class LabelLocator:
 
         def normalize_label(label_entry):
             if isinstance(label_entry, tuple):
-                return " ".join([" ".join(p) if isinstance(p, tuple) else p for p in label_entry])
+                return " ".join(
+                    [" ".join(p) if isinstance(p, tuple) else p for p in label_entry]
+                )
             return label_entry
 
-        label_info = sorted(self.allowed_labels, key=lambda x: -len(normalize_label(x["label"])))
+        label_info = sorted(
+            self.allowed_labels, key=lambda x: -len(normalize_label(x["label"]))
+        )
         normalized_label_pairs = [
             (self.normalize_text(normalize_label(li["label"])), li) for li in label_info
         ]
@@ -227,12 +247,15 @@ class LabelLocator:
                         label_config = info
                         logger.debug("Startswith match found: '{matched_label}'")
                         break
-                    elif self.is_single_char_off(normalized_text[:len(label_norm)], label_norm):
+                    elif self.is_single_char_off(
+                        normalized_text[: len(label_norm)], label_norm
+                    ):
                         matched_label = info.get("real_label", info["label"])
                         label_config = info
-                        logger.debug("Fuzzy Startswith match found (1-char off): '{matched_label}'")
-                        break            
-
+                        logger.debug(
+                            "Fuzzy Startswith match found (1-char off): '{matched_label}'"
+                        )
+                        break
 
             if matched_label and label_config.get("split_words"):
                 logger.debug("Splitting label: '{matched_label}' for box {rect}")
@@ -246,25 +269,34 @@ class LabelLocator:
                 else:
                     expected_parts = [matched_label]
 
-                split = self.reocr_split_words(full_image, rect, expected_parts=expected_parts)
+                split = self.reocr_split_words(
+                    full_image, rect, expected_parts=expected_parts
+                )
                 additional_recognized.update(split)
                 continue
 
             if matched_label:
-                keyword_matches.setdefault(matched_label, []).append((rect, text, matched_label))
+                keyword_matches.setdefault(matched_label, []).append(
+                    (rect, text, matched_label)
+                )
             else:
                 logger.debug("No match found for: '{text}'")
 
         if additional_recognized:
-            logger.debug("Recursively processing {len(additional_recognized)} split results...")
-            filtered.update(self.filter_recognized_text(additional_recognized, full_image))
+            logger.debug(
+                "Recursively processing {len(additional_recognized)} split results..."
+            )
+            filtered.update(
+                self.filter_recognized_text(additional_recognized, full_image)
+            )
 
         for label, matches in keyword_matches.items():
-            rect, _, label_text = max(matches, key=lambda m: (m[0][2] - m[0][0]) * (m[0][3] - m[0][1]))
+            rect, _, label_text = max(
+                matches, key=lambda m: (m[0][2] - m[0][0]) * (m[0][3] - m[0][1])
+            )
             filtered[rect] = label_text
 
         return filtered
-
 
     def locate(self, image: np.ndarray) -> Dict[str, Tuple[int, int, int, int]]:
         """
@@ -278,7 +310,9 @@ class LabelLocator:
         """
         # Preprocess
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        gray_upscaled = cv2.resize(gray, None, fx=self.scale_x, fy=1.0, interpolation=cv2.INTER_LINEAR)
+        gray_upscaled = cv2.resize(
+            gray, None, fx=self.scale_x, fy=1.0, interpolation=cv2.INTER_LINEAR
+        )
         results = self.reader.readtext(gray_upscaled, paragraph=True, height_ths=0.0)
 
         recognized = {}
@@ -291,7 +325,7 @@ class LabelLocator:
 
         filtered = self.filter_recognized_text(recognized, gray_upscaled)
 
-        #if self.debug:
+        # if self.debug:
         #    if self.output_debug_path:
         #        self.draw_debug_output(image, filtered, self.output_debug_path)
 
@@ -301,7 +335,7 @@ class LabelLocator:
                 "top_left": [int(x1), int(y1)],
                 "top_right": [int(x2), int(y1)],
                 "bottom_left": [int(x1), int(y2)],
-                "bottom_right": [int(x2), int(y2)]
+                "bottom_right": [int(x2), int(y2)],
             }
         return label_dict
 
@@ -309,7 +343,7 @@ class LabelLocator:
         self,
         image: np.ndarray,
         recognized_texts: Dict[Tuple[int, int, int, int], str],
-        output_path: str
+        output_path: str,
     ) -> None:
         """
         Draw debug output by overlaying detected labels on the image.
@@ -323,10 +357,17 @@ class LabelLocator:
 
         for (startX, startY, endX, endY), text in recognized_texts.items():
             cv2.rectangle(debug_image, (startX, startY), (endX, endY), (0, 255, 0), 2)
-            cv2.putText(debug_image, text, (startX, max(0, startY - 5)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+            cv2.putText(
+                debug_image,
+                text,
+                (startX, max(0, startY - 5)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 255, 0),
+                1,
+            )
 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         cv2.imwrite(output_path, debug_image)
-        
+
         logger.info(f"Debug output saved to {output_path}")

@@ -8,6 +8,7 @@ from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 
+
 class IconSlotDetector:
     """
     Pipeline aware icon slot detector. Detects icon slot candidates globally, then tags them into known regions based on region_data.
@@ -26,8 +27,10 @@ class IconSlotDetector:
 
         self.debug = debug
 
-    #def detect_inventory(self, screenshot_color, debug_output_path=None):
-    def detect_inventory(self, image: np.ndarray, region_bbox: Tuple[int, int, int, int]) -> List[Tuple[int, int, int, int]]:
+    # def detect_inventory(self, screenshot_color, debug_output_path=None):
+    def detect_inventory(
+        self, image: np.ndarray, region_bbox: Tuple[int, int, int, int]
+    ) -> List[Tuple[int, int, int, int]]:
         """
         Detect icon slot candidates globally.
 
@@ -43,11 +46,9 @@ class IconSlotDetector:
 
         candidates = self._find_slot_candidates(binary, image)
 
-        region_candidates = {
-            "Inventory": []
-        }
+        region_candidates = {"Inventory": []}
 
-        for (x, y, w, h) in candidates:
+        for x, y, w, h in candidates:
             region_candidates["Inventory"].append((x, y, w, h))
 
         # Convert all box values to native Python int to avoid JSON serialization issues
@@ -57,12 +58,16 @@ class IconSlotDetector:
         }
 
         for label in region_candidates:
-            region_candidates[label] = self._sort_boxes_grid_order(region_candidates[label])
+            region_candidates[label] = self._sort_boxes_grid_order(
+                region_candidates[label]
+            )
 
         return region_candidates
 
-    #def detect(self, screenshot_color, build_info, region_data, debug_output_path=None):
-    def detect_slots(self, image: np.ndarray, region_bbox: Tuple[int, int, int, int]) -> List[Tuple[int, int, int, int]]:
+    # def detect(self, screenshot_color, build_info, region_data, debug_output_path=None):
+    def detect_slots(
+        self, image: np.ndarray, region_bbox: Tuple[int, int, int, int]
+    ) -> List[Tuple[int, int, int, int]]:
         """
         Detect icon slot candidates globally and assign them to labeled regions.
 
@@ -77,18 +82,18 @@ class IconSlotDetector:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         _, binary = cv2.threshold(gray, 63, 255, cv2.THRESH_BINARY)
 
-        candidates = self._find_slot_candidates(binary, image) #, debug_output_path)
+        candidates = self._find_slot_candidates(binary, image)  # , debug_output_path)
 
         # Tag into regions
         region_candidates = {label: [] for label in region_bbox}
-        for (x, y, w, h) in candidates:
+        for x, y, w, h in candidates:
             cx, cy = x + w // 2, y + h // 2
             for label, entry in region_bbox.items():
-                #print(f"Entry: {entry}")
+                # print(f"Entry: {entry}")
                 x1, y1 = entry["Region"]["top_left"]
                 x2, y2 = entry["Region"]["bottom_right"]
                 if x1 <= cx <= x2 and y1 <= cy <= y2:
-                    #print(f"Adding to {label}")
+                    # print(f"Adding to {label}")
                     region_candidates[label].append((x, y, w, h))
                     break
 
@@ -110,7 +115,7 @@ class IconSlotDetector:
         #     cv2.imwrite(f"{base}_candidates.png", debug_image)
 
         # Do not apply normalization yet
-        
+
         # Convert all box values to native Python int to avoid JSON serialization issues
         region_candidates = {
             label: [tuple(int(v) for v in box) for box in boxes]
@@ -118,11 +123,23 @@ class IconSlotDetector:
         }
 
         for label in region_candidates:
-            region_candidates[label] = self._sort_boxes_grid_order(region_candidates[label])
+            region_candidates[label] = self._sort_boxes_grid_order(
+                region_candidates[label]
+            )
 
         return region_candidates
 
-    def _find_slot_candidates(self, binary, color_image, debug_dir=None, min_area=200, aspect_ratio=49/64, aspect_tolerance=0.2, min_stddev=30, min_entropy=6):
+    def _find_slot_candidates(
+        self,
+        binary,
+        color_image,
+        debug_dir=None,
+        min_area=200,
+        aspect_ratio=49 / 64,
+        aspect_tolerance=0.2,
+        min_stddev=30,
+        min_entropy=6,
+    ):
         """
         Identify and filter potential icon slot candidates from a binary image.
 
@@ -151,7 +168,9 @@ class IconSlotDetector:
         if debug_dir:
             cv2.imwrite(f"{debug_dir}_denoised.png", denoised)
 
-        contours, _ = cv2.findContours(denoised, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(
+            denoised, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
         candidates = []
         debug_img = cv2.cvtColor(denoised, cv2.COLOR_GRAY2BGR)
 
@@ -162,7 +181,7 @@ class IconSlotDetector:
             if area < min_area or not (abs(aspect - aspect_ratio) <= aspect_tolerance):
                 continue
 
-            roi = color_image[y:y+h, x:x+w]
+            roi = color_image[y : y + h, x : x + w]
             roi_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
             stddev = np.std(roi_gray)
             entropy = shannon_entropy(roi_gray)
@@ -215,7 +234,10 @@ class IconSlotDetector:
             w = np.maximum(0, xx2 - xx1 + 1)
             h = np.maximum(0, yy2 - yy1 + 1)
             overlap = (w * h) / area[idxs[:-1]]
-            idxs = np.delete(idxs, np.concatenate(([len(idxs) - 1], np.where(overlap > overlapThresh)[0])))
+            idxs = np.delete(
+                idxs,
+                np.concatenate(([len(idxs) - 1], np.where(overlap > overlapThresh)[0])),
+            )
 
         return boxes[pick].astype("int")
 
@@ -251,6 +273,4 @@ class IconSlotDetector:
         if current_row:
             rows.append(sorted(current_row, key=lambda b: b[0]))
 
-
         return {i: box for row in rows for i, box in enumerate(row)}
-

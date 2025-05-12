@@ -15,7 +15,9 @@ ENGINE_CLASSES = {
 
 
 class IconPrefilter:
-    def __init__(self, icon_root=None, hash_index=None, debug=False, engine_type="phash"):
+    def __init__(
+        self, icon_root=None, hash_index=None, debug=False, engine_type="phash"
+    ):
         """
         IconPrefilter runner that delegates to a selected engine.
 
@@ -27,20 +29,17 @@ class IconPrefilter:
         self.icon_root = Path(icon_root) if icon_root else None
         self.found_icons = None
         self.filtered_icons = None
-               
+
         engine_key = engine_type.lower()
 
         try:
             self.engine = ENGINE_CLASSES[engine_key](
-                debug=debug,
-                hash_index=hash_index,
-                icon_root=icon_root
+                debug=debug, hash_index=hash_index, icon_root=icon_root
             )
 
             self.engine_type = engine_key
         except KeyError as e:
             raise HashIndexError(f"Unknown hasher '{hasher_key}'") from e
-
 
         logger.info(f"[IconPrefilter] Using engine: {self.engine_type}")
 
@@ -61,27 +60,33 @@ class IconPrefilter:
         """
         Run icon matching using the selected engine.
         """
-        self.predicted_icons, self.found_icons, self.filtered_icons = self.engine.icon_predictions(
-            image,
-            icon_slots,
-            icon_set
+        (
+            self.predicted_icons,
+            self.found_icons,
+            self.filtered_icons,
+        ) = self.engine.icon_predictions(image, icon_slots, icon_set)
+
+        logger.info(
+            f"[IconPrefilter] Total icon predictions: {len(self.predicted_icons)}"
         )
 
-        logger.info(f"[IconPrefilter] Total icon predictions: {len(self.predicted_icons)}")
+        # print(f"[IconPrefilter] Total icon predictions: {len(self.predicted_icons)}")
+        # print(f"[IconPrefilter] Filtered icons: {self.filtered_icons}")
+        # print(f"[IconPrefilter] Found icons: {self.found_icons}")
 
-        #print(f"[IconPrefilter] Total icon predictions: {len(self.predicted_icons)}")
-        #print(f"[IconPrefilter] Filtered icons: {self.filtered_icons}")
-        #print(f"[IconPrefilter] Found icons: {self.found_icons}")
-
-        i=0
+        i = 0
         for region_label, region in self.found_icons.items():
             for idx, (box, icons) in enumerate(region.items()):
-                logger.info(f"[IconPrefilter] Found {len(icons)} icons for region '{region_label}' at slot {idx}")
-                i+=len(icons)
+                logger.info(
+                    f"[IconPrefilter] Found {len(icons)} icons for region '{region_label}' at slot {idx}"
+                )
+                i += len(icons)
 
         logger.info(f"[IconPrefilter] Total found icons: {i}")
         for region_label, region in self.filtered_icons.items():
-            logger.info(f"[IconPrefilter] Filtered icons for region '{region_label}': {len(self.filtered_icons[region_label])}")
+            logger.info(
+                f"[IconPrefilter] Filtered icons for region '{region_label}': {len(self.filtered_icons[region_label])}"
+            )
 
         # if self.debug:
         #     debug_img = screenshot_color.copy()

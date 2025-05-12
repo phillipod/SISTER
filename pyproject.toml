@@ -1,0 +1,57 @@
+[project]
+name = "sister"
+version = "0.1.0"
+description = "SISTER (Screenshot Interrogation System for Traits and Equipment Recognition): computer vision pipeline designed to match icons within screenshots"
+authors = ["Phillip O'Donnell <phillip.odonnell@gmail.com>"]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "opencv-python",
+    "numpy",
+    "scikit-image",
+    "easyocr",
+    "imagehash",
+    "pybktree",
+    "requests",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py38", "py39", "py310"]
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | venv
+  | env
+  | build
+  | dist
+  | docs
+  | log
+  | output
+  | .*\.egg-info
+)/
+'''
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    "docs",
+    "log",
+    "output",
+    ".venv",
+    "venv",
+    "env",
+    "*.egg-info"
+]
+extend-select = ["B", "B9", "C4", "D"]
+per-file-ignores = { "test/*.py" = ["D101", "D102", "D103"] }
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"

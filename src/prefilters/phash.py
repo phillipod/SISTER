@@ -10,9 +10,10 @@ from ..exceptions import PrefilterError
 
 import logging
 
-#from ..iconmap import IconDirectoryMap
+# from ..iconmap import IconDirectoryMap
 
 logger = logging.getLogger(__name__)
+
 
 class PHashEngine:
     """
@@ -22,9 +23,11 @@ class PHashEngine:
     def __init__(self, debug=False, icon_root=None, hash_index=None):
         self.debug = debug
         self.icon_root = icon_root
-        self.hash_index = hash_index 
+        self.hash_index = hash_index
 
-    def dynamic_hamming_score_cutoff(self, scores, best_score, max_next_ranks=2, max_allowed_gap=4):
+    def dynamic_hamming_score_cutoff(
+        self, scores, best_score, max_next_ranks=2, max_allowed_gap=4
+    ):
         freqs = Counter(scores)
         sorted_scores = sorted(freqs.items())
 
@@ -69,18 +72,24 @@ class PHashEngine:
 
             for idx in candidate_regions:
                 x, y, w, h = candidate_regions[idx]
-                logger.debug(f"Predicting icons for region '{region_label}' at slot {idx}")
+                logger.debug(
+                    f"Predicting icons for region '{region_label}' at slot {idx}"
+                )
                 box = (x, y, w, h)
-                roi = image[y:y+h, x:x+w]
+                roi = image[y : y + h, x : x + w]
                 found_icons[region_label][box] = {}
                 similar_icons[region_label][box] = {}
                 filtered_icons[region_label][box] = {}
 
                 try:
-                    results = self.hash_index.find_similar_to_image(roi, max_distance=18, top_n=None, grayscale=False)
+                    results = self.hash_index.find_similar_to_image(
+                        roi, max_distance=18, top_n=None, grayscale=False
+                    )
                 except Exception as e:
-                    raise PrefilterError(f"Hash prefilter failed for region '{region_label}' at {box}: {e}") from e
-                    
+                    raise PrefilterError(
+                        f"Hash prefilter failed for region '{region_label}' at {box}: {e}"
+                    ) from e
+
                 for rel_path, dist in results:
                     if "::" in rel_path:
                         path_part, quality = rel_path.split("::", 1)
@@ -96,8 +105,12 @@ class PHashEngine:
                     allowed = False
                     for folder in folders:
                         try:
-                            relative_folder = folder.relative_to(self.hash_index.base_dir)
-                            if normalized_path.startswith(os.path.normpath(str(relative_folder))):
+                            relative_folder = folder.relative_to(
+                                self.hash_index.base_dir
+                            )
+                            if normalized_path.startswith(
+                                os.path.normpath(str(relative_folder))
+                            ):
                                 allowed = True
                                 break
                         except ValueError:
@@ -120,12 +133,14 @@ class PHashEngine:
                             if icon is not None:
                                 filtered_icons[region_label][filename] = icon
                     except Exception as e:
-                        raise PrefilterError(f"Hash prefilter failed for region '{region_label}' at {box}: {e}") from e
+                        raise PrefilterError(
+                            f"Hash prefilter failed for region '{region_label}' at {box}: {e}"
+                        ) from e
 
         for region_label, candidate_regions in icon_slots.items():
             for idx_region in candidate_regions:
                 x, y, w, h = candidate_regions[idx_region]
-                roi = image[y:y+h, x:x+w]
+                roi = image[y : y + h, x : x + w]
                 candidates = found_icons[region_label][(x, y, w, h)]
 
                 dists = [info["dist"] for info in candidates.values()]
@@ -135,7 +150,9 @@ class PHashEngine:
                 best_score = min(dists)
                 stddev = statistics.stdev(dists) if len(dists) > 1 else 0
                 stddev_threshold = best_score + (2 * stddev)
-                dm_threshold = self.dynamic_hamming_score_cutoff(dists, best_score, max_next_ranks=1, max_allowed_gap=6)
+                dm_threshold = self.dynamic_hamming_score_cutoff(
+                    dists, best_score, max_next_ranks=1, max_allowed_gap=6
+                )
                 threshold_val = np.ceil(max(dm_threshold, stddev_threshold)).astype(int)
 
                 candidate_predictions = []
@@ -145,24 +162,26 @@ class PHashEngine:
                     if info["dist"] > threshold_val:
                         continue
 
-                    candidate_predictions.append({
-                        "name": info["name"],
-                        "top_left": (x, y),
-                        "bottom_right": (x + w, y + h),
-                        "score": info["dist"],
-                        "match_threshold": int(threshold_val),
-                        "region": region_label,
-                        "method": "hash-phash",
-                        "quality": info["quality"],
-                        "quality_scale": 1.0,
-                        "quality_score": 0.0,
-                        "scale": 1.0
-                    })
+                    candidate_predictions.append(
+                        {
+                            "name": info["name"],
+                            "top_left": (x, y),
+                            "bottom_right": (x + w, y + h),
+                            "score": info["dist"],
+                            "match_threshold": int(threshold_val),
+                            "region": region_label,
+                            "method": "hash-phash",
+                            "quality": info["quality"],
+                            "quality_scale": 1.0,
+                            "quality_score": 0.0,
+                            "scale": 1.0,
+                        }
+                    )
 
                     filtered_slot_icons[filename] = info
 
                 found_icons[region_label][(x, y, w, h)] = filtered_slot_icons
-                
+
                 try:
                     for filename in filtered_slot_icons:
                         if filename not in filtered_icons[region_label]:
@@ -171,11 +190,14 @@ class PHashEngine:
                             if icon is not None:
                                 filtered_icons[region_label][filename] = icon
                 except Exception as e:
-                    raise PrefilterError(f"Hash prefilter failed for region '{region_label}' at {box}: {e}") from e
+                    raise PrefilterError(
+                        f"Hash prefilter failed for region '{region_label}' at {box}: {e}"
+                    ) from e
 
-                logger.debug(f"Predicted {len(candidate_predictions)} icons for region '{region_label}' at slot {idx_region}.")
+                logger.debug(
+                    f"Predicted {len(candidate_predictions)} icons for region '{region_label}' at slot {idx_region}."
+                )
                 predictions.extend(candidate_predictions)
 
         logger.info("Completed all candidate predictions.")
         return predictions, found_icons, filtered_icons
-

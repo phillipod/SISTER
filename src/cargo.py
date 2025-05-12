@@ -21,46 +21,52 @@ WIKI_BASE_URL = "https://stowiki.net/wiki/"
 CARGO_EXPORT_PAGE = "Special:CargoExport"
 FILE_PATH_BASE = "https://stowiki.net/wiki/Special:FilePath/"
 
-DEFAULT_CACHE_DIR = Path(os.path.expanduser('~')) / '.sto-cargo-cache'
+DEFAULT_CACHE_DIR = Path(os.path.expanduser("~")) / ".sto-cargo-cache"
 CACHE_EXPIRE_DAYS = 3
 
 CARGO_TYPES = {
-    'equipment': {
-        'tables': 'Infobox',
-        'fields': '_pageName=Page,name,rarity,type,boundto,boundwhen,who,' + ','.join(f'{prefix}{i}' for prefix in ('head', 'subhead', 'text') for i in range(1, 10)),
-        'limit': 5000,
+    "equipment": {
+        "tables": "Infobox",
+        "fields": "_pageName=Page,name,rarity,type,boundto,boundwhen,who,"
+        + ",".join(
+            f"{prefix}{i}"
+            for prefix in ("head", "subhead", "text")
+            for i in range(1, 10)
+        ),
+        "limit": 5000,
     },
-    'personal_trait': {
-        'tables': 'Traits',
-        'fields': '_pageName=Page,name,chartype,environment,type,isunique,description',
-        'limit': 2500,
+    "personal_trait": {
+        "tables": "Traits",
+        "fields": "_pageName=Page,name,chartype,environment,type,isunique,description",
+        "limit": 2500,
     },
-    'starship_trait': {
-        'tables': 'StarshipTraits',
-        'fields': '_pageName=Page,name,short,type,detailed,obtained,basic',
-        'limit': 2500,
-        'where': 'name IS NOT NULL',
+    "starship_trait": {
+        "tables": "StarshipTraits",
+        "fields": "_pageName=Page,name,short,type,detailed,obtained,basic",
+        "limit": 2500,
+        "where": "name IS NOT NULL",
     },
-    'doff': {
-        'tables': 'Specializations',
-        'fields': '_pageName=Page,name=doff_specialization,shipdutytype,department,description,white,green,blue,purple,violet,gold',
-        'limit': 1000,
+    "doff": {
+        "tables": "Specializations",
+        "fields": "_pageName=Page,name=doff_specialization,shipdutytype,department,description,white,green,blue,purple,violet,gold",
+        "limit": 1000,
     },
 }
 
 # Normalization rules per cargo type and field
 NORMALIZATION_RULES = {
-    'equipment': {
-        'type': {
+    "equipment": {
+        "type": {
             "Ground Ability": "Ground Device",
             "Ground Armor": "Body Armor",
             "Kit Modules": "Kit Module",
             "Sniper Rifle": "Ground Weapon",
             "inventory": "Inventory",
-            "Consumable": "Inventory"
+            "Consumable": "Inventory",
         }
     },
 }
+
 
 class CargoDownloader:
     """
@@ -77,7 +83,9 @@ class CargoDownloader:
             verbose (bool): If True, enables console output for progress.
         """
         self.force_download = force_download
-        self.cache_dir = Path(cache_dir).expanduser() if cache_dir else DEFAULT_CACHE_DIR
+        self.cache_dir = (
+            Path(cache_dir).expanduser() if cache_dir else DEFAULT_CACHE_DIR
+        )
 
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Using cache directory: {self.cache_dir}")
@@ -101,7 +109,7 @@ class CargoDownloader:
             f"offset={offset}",
             "format=json",
         ]
-        if 'where' in config:
+        if "where" in config:
             params.append(f"where={config['where']}")
         return WIKI_BASE_URL + CARGO_EXPORT_PAGE + "?" + "&".join(params)
 
@@ -129,7 +137,9 @@ class CargoDownloader:
         """
         if not path.exists():
             return False
-        return datetime.fromtimestamp(path.stat().st_mtime) > datetime.now() - timedelta(days=CACHE_EXPIRE_DAYS)
+        return datetime.fromtimestamp(
+            path.stat().st_mtime
+        ) > datetime.now() - timedelta(days=CACHE_EXPIRE_DAYS)
 
     def normalize_item(self, cargo_type, item):
         """
@@ -185,13 +195,13 @@ class CargoDownloader:
 
             all_data.extend(batch)
 
-            if len(batch) < CARGO_TYPES[cargo_type]['limit']:
+            if len(batch) < CARGO_TYPES[cargo_type]["limit"]:
                 break
 
-            offset += CARGO_TYPES[cargo_type]['limit']
+            offset += CARGO_TYPES[cargo_type]["limit"]
             time.sleep(1)
 
-        with open(path, 'w', encoding='utf-8') as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(all_data, f, ensure_ascii=False, indent=2)
 
     def download_all(self):
@@ -219,9 +229,9 @@ class CargoDownloader:
             raise FileNotFoundError(f"No cached file found for {cargo_type}")
         # with open(path, 'r', encoding='utf-8') as f:
         #     return json.load(f)
-        
+
         try:
-            with open(path, 'r', encoding='utf-8') as f:
+            with open(path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except FileNotFoundError as e:
             raise CargoCacheIOError(f"Cache file not found for {cargo_type}") from e
@@ -235,8 +245,8 @@ class CargoDownloader:
         Returns:
             list: Sorted list of unique equipment types.
         """
-        equipment_data = self.load('equipment')
-        types = {item.get('type') for item in equipment_data if item.get('type')}
+        equipment_data = self.load("equipment")
+        types = {item.get("type") for item in equipment_data if item.get("type")}
         return sorted(types)
 
     def download_icons(self, cargo_type, dest_dir, image_cache_path, filters=None):
@@ -255,15 +265,25 @@ class CargoDownloader:
         data = self.load(cargo_type)
 
         if filters:
-            matching_items = [item for item in data if all(item.get(k) == v for k, v in filters.items())]
+            matching_items = [
+                item
+                for item in data
+                if all(item.get(k) == v for k, v in filters.items())
+            ]
         else:
             matching_items = data
 
-        logger.info(f"Downloading {len(matching_items)} {cargo_type} icons into {dest_dir}...")
+        logger.info(
+            f"Downloading {len(matching_items)} {cargo_type} icons into {dest_dir}..."
+        )
 
-        self._download_icons(matching_items, dest_dir, image_cache_path, cargo_type, filters)
+        self._download_icons(
+            matching_items, dest_dir, image_cache_path, cargo_type, filters
+        )
 
-    def _download_icons(self, items, dest_dir, image_cache_path, cargo_type=None, filters=None):
+    def _download_icons(
+        self, items, dest_dir, image_cache_path, cargo_type=None, filters=None
+    ):
         """
         Internal function to handle threaded downloading of icon images.
 
@@ -279,27 +299,31 @@ class CargoDownloader:
 
         with cache_lock:
             if image_cache_path.exists():
-                with image_cache_path.open('r', encoding='utf-8') as f:
+                with image_cache_path.open("r", encoding="utf-8") as f:
                     cache_entries = json.load(f)
             else:
                 cache_entries = []
 
-        existing_files = {entry['file'] for entry in cache_entries}
+        existing_files = {entry["file"] for entry in cache_entries}
 
         def download_single_icon(item):
             """Download a single icon file."""
-            raw_name = item.get('name')
+            raw_name = item.get("name")
             if not raw_name:
                 return
 
             name_unescaped = html.unescape(html.unescape(raw_name))
-            cleaned_name = re.sub(r'\s*(∞)\s*', '', name_unescaped, flags=re.IGNORECASE).strip()
-            cleaned_name = re.sub(r'(\s*\[[^\]]+\](x\d+)*)+$', '', cleaned_name).strip()
-            cleaned_name = re.sub(r'\s*(Mk [IVXLCDM]+)$', '', cleaned_name, flags=re.IGNORECASE).strip()
-            cleaned_name = re.sub(r'[\/\\:\*\?\"\<\>\|]', '_', cleaned_name).strip()
+            cleaned_name = re.sub(
+                r"\s*(∞)\s*", "", name_unescaped, flags=re.IGNORECASE
+            ).strip()
+            cleaned_name = re.sub(r"(\s*\[[^\]]+\](x\d+)*)+$", "", cleaned_name).strip()
+            cleaned_name = re.sub(
+                r"\s*(Mk [IVXLCDM]+)$", "", cleaned_name, flags=re.IGNORECASE
+            ).strip()
+            cleaned_name = re.sub(r"[\/\\:\*\?\"\<\>\|]", "_", cleaned_name).strip()
 
-            filename = cleaned_name.replace(' ', '_') + ".png"
-            url = FILE_PATH_BASE + cleaned_name.replace(' ', '_') + "_icon.png"
+            filename = cleaned_name.replace(" ", "_") + ".png"
+            url = FILE_PATH_BASE + cleaned_name.replace(" ", "_") + "_icon.png"
             dest_path = dest_dir / filename
 
             local_counter = 0
@@ -309,7 +333,7 @@ class CargoDownloader:
                 "cargo": cargo_type if cargo_type else "",
                 "filters": filters if filters else {},
                 "name": raw_name,
-                "cleaned_name": cleaned_name
+                "cleaned_name": cleaned_name,
             }
 
             with cache_lock:
@@ -328,7 +352,7 @@ class CargoDownloader:
             try:
                 response = requests.get(url)
                 if response.ok:
-                    with open(dest_path, 'wb') as f:
+                    with open(dest_path, "wb") as f:
                         f.write(response.content)
                     logger.verbose(f"  [Downloaded] {filename}")
                 else:
@@ -342,7 +366,9 @@ class CargoDownloader:
 
         with ThreadPoolExecutor(max_workers=4) as executor:
             try:
-                futures = [executor.submit(download_single_icon, item) for item in items]
+                futures = [
+                    executor.submit(download_single_icon, item) for item in items
+                ]
                 for future in as_completed(futures):
                     pass
             except KeyboardInterrupt:
@@ -362,7 +388,7 @@ class CargoDownloader:
             entries (list): Metadata entries to write.
         """
         try:
-            with cache_path.open('w', encoding='utf-8') as f:
+            with cache_path.open("w", encoding="utf-8") as f:
                 json.dump(entries, f, ensure_ascii=False, indent=2)
         except OSError as e:
             raise CargoCacheIOError("Failed to write icon cache") from e

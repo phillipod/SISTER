@@ -21,11 +21,15 @@ HASHER_FACTORY = {
     # "ahash": AHashHasher,  # If you add more
     # "dhash": DHashHasher,
 }
+
+
 def hamming_distance(h1, h2):
     return h1 - h2
 
+
 BK_TREE_MAP = {}
 BK_TREE_RELPATHS = {}
+
 
 def add_to_bktree(namespace, hash_str, rel_path):
     if namespace not in BK_TREE_MAP:
@@ -34,6 +38,7 @@ def add_to_bktree(namespace, hash_str, rel_path):
     hash_obj = hex_to_hash(hash_str)
     BK_TREE_MAP[namespace].add(hash_obj)
     BK_TREE_RELPATHS[namespace][str(hash_obj)] = rel_path
+
 
 def find_similar_in_namespace(namespace, target_hash, max_distance=10, top_n=None):
     if namespace not in BK_TREE_MAP:
@@ -48,6 +53,7 @@ def find_similar_in_namespace(namespace, target_hash, max_distance=10, top_n=Non
     ]
     return filtered[:top_n] if top_n else filtered
 
+
 class HashIndex:
     """
     Maintains a persistent perceptual hash index for icon files.
@@ -55,11 +61,18 @@ class HashIndex:
     Supports incremental updates, pruning stale entries, and similarity search.
     """
 
-    def __init__(self, base_dir, hasher, output_file="hash_index.json", recursive=True, match_size=(32, 32)):
-        #print(f"[HashIndex] base_dir: {base_dir}, hasher: {hasher}, output_file: {output_file}, recursive: {recursive}, match_size: {match_size}")
+    def __init__(
+        self,
+        base_dir,
+        hasher,
+        output_file="hash_index.json",
+        recursive=True,
+        match_size=(32, 32),
+    ):
+        # print(f"[HashIndex] base_dir: {base_dir}, hasher: {hasher}, output_file: {output_file}, recursive: {recursive}, match_size: {match_size}")
         self.base_dir = Path(base_dir)
-        #print(f"[HashIndex] base_dir: {self.base_dir}")
-        #print(f"[HashIndex] output_file: {self.base_dir / output_file}")
+        # print(f"[HashIndex] base_dir: {self.base_dir}")
+        # print(f"[HashIndex] output_file: {self.base_dir / output_file}")
         self.hasher_name = None
 
         hasher_key = hasher.lower()
@@ -81,31 +94,39 @@ class HashIndex:
     def _load_cache(self):
         if not self.output_file.exists():
             logger.info(f"No existing hash index at {self.output_file}")
-            raise HashIndexNotFoundError(f"No existing hash index at {self.output_file}")
+            raise HashIndexNotFoundError(
+                f"No existing hash index at {self.output_file}"
+            )
 
         try:
             with open(self.output_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            
+
             cached_hasher = data.get("hasher")
-            
+
             if cached_hasher != self.hasher_name:
-                logger.info(f"Hash method changed from '{cached_hasher}' to '{self.hasher_name}'; discarding old index.")
+                logger.info(
+                    f"Hash method changed from '{cached_hasher}' to '{self.hasher_name}'; discarding old index."
+                )
                 return
-            
+
             self.hashes = data.get("hashes", {})
-            
-            logger.verbose(f"Loaded hash index from {self.output_file} with {len(self.hashes)} entries.")
-            
+
+            logger.verbose(
+                f"Loaded hash index from {self.output_file} with {len(self.hashes)} entries."
+            )
+
             for rel_path, entry in self.hashes.items():
                 try:
                     hash_obj = hex_to_hash(entry["hash"])
-                    #self.bktree.add(hash_obj)
+                    # self.bktree.add(hash_obj)
                     add_to_bktree(self.hasher_name, entry["hash"], rel_path)
-                    #self.bktree_map[hash_obj] = rel_path
+                    # self.bktree_map[hash_obj] = rel_path
                 except Exception as e:
                     logger.warning(f"Failed to rehydrate BKTree for {rel_path}: {e}")
-                    raise HashIndexError(f"Failed to rehydrate BKTree for {rel_path}: {e}") from e
+                    raise HashIndexError(
+                        f"Failed to rehydrate BKTree for {rel_path}: {e}"
+                    ) from e
         except Exception as e:
             logger.warning(f"Failed to load hash index: {e}")
             raise HashIndexError("Failed to load hash index") from e
@@ -115,15 +136,16 @@ class HashIndex:
             out = {
                 "hasher": self.hasher_name,
                 "generated": datetime.utcnow().isoformat(),
-                "hashes": self.hashes
+                "hashes": self.hashes,
             }
             with open(self.output_file, "w", encoding="utf-8") as f:
                 json.dump(out, f, indent=2)
-            logger.info(f"Saved hash index to {self.output_file} with {len(self.hashes)} entries.")
+            logger.info(
+                f"Saved hash index to {self.output_file} with {len(self.hashes)} entries."
+            )
         except Exception as e:
             logger.error(f"Failed to write hash index: {e}")
             raise HashIndexError("Failed to write hash index") from e
-
 
     def build_or_update(self):
         pattern = "**/*.png" if self.recursive else "*.png"
@@ -157,7 +179,9 @@ class HashIndex:
             logger.verbose(f"Removed stale hash entry: {key}")
 
         self._save_cache()
-        logger.info(f"Hash index update complete: {updated} updated, {len(stale_keys)} removed, {len(self.hashes)} total.")
+        logger.info(
+            f"Hash index update complete: {updated} updated, {len(stale_keys)} removed, {len(self.hashes)} total."
+        )
 
     def build_with_overlays(self, overlays: dict):
         """
@@ -181,11 +205,13 @@ class HashIndex:
 
                 for quality, overlay in overlays.items():
                     blended = apply_overlay(image_bgr[:, :, :3], overlay)
-                    
+
                     masked = apply_mask(blended)
-                    
+
                     _, buf = cv2.imencode(".png", masked)
-                    hash_val = self.hasher.compute(buf.tobytes(), size=self.match_size, grayscale=False)
+                    hash_val = self.hasher.compute(
+                        buf.tobytes(), size=self.match_size, grayscale=False
+                    )
                     key = f"{rel_path}::{quality}"
                     self.hashes[key] = {"hash": hash_val, "mtime": mtime}
                     found_keys.add(key)
@@ -193,7 +219,9 @@ class HashIndex:
                     logger.verbose(f"Hashed {key}")
             except Exception as e:
                 logger.warning(f"Failed to hash overlays for {rel_path}: {e}")
-                raise HashIndexError(f"Failed to hash overlays for {rel_path}: {e}") from e
+                raise HashIndexError(
+                    f"Failed to hash overlays for {rel_path}: {e}"
+                ) from e
 
         all_existing = set(self.hashes.keys())
         stale_keys = all_existing - found_keys
@@ -212,9 +240,13 @@ class HashIndex:
         return {k: v["hash"] for k, v in self.hashes.items()}
 
     def find_similar(self, target_hash, max_distance=10, top_n=None):
-        return find_similar_in_namespace(self.hasher_name, target_hash, max_distance, top_n)
+        return find_similar_in_namespace(
+            self.hasher_name, target_hash, max_distance, top_n
+        )
 
-    def find_similar_to_image(self, roi_bgr, max_distance=20, top_n=None, size=None, grayscale=False):
+    def find_similar_to_image(
+        self, roi_bgr, max_distance=20, top_n=None, size=None, grayscale=False
+    ):
         """
         Compute the perceptual hash of the ROI and return matching icons within max Hamming distance.
 
@@ -244,9 +276,8 @@ class HashIndex:
             pil_img = Image.fromarray(resized)
             target_hash = imagehash.phash(pil_img)
             pil_img.close()
-        except (Exception) as e:
+        except Exception as e:
             raise HashIndexFindError("Failed to prepare image for hashing") from e
-            
-        #print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
-        return self.find_similar(target_hash, max_distance=max_distance, top_n=top_n)
 
+        # print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
+        return self.find_similar(target_hash, max_distance=max_distance, top_n=top_n)
