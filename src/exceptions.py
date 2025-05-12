@@ -91,6 +91,10 @@ class CargoCacheIOError(CargoError):
 
     pass
 
+class CargoDownloadError(CargoError):
+    """Raised when cargo cache download fails."""
+
+    pass
 
 class DomainError(SISTERError):
     """Base class for domain-specific or utility errors."""

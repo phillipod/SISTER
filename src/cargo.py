@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import requests
 
-from .exceptions import CargoError, CargoCacheIOError
+from .exceptions import CargoError, CargoCacheIOError, CargoDownloadError
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
@@ -182,8 +182,8 @@ class CargoDownloader:
                 response = requests.get(url, timeout=10)
                 response.raise_for_status()
                 batch = response.json()
-            except requests.RequestException as e:
-                raise CargoError(f"Network error downloading {cargo_type}") from e
+            except Exception as e:
+                raise CargoDownloadError(f"Network error downloading {cargo_type}") from e
             except (ValueError, json.JSONDecodeError) as e:
                 raise CargoError(f"Invalid JSON for {cargo_type}") from e
 
@@ -359,6 +359,7 @@ class CargoDownloader:
                     logger.warning(f"  [Failed] {filename} ({response.status_code})")
             except Exception as e:
                 logger.error(f"  [Error] {filename}: {e}")
+                raise CargoDownloadError(f"Failed to download {filename}") from e
 
             if local_counter > 0 and local_counter % 20 == 0:
                 with cache_lock:
