@@ -168,10 +168,7 @@ class IconMatchingQualityDetectionStage(Stage):
         icon_dir_map = ctx.config.get("icon_dirs", {})
         overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_dir", ""))
         ctx.predicted_qualities = self.matcher.quality_predictions(
-            ctx.screenshot,
-            ctx.classification,
             ctx.slots,
-            icon_dir_map,
             overlays,
             threshold=self.opts.get("threshold", 0.8),
         )
@@ -208,7 +205,7 @@ class IconPrefilterStage(Stage):
         icon_set = icon_sets[ctx.classification["icon_set"]]
 
         ctx.predicted_icons = self.prefilterer.icon_predictions(
-            ctx.screenshot, ctx.slots, icon_set
+            ctx.slots, icon_set
         )
         ctx.found_icons = self.prefilterer.found_icons
         ctx.filtered_icons = self.prefilterer.filtered_icons
@@ -238,8 +235,6 @@ class IconMatchingStage(Stage):
         )
         # print(f"[Matching] ctx.filtered_icons: {ctx.filtered_icons}")
         ctx.matches = self.matcher.match_all(
-            ctx.screenshot,
-            ctx.classification,
             ctx.slots,
             icon_sets,
             ctx.overlays,

@@ -18,21 +18,16 @@ class SSIMEngine:
 
     def quality_predictions(
         self,
-        screenshot_color,
-        build_info,
         icon_slots,
-        icon_dir_map,
         overlays,
         threshold=0.8,
     ):
         return self.quality_engine.quality_predictions(
-            screenshot_color, build_info, icon_slots, icon_dir_map, overlays, threshold
+            icon_slots, overlays, threshold
         )
 
     def match_all(
         self,
-        screenshot_color,
-        build_info,
         icon_slots,
         icon_dir_map,
         overlays,
@@ -42,8 +37,6 @@ class SSIMEngine:
         threshold=0.8,
     ):
         return self.match_engine.match_all(
-            screenshot_color,
-            build_info,
             icon_slots,
             icon_dir_map,
             overlays,

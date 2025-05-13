@@ -56,7 +56,7 @@ class IconPrefilter:
     #                     icons[filename] = icon
     #     return icons
 
-    def icon_predictions(self, image, icon_slots, icon_set):
+    def icon_predictions(self, icon_slots, icon_set):
         """
         Run icon matching using the selected engine.
         """
@@ -64,7 +64,7 @@ class IconPrefilter:
             self.predicted_icons,
             self.found_icons,
             self.filtered_icons,
-        ) = self.engine.icon_predictions(image, icon_slots, icon_set)
+        ) = self.engine.icon_predictions(icon_slots, icon_set)
 
         logger.info(
             f"[IconPrefilter] Total icon predictions: {len(self.predicted_icons)}"

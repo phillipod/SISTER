@@ -52,14 +52,15 @@ class PHashEngine:
 
         return threshold
 
-    def icon_predictions(self, image, icon_slots, icon_set):
+    def icon_predictions(self, icon_slots, icon_set):
         predictions = {}
 
         filtered_icons = {}
         similar_icons = {}
         found_icons = {}
-
-        for region_label, candidate_regions in icon_slots.items():
+        
+        for region_label in icon_slots:
+            # print(f"region_label: {region_label}")
             folders = icon_set.get(region_label, [])
             if not folders:
                 logger.warning(f"No icon directories found for region '{region_label}'")
@@ -69,14 +70,16 @@ class PHashEngine:
             filtered_icons[region_label] = {}
             similar_icons[region_label] = {}
             found_icons[region_label] = {}
+           
+            for slot in icon_slots[region_label]['Slots']:
+                idx = slot['Slot']
+                box = slot['Box']
+                roi = slot['ROI']
 
-            for idx in candidate_regions:
-                x, y, w, h = candidate_regions[idx]
                 logger.debug(
                     f"Predicting icons for region '{region_label}' at slot {idx}"
                 )
-                box = (x, y, w, h)
-                roi = image[y : y + h, x : x + w]
+
                 found_icons[region_label][box] = {}
                 similar_icons[region_label][box] = {}
                 filtered_icons[region_label][box] = {}
@@ -137,15 +140,17 @@ class PHashEngine:
                             f"Hash prefilter failed for region '{region_label}' at {box}: {e}"
                         ) from e
 
-        for region_label, candidate_regions in icon_slots.items():
+        for region_label in icon_slots:
             predictions[region_label] = {}
 
-            for idx_region in candidate_regions:
-                predictions[region_label][idx_region] = []
+            for slot in icon_slots[region_label]['Slots']:
+                idx = slot['Slot']
+                box = slot['Box']
+                roi = slot['ROI']
 
-                x, y, w, h = candidate_regions[idx_region]
-                roi = image[y : y + h, x : x + w]
-                candidates = found_icons[region_label][(x, y, w, h)]
+                predictions[region_label][idx] = []
+
+                candidates = found_icons[region_label][box]
 
                 dists = [info["dist"] for info in candidates.values()]
                 if not dists:
@@ -166,7 +171,7 @@ class PHashEngine:
                     if info["dist"] > threshold_val:
                         continue
 
-                    predictions[region_label][idx_region].append(
+                    predictions[region_label][idx].append(
                         {
                             "name": info["name"],
                             # "top_left": (x, y),
@@ -174,7 +179,7 @@ class PHashEngine:
                             "score": info["dist"],
                             "match_threshold": int(threshold_val),
                             "region": region_label,
-                            "slot": idx_region,
+                            "slot": idx,
                             "method": "hash-phash",
                             "quality": info["quality"],
                             # "quality_scale": 1.0,
@@ -185,7 +190,7 @@ class PHashEngine:
 
                     filtered_slot_icons[filename] = info
 
-                found_icons[region_label][(x, y, w, h)] = filtered_slot_icons
+                found_icons[region_label][box] = filtered_slot_icons
 
                 try:
                     for filename in filtered_slot_icons:
@@ -200,9 +205,11 @@ class PHashEngine:
                     ) from e
 
                 logger.debug(
-                    f"Predicted {len(predictions[region_label][idx_region])} icons for region '{region_label}' at slot {idx_region}."
+                    f"Predicted {len(predictions[region_label][idx])} icons for region '{region_label}' at slot {idx}."
                 )
                 # predictions.extend(candidate_predictions)
 
         logger.info("Completed all candidate predictions.")
+
+
         return predictions, found_icons, filtered_icons

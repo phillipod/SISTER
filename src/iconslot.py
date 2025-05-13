@@ -4,7 +4,7 @@ import numpy as np
 import logging
 from skimage.measure import shannon_entropy
 
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -64,70 +64,79 @@ class IconSlotDetector:
 
         return region_candidates
 
-    # def detect(self, screenshot_color, build_info, region_data, debug_output_path=None):
     def detect_slots(
-        self, image: np.ndarray, region_bbox: Tuple[int, int, int, int]
-    ) -> List[Tuple[int, int, int, int]]:
+        self, image: np.ndarray, region_bbox: Dict[str, Any]
+    ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
         """
-        Detect icon slot candidates globally and assign them to labeled regions.
+        Detect icon slot candidates globally and assign them to labeled regions, including ROI data.
 
         Args:
-            screenshot_color (np.array): Full BGR screenshot.
-            region_data (dict): Output from RegionDetector.
-            debug_output_path (str): If set, saves debug images.
+            image (np.ndarray): Full BGR screenshot.
+            region_bbox (Dict[str, Any]): Mapping of region labels to region metadata.
 
         Returns:
-            dict: Mapping of region label to list of (x, y, w, h) tuples.
+            Dict[str, Dict[str, List[Dict[str, Any]]]]: Mapping of region label to dict with key "Slots",
+            containing a list of dicts with keys "Slot" (index within region), "Box" (x, y, w, h), and "ROI" (cropped image).
         """
+        # Convert to grayscale and threshold
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         _, binary = cv2.threshold(gray, 63, 255, cv2.THRESH_BINARY)
 
-        candidates = self._find_slot_candidates(binary, image)  # , debug_output_path)
+        # Find slot candidates and their corresponding ROIs
+        candidates, candidate_rois = self._find_slot_candidates(binary, image)
 
-        # Tag into regions
-        region_candidates = {label: [] for label in region_bbox}
-        for x, y, w, h in candidates:
+        # Initialize region slots
+        region_candidates: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
+            label: {"Slots": []} for label in region_bbox
+        }
+
+        # Assign each candidate to its region
+        for idx, (x, y, w, h) in enumerate(candidates):
             cx, cy = x + w // 2, y + h // 2
             for label, entry in region_bbox.items():
-                # print(f"Entry: {entry}")
                 x1, y1 = entry["Region"]["top_left"]
                 x2, y2 = entry["Region"]["bottom_right"]
                 if x1 <= cx <= x2 and y1 <= cy <= y2:
-                    # print(f"Adding to {label}")
-                    region_candidates[label].append((x, y, w, h))
+                    slot_info = {
+                        # Temporarily store global index; will renumber per region later
+                        "GlobalIdx": idx,
+                        "Box": (int(x), int(y), int(w), int(h)),
+                        "ROI": candidate_rois[(x, y, w, h)],
+                    }
+                    region_candidates[label]["Slots"].append(slot_info)
                     break
 
-        # Debug drawing
-        # if self.debug and debug_output_path:
-        #     debug_image = image.copy()
-        #     font = cv2.FONT_HERSHEY_SIMPLEX
-        #     for label, boxes in region_candidates.items():
-        #         color = tuple(np.random.randint(50, 255, size=3).tolist())
-        #         for (x, y, w, h) in boxes:
-        #             cv2.rectangle(debug_image, (x, y), (x + w, y + h), color, 1)
+        #print(f"region_candidates: {region_candidates}")
 
-        #         if label in region_bbox:
-        #             lx, ly = region_bbox[label]["Label"]["top_left"]
-        #             cv2.putText(debug_image, label, (lx + 5, ly + 20), font, 0.6, color, 2, cv2.LINE_AA)
+        # Sort slots and renumber per region
+        for label, data in region_candidates.items():
+            slots = data["Slots"]
+            
+            if not slots:
+                continue
+            boxes = [slot["Box"] for slot in slots]
+            sorted_boxes = self._sort_boxes_grid_order(boxes)
 
-        #     base, _ = os.path.splitext(debug_output_path)
-        #     os.makedirs(os.path.dirname(base), exist_ok=True)
-        #     cv2.imwrite(f"{base}_candidates.png", debug_image)
 
-        # Do not apply normalization yet
+            # Map original slots by box for quick lookup
+            slot_map = {slot["Box"]: slot for slot in slots}
+            #print (f"slot_map: {slot_map}")
+            sorted_slots: List[Dict[str, Any]] = []
+            for local_idx, box in enumerate(sorted_boxes):
+                info = slot_map.get(sorted_boxes[box], None)
+                
+                if info is not None:
+                    sorted_slots.append({
+                        "Slot": local_idx,
+                        "Box": info["Box"],
+                        "ROI": info["ROI"]
+                    })
+            region_candidates[label]["Slots"] = sorted_slots
 
-        # Convert all box values to native Python int to avoid JSON serialization issues
-        region_candidates = {
-            label: [tuple(int(v) for v in box) for box in boxes]
-            for label, boxes in region_candidates.items()
-        }
-
-        for label in region_candidates:
-            region_candidates[label] = self._sort_boxes_grid_order(
-                region_candidates[label]
-            )
+        # print(f"region_candidates: {region_candidates}")
 
         return region_candidates
+
 
     def _find_slot_candidates(
         self,
@@ -172,6 +181,7 @@ class IconSlotDetector:
             denoised, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
         )
         candidates = []
+        candidate_rois = {}
         debug_img = cv2.cvtColor(denoised, cv2.COLOR_GRAY2BGR)
 
         for i, cnt in enumerate(contours):
@@ -190,6 +200,8 @@ class IconSlotDetector:
                 continue
 
             candidates.append((x, y, w, h))
+            candidate_rois[(x, y, w, h)] = roi.copy()
+
             if debug_dir:
                 cv2.rectangle(debug_img, (x, y), (x + w, y + h), (0, 255, 0), 1)
 
@@ -199,7 +211,7 @@ class IconSlotDetector:
         if debug_dir:
             cv2.imwrite(f"{debug_dir}_slot_candidates.png", debug_img)
 
-        return candidates
+        return candidates, candidate_rois
 
     def _non_max_suppression(self, boxes, overlapThresh=0.3):
         """

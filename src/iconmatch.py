@@ -67,8 +67,6 @@ class IconMatcher:
 
     def match_all(
         self,
-        screenshot_color,
-        build_info,
         icon_slots,
         icon_dir_map,
         overlays,
@@ -81,8 +79,6 @@ class IconMatcher:
         Run icon matching using the selected engine.
         """
         matches = self.engine.match_all(
-            screenshot_color,
-            build_info,
             icon_slots,
             icon_dir_map,
             overlays,
@@ -121,10 +117,7 @@ class IconMatcher:
 
     def quality_predictions(
         self,
-        screenshot_color,
-        build_info,
         icon_slots,
-        icon_dir_map,
         overlays,
         threshold=0.8,
     ):
@@ -132,7 +125,7 @@ class IconMatcher:
         Run icon matching using the selected engine.
         """
         self.predicted_qualities = self.engine.quality_predictions(
-            screenshot_color, build_info, icon_slots, icon_dir_map, overlays, threshold
+            icon_slots, overlays, threshold
         )
 
         logger.info(

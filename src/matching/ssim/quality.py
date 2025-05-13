@@ -22,10 +22,7 @@ class SSIMQualityEngine:
 
     def quality_predictions(
         self,
-        screenshot_color,
-        build_info,
         icon_slots,
-        icon_dir_map,
         overlays,
         threshold=0.8,
     ):
@@ -34,84 +31,47 @@ class SSIMQualityEngine:
         """
         matches = []
 
-        max_x = 0
-        max_y = 0
-        for candidate_regions in icon_slots.values():
-            # print(f"candidate_regions: {candidate_regions}", flush=True)
-            for slot_idx in candidate_regions:
-                max_x = max(
-                    max_x,
-                    candidate_regions[slot_idx][0] + candidate_regions[slot_idx][2],
-                )  # max(max_x, x + w)
-                max_y = max(
-                    max_y,
-                    candidate_regions[slot_idx][1] + candidate_regions[slot_idx][3],
-                )  # max(max_y, y + h)
+        overlay_tasks = []
+        region_slot_index = []
 
-        if max_x > 0 and max_y > 0:
-            screenshot_color = screenshot_color[:max_y, :max_x]
-            logger.debug(
-                f"Cropped screenshot to ({max_x}, {max_y}) based on candidate regions."
-            )
+        for region_label in icon_slots:
+            for slot in icon_slots[region_label]['Slots']:
+                idx = slot['Slot']
+                box = slot['Box']
+                roi = slot['ROI']
 
-        shm = shared_memory.SharedMemory(create=True, size=screenshot_color.nbytes)
-        shm_array = np.ndarray(
-            screenshot_color.shape, dtype=screenshot_color.dtype, buffer=shm.buf
-        )
-        np.copyto(shm_array, screenshot_color)
+                logger.debug(
+                    f"Predicting quality for region '{region_label}', slot {idx}"
+                )
 
-        shm_name = shm.name
-        shape = screenshot_color.shape
-        dtype = screenshot_color.dtype
-        logger.debug(
-            f"Created shared memory block with name '{shm_name}' and shape {shape} and dtype {dtype}."
-        )
+                overlay_tasks.append((roi, overlays))
+                region_slot_index.append((region_label, idx))
 
-        try:
-            overlay_tasks = []
-            region_slot_index = []
+        predicted_qualities_by_label = {}
+        with ProcessPoolExecutor() as executor:
+            futures = {
+                executor.submit(identify_overlay, roi, overlays): (
+                    region_label,
+                    idx,
+                )
+                for (roi, overlays), (region_label, idx) in zip(
+                    overlay_tasks, region_slot_index
+                )
+            }
 
-            for region_label, candidate_regions in icon_slots.items():
-                # print(f"region_label: {region_label}, candidate_regions: {candidate_regions}", flush=True)
-                for slot_idx in candidate_regions:
-                    x, y, w, h = candidate_regions[slot_idx]
-
-                    logger.debug(
-                        f"Predicting quality for region '{region_label}', slot {slot_idx}"
+            for future in as_completed(futures):
+                region_label, idx = futures[future]
+                try:
+                    quality, scale, method = future.result()
+                except Exception as e:
+                    logger.warning(
+                        f"Overlay prediction failed for region '{region_label}', slot {idx}: {e}"
                     )
+                    quality, scale, method = "common", 1.0, "default"
 
-                    roi = screenshot_color[y : y + h, x : x + w]
-                    overlay_tasks.append((roi, overlays))
-                    region_slot_index.append((region_label, slot_idx))
-
-            predicted_qualities_by_label = {}
-            with ProcessPoolExecutor() as executor:
-                futures = {
-                    executor.submit(identify_overlay, roi, overlays): (
-                        region_label,
-                        slot_idx,
+                predicted_qualities_by_label.setdefault(region_label, []).append(
+                    (quality, scale, method)
                     )
-                    for (roi, overlays), (region_label, slot_idx) in zip(
-                        overlay_tasks, region_slot_index
-                    )
-                }
-
-                for future in as_completed(futures):
-                    region_label, slot_idx = futures[future]
-                    try:
-                        quality, scale, method = future.result()
-                    except Exception as e:
-                        logger.warning(
-                            f"Overlay prediction failed for region '{region_label}', slot {slot_idx}: {e}"
-                        )
-                        quality, scale, method = "common", 1.0, "default"
-
-                    predicted_qualities_by_label.setdefault(region_label, []).append(
-                        (quality, scale, method)
-                    )
-        finally:
-            shm.close()
-            shm.unlink()
 
         logger.info("Performed all quality predictions.")
 

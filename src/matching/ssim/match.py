@@ -26,8 +26,6 @@ class SSIMMatchEngine:
 
     def match_all(
         self,
-        screenshot_color,
-        build_info,
         icon_slots,
         icon_dir_map,
         overlays,
@@ -43,48 +41,12 @@ class SSIMMatchEngine:
         matched_indexes_global = set()
         matched_icon_slot_pairs = set()
 
-        max_x = 0
-        max_y = 0
-        for candidate_regions in icon_slots.values():
-            # print(f"candidate_regions: {candidate_regions}", flush=True)
-            for slot_idx in candidate_regions:
-                max_x = max(
-                    max_x,
-                    candidate_regions[slot_idx][0] + candidate_regions[slot_idx][2],
-                )  # max(max_x, x + w)
-                max_y = max(
-                    max_y,
-                    candidate_regions[slot_idx][1] + candidate_regions[slot_idx][3],
-                )  # max(max_y, y + h)
-
-        if max_x > 0 and max_y > 0:
-            screenshot_color = screenshot_color[:max_y, :max_x]
-            logger.debug(
-                f"Cropped screenshot to ({max_x}, {max_y}) based on candidate regions."
-            )
-
-        shm = shared_memory.SharedMemory(create=True, size=screenshot_color.nbytes)
-        shm_array = np.ndarray(
-            screenshot_color.shape, dtype=screenshot_color.dtype, buffer=shm.buf
-        )
-        np.copyto(shm_array, screenshot_color)
-
-        shm_name = shm.name
-        shape = screenshot_color.shape
-        dtype = screenshot_color.dtype
-        logger.debug(
-            f"Created shared memory block with name '{shm_name}' and shape {shape} and dtype {dtype}."
-        )
-
         try:
             args_list = []
 
-            for region_label, candidate_regions in icon_slots.items():
-                if region_label not in matches:
-                    matches[region_label] = {}
+            for region_label in icon_slots:
+                matches[region_label] = {} 
 
-                # print(f"Processing region '{region_label}'")
-                # print(f"filtered_icons: {filtered_icons}")
                 region_filtered_icons = filtered_icons.get(region_label, {})
                 if not region_filtered_icons:
                     logger.warning(
@@ -95,33 +57,32 @@ class SSIMMatchEngine:
                 predicted_qualities = predicted_qualities_by_region.get(
                     region_label, []
                 )
-                if len(predicted_qualities) != len(candidate_regions):
+                if len(predicted_qualities) != len(icon_slots[region_label]['Slots']):
                     logger.warning(
                         f"Mismatch between candidate regions and predicted qualities for '{region_label}'"
                     )
 
-                for idx_region, (x, y, w, h) in candidate_regions.items():
-                    if idx_region not in matches[region_label]:
-                        matches[region_label][idx_region] = []
+                for slot in icon_slots[region_label]['Slots']:
+                    idx = slot['Slot']
+                    box = slot['Box']
+                    roi = slot['ROI']
 
-                    print(
-                        f"Matching {len(region_filtered_icons)} icons against {len(candidate_regions)} candidates for label '{region_label}' at slot {idx_region}"
-                    )
-                    region_key = (x, y, w, h)
-                    icons_for_slot = found_icons[region_label].get(region_key, {})
+                    if idx not in matches[region_label]:
+                        matches[region_label][idx] = []
+
+                    
+                    icons_for_slot = found_icons[region_label].get(box, {})
                     # print(f"icons_for_slot: {icons_for_slot}")
 
                     if not icons_for_slot:
                         continue
 
-                    predicted_quality = predicted_qualities[idx_region]
+                    predicted_quality = predicted_qualities[idx]
 
                     logger.info(
-                        f"Matching {len(icons_for_slot)} icons against 1 candidate for label '{region_label}' at slot {idx_region} with quality {predicted_quality}"
+                        f"Matching {len(icons_for_slot)} icons into label '{region_label}' at slot {idx} with quality {predicted_quality}"
                     )
 
-                    # print(f"icons_for_slot: {icons_for_slot}")
-                    # print(f"region_filtered_icons: {region_filtered_icons}" )
                     for idx_icon, (name, icon_color) in enumerate(
                         region_filtered_icons.items(), 1
                     ):
@@ -136,23 +97,17 @@ class SSIMMatchEngine:
 
                         args = (
                             name,
-                            idx_region,
+                            idx,
+                            roi,
                             icon_color,
-                            shm_name,
-                            shape,
-                            dtype,
-                            [(x, y, w, h)],
-                            [predicted_quality],
+                            predicted_quality,
                             threshold,
                             overlays,
-                            idx_icon,
-                            len(region_filtered_icons),
                             region_label,
                             False,
                         )
                         args_list.append(args)
 
-            print(f"Number of args: {len(args_list)}")
             future_to_args = {}
             with ProcessPoolExecutor() as executor:
                 futures = [
@@ -165,7 +120,6 @@ class SSIMMatchEngine:
                     args = future_to_args[future]
                     result, matched, slot_idx = future.result()
 
-                    # print(f"args: {args}")
                     for item in result:
                         matches[item["region"]][item["slot"]].append(item)
 
@@ -173,26 +127,29 @@ class SSIMMatchEngine:
                         matched_indexes_global.add((args[-2], args[1]))
                         matched_icon_slot_pairs.add((args[-2], args[0], idx))
 
-            print(f"Number of matches: {len(matches)}")
-
             # Fallback pass
             fallback_args_list = []
-            for region_label, candidate_regions in icon_slots.items():
+            for region_label in icon_slots:
                 region_filtered_icons = filtered_icons.get(region_label, {})
                 if not region_filtered_icons:
+                    logger.warning(
+                        f"No filtered icons available for region '{region_label}'"
+                    )
                     continue
 
                 predicted_qualities = predicted_qualities_by_region.get(
                     region_label, []
                 )
 
-                for original_idx, (x, y, w, h) in candidate_regions.items():
-                    # original_idx = candidate_regions.index((x, y, w, h))
-                    if (region_label, original_idx) in matched_indexes_global:
-                        continue
+                for slot in icon_slots[region_label]['Slots']:
+                    idx = slot['Slot']
+                    box = slot['Box']
+                    roi = slot['ROI']
 
-                    region_key = (x, y, w, h)
-                    icons_for_slot = found_icons[region_label].get(region_key, {})
+                    if matches[region_label].get(idx) is not None:
+                        continue
+                    
+                    icons_for_slot = found_icons[region_label].get(region_key, {})    
                     if not icons_for_slot:
                         continue
 
@@ -200,36 +157,38 @@ class SSIMMatchEngine:
                     if not fallback_icons:
                         continue
 
+
+                    icons_for_slot = found_icons[region_label].get(box, {})
+                    if not icons_for_slot:
+                        continue
+
+                    fallback_icons = list(icons_for_slot.keys())
+                    if not fallback_icons:
+                        continue
+
+                    predicted_quality = predicted_qualities[idx]
+
                     logger.info(
-                        f"Fallback matching {len(fallback_icons)} icons against 1 candidate for label '{region_label}' at slot {original_idx}"
+                        f"Fallback matching {len(fallback_icons)} icons into label '{region_label}' at slot {original_idx}"
                     )
 
-                    for idx_icon, name in enumerate(fallback_icons, 1):
-                        if (
-                            region_label,
-                            name,
-                            original_idx,
-                        ) in matched_icon_slot_pairs:
+                    for idx_icon, (name, icon_color) in enumerate(
+                        fallback_icons.items(), 1
+                    ):
+                        if name not in icons_for_slot:
                             continue
-                        #                        print(f"name: {name} region_label: {region_label} original_idx: {original_idx} ")
-                        icon_color = region_filtered_icons.get(name)
+
                         if icon_color is None:
-                            # print(f"icon_color is None")
                             continue
 
                         args = (
                             name,
-                            original_idx,
+                            idx,
+                            roi,
                             icon_color,
-                            shm_name,
-                            shape,
-                            dtype,
-                            [(x, y, w, h)],
-                            [predicted_qualities[original_idx]],
+                            predicted_quality,
                             threshold,
                             overlays,
-                            idx_icon,
-                            len(fallback_icons),
                             region_label,
                             True,
                         )
@@ -256,9 +215,6 @@ class SSIMMatchEngine:
                         matched_icon_slot_pairs.add((args[-2], args[0], idx))
         except SISTERError as e:
             raise IconMatchingError(e) from e
-        finally:
-            shm.close()
-            shm.unlink()
 
         logger.info("Completed all region matches.")
         return matches
@@ -267,121 +223,102 @@ class SSIMMatchEngine:
         (
             name,
             slot_idx,
+            roi,
             icon_color,
-            shm_name,
-            shape,
-            dtype,
-            candidate_regions,
-            predicted_qualities,
+            predicted_quality,
             threshold,
             overlays,
-            idx,
-            total,
             region_label,
             fallback_mode,
         ) = args
 
-        shm = shared_memory.SharedMemory(name=shm_name)
-        screenshot_color = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
-
         found_matches = []
         matched_candidate_indexes = set()
 
-        # print(f"candidate_regions: {candidate_regions}")
-        # print(f"overlays: {overlays}")
-        for idx_region, (x, y, w, h) in enumerate(candidate_regions):
-            # print(f"slot_idx: {slot_idx} x: {x} y: {y} w: {w} h: {h}")
-            # print(f"idx_region: {idx_region}")
-            # print(f"predicted_qualities: {predicted_qualities}")
-            quality, quality_scale, quality_method = predicted_qualities[idx_region]
+        quality, quality_scale, quality_method = predicted_quality
 
-            # print(f"quality: {quality} quality_scale: {quality_scale} quality_method: {quality_method}")
-            if not quality or quality not in overlays:
-                # print(f"Skipping {name} against {total} icons for label '{region_label}' at slot {slot_idx} with quality {quality}")
-                continue
+        if not quality or quality not in overlays:
+            return found_matches, matched_candidate_indexes, slot_idx
 
-            roi = screenshot_color[y : y + h, x : x + w]
-            scale_factor = None
+        scale_factor = None
 
-            if roi.shape[0] > 43 * 1.1 or roi.shape[1] > 33 * 1.1:
-                scale_factor = min(43 / roi.shape[0], 33 / roi.shape[1])
-                roi = cv2.resize(
-                    roi,
-                    None,
-                    fx=scale_factor,
-                    fy=scale_factor,
-                    interpolation=cv2.INTER_AREA,
-                )
+        if roi.shape[0] > 43 * 1.1 or roi.shape[1] > 33 * 1.1:
+            scale_factor = min(43 / roi.shape[0], 33 / roi.shape[1])
+            roi = cv2.resize(
+                roi.copy(),
+                None,
+                fx=scale_factor,
+                fy=scale_factor,
+                interpolation=cv2.INTER_AREA,
+            )
 
-            best_match = None
-            method = "ssim-all-overlays-all-scales-fallback"
-            quality_used = quality
+        best_match = None
+        method = "ssim-all-overlays-all-scales-fallback"
+        quality_used = quality
 
-            if quality == "common":
-                best_score = -np.inf
-                for overlay_name, overlay_img in overlays.items():
-                    blended_icon = apply_overlay(icon_color, overlay_img)
-                    match = multi_scale_match(roi, blended_icon, threshold=threshold)
+        if quality == "common":
+            best_score = -np.inf
+            for overlay_name, overlay_img in overlays.items():
+                blended_icon = apply_overlay(icon_color, overlay_img)
+                match = multi_scale_match(roi, blended_icon, threshold=threshold)
 
-                    if match and match[2] > best_score:
-                        best_score = match[2]
-                        best_match = match
-                        quality_used = overlay_name
+                if match and match[2] > best_score:
+                    best_score = match[2]
+                    best_match = match
+                    quality_used = overlay_name
 
-                # print(f"quality==common: best_match: {best_match} best_score: {best_score} quality_used: {quality_used}")
+            # print(f"quality==common: best_match: {best_match} best_score: {best_score} quality_used: {quality_used}")
+        else:
+            blended_icon = apply_overlay(icon_color, overlays[quality])
+            icon_h, icon_w = icon_color.shape[:2]
+            overlay_h, overlay_w = overlays[quality].shape[:2]
+
+            if icon_h == overlay_h and icon_w == overlay_w and quality_scale:
+                scales = [quality_scale]
+                method = "ssim-predicted-overlay-scale"
             else:
-                blended_icon = apply_overlay(icon_color, overlays[quality])
-                icon_h, icon_w = icon_color.shape[:2]
-                overlay_h, overlay_w = overlays[quality].shape[:2]
-
-                if icon_h == overlay_h and icon_w == overlay_w and quality_scale:
-                    scales = [quality_scale]
-                    method = "ssim-predicted-overlay-scale"
-                else:
-                    scales = np.linspace(0.6, 0.8, 20)
-                    method = (
-                        "ssim-predicted-overlays-all-scales-icon-size-mismatch-fallback"
-                    )
-
-                if not fallback_mode:
-                    best_match = multi_scale_match(
-                        roi, blended_icon, scales=scales, threshold=threshold
-                    )
-                else:
-                    method = "ssim-predicted-overlay-all-scales-fallback"
-                    best_match = multi_scale_match(
-                        roi, blended_icon, threshold=threshold
-                    )
-
-                # print(f"quality!=common: best_match: {best_match} scales: {scales} method: {method}")
-
-            if best_match:
-                top_left, size, score, scale = best_match
-                gx, gy = top_left
-                match_w, match_h = size
-
-                if scale_factor:
-                    inv_scale = 1.0 / scale_factor
-                    gx = int(np.floor(gx * inv_scale))
-                    gy = int(np.floor(gy * inv_scale))
-                    match_w = int(np.ceil(match_w * inv_scale)) + 1
-                    match_h = int(np.ceil(match_h * inv_scale)) + 1
-
-                found_matches.append(
-                    {
-                        "region": region_label,
-                        "slot": slot_idx,
-                        "name": f"{name}",
-                        # "top_left": (x + gx, y + gy),
-                        # "bottom_right": (x + gx + match_w, y + gy + match_h),
-                        "score": score,
-                        "scale": scale,
-                        "quality_scale": quality_scale,
-                        "quality": quality_used,
-                        "method": method,
-                    }
+                scales = np.linspace(0.6, 0.8, 20)
+                method = (
+                    "ssim-predicted-overlays-all-scales-icon-size-mismatch-fallback"
                 )
-                matched_candidate_indexes.add(idx_region)
+
+            if not fallback_mode:
+                best_match = multi_scale_match(
+                    roi, blended_icon, scales=scales, threshold=threshold
+                )
+            else:
+                method = "ssim-predicted-overlay-all-scales-fallback"
+                best_match = multi_scale_match(
+                    roi, blended_icon, threshold=threshold
+                )
+
+            # print(f"quality!=common: best_match: {best_match} scales: {scales} method: {method}")
+
+        if best_match:
+            top_left, size, score, scale = best_match
+            gx, gy = top_left
+            match_w, match_h = size
+
+            if scale_factor:
+                inv_scale = 1.0 / scale_factor
+                gx = int(np.floor(gx * inv_scale))
+                gy = int(np.floor(gy * inv_scale))
+                match_w = int(np.ceil(match_w * inv_scale)) + 1
+                match_h = int(np.ceil(match_h * inv_scale)) + 1
+
+            found_matches.append(
+                {
+                    "region": region_label,
+                    "slot": slot_idx,
+                    "name": f"{name}",
+                    "score": score,
+                    "scale": scale,
+                    "quality_scale": quality_scale,
+                    "quality": quality_used,
+                    "method": method,
+                }
+            )
+            matched_candidate_indexes.add(slot_idx)
 
         # print(f"Completed {name} against {total} icons for label '{region_label}' at slot {slot_idx}")
         # print(f"found_matches: {found_matches}")
