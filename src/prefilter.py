@@ -63,7 +63,7 @@ class IconPrefilter:
 
         logger.info(
             f"[IconPrefilter] Total icon predictions: {sum(len(slots) for region in self.predicted_icons.values() for slots in region.values())}"
-        )      
+        )
 
         # if self.debug:
         #     debug_img = screenshot_color.copy()

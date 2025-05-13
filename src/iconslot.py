@@ -17,7 +17,7 @@ class IconSlotDetector:
         debug (bool): If True, enables debug output and writes annotated images.
     """
 
-    def __init__(self, debug=False):
+    def __init__(self, hash_index=None, debug=False):
         """
         Initialize the IconSlotDetector.
 
@@ -26,6 +26,7 @@ class IconSlotDetector:
         """
 
         self.debug = debug
+        self.hash_index = hash_index
 
     # def detect_inventory(self, screenshot_color, debug_output_path=None):
     def detect_inventory(
@@ -102,6 +103,7 @@ class IconSlotDetector:
                         "GlobalIdx": idx,
                         "Box": (int(x), int(y), int(w), int(h)),
                         "ROI": candidate_rois[(x, y, w, h)],
+                        "Hash": self.hash_index.get_hash(candidate_rois[(x, y, w, h)]),
                     }
                     region_candidates[label].append(slot_info)
                     break
@@ -124,7 +126,12 @@ class IconSlotDetector:
 
                 if info is not None:
                     sorted_slots.append(
-                        {"Slot": local_idx, "Box": info["Box"], "ROI": info["ROI"]}
+                        {
+                            "Slot": local_idx,
+                            "Box": info["Box"],
+                            "ROI": info["ROI"],
+                            "Hash": info["Hash"],
+                        }
                     )
             region_candidates[label] = sorted_slots
 

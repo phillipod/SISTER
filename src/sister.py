@@ -57,6 +57,10 @@ class Stage:
     name: str = ""
     interactive: bool = False
 
+    def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
+        self.opts = opts
+        self.app_config = app_config
+
     def run(
         self, ctx: PipelineContext, report: Callable[[str, float], None]
     ) -> StageResult:
@@ -71,8 +75,8 @@ class Stage:
 class LabelLocatorStage(Stage):
     name = "label_locator"
 
-    def __init__(self, opts: Dict[str, Any]):
-        self.opts = opts
+    def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
+        super().__init__(opts, app_config)
         self.locator = LabelLocator(**opts)
 
     def run(
@@ -87,8 +91,8 @@ class LabelLocatorStage(Stage):
 class ClassifierStage(Stage):
     name = "classifier"
 
-    def __init__(self, opts: Dict[str, Any]):
-        self.opts = opts
+    def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
+        super().__init__(opts, app_config)
         self.classifier = Classifier(**opts)
 
     def run(
@@ -117,8 +121,8 @@ class RegionDetectionStage(Stage):
     name = "region_detection"
     interactive = True  # allow UI confirmation
 
-    def __init__(self, opts: Dict[str, Any]):
-        self.opts = opts
+    def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
+        super().__init__(opts, app_config)
         self.detector = RegionDetector(**opts)
 
     def run(
@@ -137,9 +141,12 @@ class RegionDetectionStage(Stage):
 class IconSlotDetectionStage(Stage):
     name = "iconslot_detection"
 
-    def __init__(self, opts: Dict[str, Any]):
-        self.opts = opts
-        self.slot_detector = IconSlotDetector(**opts)
+    def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
+        super().__init__(opts, app_config)
+
+        self.opts["hash_index"] = self.app_config.get("hash_index")
+
+        self.slot_detector = IconSlotDetector(**self.opts)
 
     def run(
         self, ctx: PipelineContext, report: Callable[[str, float], None]
@@ -155,21 +162,12 @@ class IconSlotDetectionStage(Stage):
 class IconPrefilterStage(Stage):
     name = "icon_prefilter"
 
-    def __init__(self, opts: Dict[str, Any]):
-        self.opts = opts
+    def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
+        super().__init__(opts, app_config)
 
-        hash_index = HashIndex(
-            opts.get("hash_index_dir"),
-            opts.get("engine", "phash"),
-            match_size=opts.get("hash_max_size", (16, 16)),
-            output_file=opts.get("hash_index_file", "hash_index.json"),
-        )
+        self.opts["hash_index"] = self.app_config.get("hash_index")
 
-        self.prefilterer = IconPrefilter(
-            hash_index=hash_index,
-            debug=opts.get("debug", False),
-            engine_type=opts.get("engine", "phash"),
-        )
+        self.prefilterer = IconPrefilter(**self.opts)
 
     def run(
         self, ctx: PipelineContext, report: Callable[[str, float], None]
@@ -190,11 +188,11 @@ class IconPrefilterStage(Stage):
 class IconMatchingQualityDetectionStage(Stage):
     name = "icon_quality_detection"
 
-    def __init__(self, opts: Dict[str, Any]):
-        self.opts = opts
+    def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
+        super().__init__(opts, app_config)
 
         self.matcher = IconMatcher(
-            hash_index=opts.get("hash_index"),
+            hash_index=app_config.get("hash_index"),
             debug=opts.get("debug", False),
             engine_type=opts.get("engine_type", "ssim"),
         )
@@ -218,10 +216,11 @@ class IconMatchingQualityDetectionStage(Stage):
 class IconMatchingStage(Stage):
     name = "icon_matching"
 
-    def __init__(self, opts: Dict[str, Any]):
-        self.opts = opts
+    def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
+        super().__init__(opts, app_config)
+
         self.matcher = IconMatcher(
-            hash_index=opts.get("hash_index"),
+            hash_index=app_config.get("hash_index"),
             debug=opts.get("debug", False),
             engine_type=opts.get("engine_type", "ssim"),
         )
@@ -251,8 +250,8 @@ class IconMatchingStage(Stage):
 class OutputTransformationStage(Stage):
     name = "output_transformation"
 
-    def __init__(self, opts: Dict[str, Any]):
-        self.opts = opts
+    def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
+        super().__init__(opts, app_config)
 
     def run(
         self, ctx: PipelineContext, report: Callable[[str, float], None]
@@ -300,7 +299,6 @@ class OutputTransformationStage(Stage):
 class SISTER:
     def __init__(
         self,
-        stages: List[Stage],
         on_progress: Callable[[str, float, PipelineContext], None],
         on_interactive: Callable[[str, PipelineContext], PipelineContext],
         on_error: Callable[[PipelineError], None],
@@ -315,8 +313,25 @@ class SISTER:
         ] = None,
     ):
         self.metrics: Dict[str, Dict[str, float]] = {}
+        self.app_config: Dict[str, Any] = {}
 
-        self.stages = stages
+        self.config = config
+        self.app_init()
+
+        self.stages: List[Stage] = [
+            LabelLocatorStage(config.get("locator", {"debug": True}), self.app_config),
+            ClassifierStage(config.get("classifier", {}), self.app_config),
+            RegionDetectionStage(config.get("region", {}), self.app_config),
+            IconSlotDetectionStage(config.get("iconslot", {}), self.app_config),
+            IconPrefilterStage(
+                config.get("prefilter", {"debug": True}), self.app_config
+            ),
+            IconMatchingQualityDetectionStage(
+                config.get("quality", {}), self.app_config
+            ),
+            IconMatchingStage(config.get("matching", {}), self.app_config),
+            OutputTransformationStage(config.get("transform", {}), self.app_config),
+        ]
 
         self.on_progress = on_progress
         self.on_interactive = on_interactive
@@ -328,13 +343,15 @@ class SISTER:
         self.on_stage_complete = on_stage_complete
         self.on_pipeline_complete = on_pipeline_complete
 
-        self.config = config
-
-        self.app_config = {}
-
-        self.app_init()
-
     def app_init(self) -> None:
+        print(f"Initializing SISTER with config: {self.config}")
+        self.app_config["hash_index"] = HashIndex(
+            self.config.get("hash_index_dir"),
+            self.config.get("engine", "phash"),
+            match_size=self.config.get("hash_max_size", (16, 16)),
+            output_file=self.config.get("hash_index_file", "hash_index.json"),
+        )
+
         icon_root = Path(self.config.get("icon_dir"))
 
         self.app_config["icon_sets"] = {
@@ -508,18 +525,7 @@ def build_default_pipeline(
     ] = None,
     config: Dict[str, Any] = {},
 ) -> SISTER:
-    stages: List[Stage] = [
-        LabelLocatorStage(config.get("locator", {"debug": True})),
-        ClassifierStage(config.get("classifier", {})),
-        RegionDetectionStage(config.get("region", {})),
-        IconSlotDetectionStage(config.get("iconslot", {})),
-        IconPrefilterStage(config.get("prefilter", {"debug": True})),
-        IconMatchingQualityDetectionStage(config.get("quality", {})),
-        IconMatchingStage(config.get("matching", {})),
-        OutputTransformationStage(config.get("transform", {})),
-    ]
     return SISTER(
-        stages,
         on_progress,
         on_interactive,
         on_error,

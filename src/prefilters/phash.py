@@ -51,12 +51,17 @@ class PHashEngine:
 
         return threshold
 
-    def icon_predictions(self, icon_slots, icon_set):
+    def icon_predictions(self, icon_slots, icon_set, select_items=None):
         predictions = {}
 
         filtered_icons = {}
         similar_icons = {}
         found_icons = {}
+        target_hashes = {}
+
+        # select_items = {
+        #    "Science Console": { 3: True },
+        # }
 
         for region_label in icon_slots:
             # print(f"region_label: {region_label}")
@@ -69,11 +74,13 @@ class PHashEngine:
             filtered_icons[region_label] = {}
             similar_icons[region_label] = {}
             found_icons[region_label] = {}
+            target_hashes[region_label] = []
 
             for slot in icon_slots[region_label]:
                 idx = slot["Slot"]
                 box = slot["Box"]
                 roi = slot["ROI"]
+                roi_hash = slot["Hash"]
 
                 logger.debug(
                     f"Predicting icons for region '{region_label}' at slot {idx}"
@@ -85,8 +92,9 @@ class PHashEngine:
 
                 try:
                     results = self.hash_index.find_similar_to_image(
-                        roi, max_distance=18, top_n=None, grayscale=False
+                        roi_hash, max_distance=18, top_n=None, grayscale=False
                     )
+                    target_hashes[region_label].append(roi_hash)
                 except Exception as e:
                     raise PrefilterError(
                         f"Hash prefilter failed for region '{region_label}' at {box}: {e}"
@@ -140,12 +148,28 @@ class PHashEngine:
                         ) from e
 
         for region_label in icon_slots:
+            if select_items:
+                if region_label not in select_items.keys():
+                    logger.info(f"Skipping region '{region_label}' - user selection")
+                    continue
+
             predictions[region_label] = {}
 
             for slot in icon_slots[region_label]:
                 idx = slot["Slot"]
                 box = slot["Box"]
                 roi = slot["ROI"]
+                roi_hash = slot["Hash"]
+
+                if select_items and region_label in select_items:
+                    if (
+                        idx not in select_items[region_label]
+                        or select_items[region_label][idx] == False
+                    ):
+                        logger.info(
+                            f"Skipping region '{region_label}' at slot {idx} - user selection"
+                        )
+                        continue
 
                 predictions[region_label][idx] = []
 
@@ -159,7 +183,7 @@ class PHashEngine:
                 stddev = statistics.stdev(dists) if len(dists) > 1 else 0
                 stddev_threshold = best_score + (2 * stddev)
                 dm_threshold = self.dynamic_hamming_score_cutoff(
-                    dists, best_score, max_next_ranks=1, max_allowed_gap=6
+                    dists, best_score, max_next_ranks=2, max_allowed_gap=6
                 )
                 threshold_val = np.ceil(max(dm_threshold, stddev_threshold)).astype(int)
 
@@ -181,6 +205,7 @@ class PHashEngine:
                             "slot": idx,
                             "method": "hash-phash",
                             "quality": info["quality"],
+                            "roi_hash": target_hashes[region_label][idx],
                             # "quality_scale": 1.0,
                             # "quality_score": 0.0,
                             # "scale": 1.0,

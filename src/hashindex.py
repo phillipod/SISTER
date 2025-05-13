@@ -237,25 +237,18 @@ class HashIndex:
     def all_hashes(self):
         return {k: v["hash"] for k, v in self.hashes.items()}
 
-    def find_similar(self, target_hash, max_distance=10, top_n=None):
-        return find_similar_in_namespace(
-            self.hasher_name, target_hash, max_distance, top_n
-        )
-
-    def find_similar_to_image(
-        self, roi_bgr, max_distance=20, top_n=None, size=None, grayscale=False
-    ):
+    def get_hash(self, roi_bgr, size=None, grayscale=False):
         """
-        Compute the perceptual hash of the ROI and return matching icons within max Hamming distance.
+        Compute the perceptual hash of the ROI.
 
         Args:
             roi_bgr (np.ndarray): Target region (BGR format) as a numpy array.
-            max_distance (int): Max Hamming distance to accept as similar.
-            top_n (int, optional): Limit the number of results.
 
         Returns:
-            list of (rel_path, distance): Paths relative to the base dir, sorted by increasing distance.
+            str: Hex string of the computed hash.
         """
+        target_hash = None
+
         if roi_bgr is None or roi_bgr.size == 0:
             raise HashIndexError("ROI image is empty or invalid")
 
@@ -276,6 +269,29 @@ class HashIndex:
             pil_img.close()
         except Exception as e:
             raise HashIndexFindError("Failed to prepare image for hashing") from e
+
+        # print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
+        return str(target_hash)
+
+    def find_similar(self, target_hash, max_distance=10, top_n=None):
+        return find_similar_in_namespace(
+            self.hasher_name, target_hash, max_distance, top_n
+        )
+
+    def find_similar_to_image(
+        self, target_hash, max_distance=20, top_n=None, size=None, grayscale=False
+    ):
+        """
+        Compute the perceptual hash of the ROI and return matching icons within max Hamming distance.
+
+        Args:
+            target_hash (str): Hex string of the target hash.
+            max_distance (int): Max Hamming distance to accept as similar.
+            top_n (int, optional): Limit the number of results.
+
+        Returns:
+            list of (rel_path, distance): Paths relative to the base dir, sorted by increasing distance.
+        """
 
         # print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
         return self.find_similar(target_hash, max_distance=max_distance, top_n=top_n)
