@@ -2,9 +2,10 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-
 import time
 import numpy as np
+
+from pathlib import Path
 
 # --- Import modules ---
 from src.exceptions import *
@@ -30,6 +31,7 @@ class Slot:
 class PipelineContext:
     screenshot: np.ndarray
     config: Dict[str, Any] = field(default_factory=dict)
+    app_config: Dict[str, Any] = field(default_factory=dict)
     labels: Dict[str, Tuple[int, int, int, int]] = field(default_factory=dict)
     regions: Dict[str, Tuple[int, int, int, int]] = field(default_factory=dict)
     slots: Dict[str, List[Slot]] = field(default_factory=dict)
@@ -155,6 +157,7 @@ class IconMatchingQualityDetectionStage(Stage):
 
     def __init__(self, opts: Dict[str, Any]):
         self.opts = opts
+        
         self.matcher = IconMatcher(
             hash_index=opts.get("hash_index"),
             debug=opts.get("debug", False),
@@ -165,8 +168,9 @@ class IconMatchingQualityDetectionStage(Stage):
         self, ctx: PipelineContext, report: Callable[[str, float], None]
     ) -> StageResult:
         report(self.name, 0.0)
-        icon_dir_map = ctx.config.get("icon_dirs", {})
+
         overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_dir", ""))
+
         ctx.predicted_qualities = self.matcher.quality_predictions(
             ctx.slots,
             overlays,
@@ -201,7 +205,7 @@ class IconPrefilterStage(Stage):
     ) -> StageResult:
         report(self.name, 0.0)
 
-        icon_sets = ctx.config.get("icon_sets", {})
+        icon_sets = ctx.app_config.get("icon_sets", {})
         icon_set = icon_sets[ctx.classification["icon_set"]]
 
         ctx.predicted_icons = self.prefilterer.icon_predictions(ctx.slots, icon_set)
@@ -227,7 +231,7 @@ class IconMatchingStage(Stage):
         self, ctx: PipelineContext, report: Callable[[str, float], None]
     ) -> StageResult:
         report(self.name, 0.0)
-        icon_sets = ctx.config.get("icon_sets", {})
+        icon_sets = ctx.app_config.get("icon_sets", {})
         ctx.overlays = self.matcher.load_quality_overlays(
             ctx.config.get("overlay_dir", "")
         )
@@ -327,6 +331,52 @@ class SISTER:
 
         self.config = config
 
+        self.app_config = { }
+
+        self.app_init()
+
+    def app_init(self) -> None:
+
+        icon_root = Path(self.config.get("icon_dir"))
+
+        self.app_config["icon_sets"] = {
+                "ship": {
+                    "Fore Weapon": [icon_root / 'space/weapons/fore', icon_root / 'space/weapons/unrestricted'],
+                    "Aft Weapon": [icon_root / 'space/weapons/aft', icon_root / 'space/weapons/unrestricted'],
+                    "Experimental Weapon": [icon_root / 'space/weapons/experimental'],
+                    "Shield": [icon_root / 'space/shield'],
+                    "Secondary Deflector": [icon_root / 'space/secondary_deflector'],
+                    "Deflector": [icon_root / 'space/deflector', icon_root / 'space/secondary_deflector' ], # Console doesn't have a specific label for Secondary Deflector, it's located under the Deflector label.
+                    "Impulse": [icon_root / 'space/impulse'],
+                    "Warp": [icon_root / 'space/warp'],
+                    "Singularity": [icon_root / 'space/singularity'],
+                    "Hangar": [icon_root / 'space/hangar'],
+                    "Devices": [icon_root / 'space/device'],
+                    "Universal Console": [icon_root / 'space/consoles/universal', icon_root / 'space/consoles/engineering', icon_root / 'space/consoles/tactical', icon_root / 'space/consoles/science'],
+                    "Engineering Console": [icon_root / 'space/consoles/engineering', icon_root / 'space/consoles/universal'],
+                    "Tactical Console": [icon_root / 'space/consoles/tactical', icon_root / 'space/consoles/universal'],
+                    "Science Console": [icon_root / 'space/consoles/science', icon_root / 'space/consoles/universal']
+                },
+                "pc_ground": {
+                    "Body": [icon_root / 'ground/armor'],
+                    "Shield": [icon_root / 'ground/shield'],
+                    "EV Suit": [icon_root / 'ground/ev_suit'],
+                    "Kit Modules": [icon_root / 'ground/kit_module'],
+                    "Kit": [icon_root / 'ground/kit'],
+                    "Devices": [icon_root / 'ground/device'],
+                    "Weapon": [icon_root / 'ground/weapon'],
+                },
+                "console_ground": {
+                    "Body": [icon_root / 'ground/armor'],
+                    "Shield": [icon_root / 'ground/shield'],
+                    "EV Suit": [icon_root / 'ground/ev_suit'],
+                    "Kit": [icon_root / 'ground/kit_module'], # Console swaps "Kit Modules" to "Kit"
+                    "Kit Frame": [icon_root / 'ground/kit'], # And "Kit" becomes "Kit Frame"
+                    "Devices": [icon_root / 'ground/device'],
+                    "Weapon": [icon_root / 'ground/weapon'],
+                }
+            }
+
     def start_metric(self, name: str) -> None:
         self.metrics[name] = {
             "start": time.time(),
@@ -344,7 +394,7 @@ class SISTER:
     def run(self, screenshot: np.ndarray) -> PipelineContext:
         self.start_metric("pipeline")
 
-        ctx = PipelineContext(screenshot=screenshot, config=self.config)
+        ctx = PipelineContext(screenshot=screenshot, config=self.config, app_config=self.app_config)
         results: Dict[str, Any] = {}
 
         for stage in self.stages:

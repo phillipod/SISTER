@@ -101,7 +101,7 @@ if __name__ == "__main__":
         raise RuntimeError("Could not read image")
 
 
-    icon_root = Path(args.icons)
+    #icon_root = Path(args.icons)
     #hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
     
     
@@ -110,52 +110,14 @@ if __name__ == "__main__":
         "debug": True,
         
         "prefilter": {
-            "icon_root": icon_root,
-            "hash_index_dir": icon_root,
+            "icon_root": args.icons,
+            "hash_index_dir": args.icons,
             "hash_index_file": "hash_index.json",
             "hash_max_size": (16, 16),
         },
 
         "icon_dir": args.icons,
         "overlay_dir": args.overlays,
-
-        "icon_sets": {
-            "ship": {
-                "Fore Weapon": [icon_root / 'space/weapons/fore', icon_root / 'space/weapons/unrestricted'],
-                "Aft Weapon": [icon_root / 'space/weapons/aft', icon_root / 'space/weapons/unrestricted'],
-                "Experimental Weapon": [icon_root / 'space/weapons/experimental'],
-                "Shield": [icon_root / 'space/shield'],
-                "Secondary Deflector": [icon_root / 'space/secondary_deflector'],
-                "Deflector": [icon_root / 'space/deflector', icon_root / 'space/secondary_deflector' ], # Console doesn't have a specific label for Secondary Deflector, it's located under the Deflector label.
-                "Impulse": [icon_root / 'space/impulse'],
-                "Warp": [icon_root / 'space/warp'],
-                "Singularity": [icon_root / 'space/singularity'],
-                "Hangar": [icon_root / 'space/hangar'],
-                "Devices": [icon_root / 'space/device'],
-                "Universal Console": [icon_root / 'space/consoles/universal', icon_root / 'space/consoles/engineering', icon_root / 'space/consoles/tactical', icon_root / 'space/consoles/science'],
-                "Engineering Console": [icon_root / 'space/consoles/engineering', icon_root / 'space/consoles/universal'],
-                "Tactical Console": [icon_root / 'space/consoles/tactical', icon_root / 'space/consoles/universal'],
-                "Science Console": [icon_root / 'space/consoles/science', icon_root / 'space/consoles/universal']
-            },
-            "pc_ground": {
-                "Body": [icon_root / 'ground/armor'],
-                "Shield": [icon_root / 'ground/shield'],
-                "EV Suit": [icon_root / 'ground/ev_suit'],
-                "Kit Modules": [icon_root / 'ground/kit_module'],
-                "Kit": [icon_root / 'ground/kit'],
-                "Devices": [icon_root / 'ground/device'],
-                "Weapon": [icon_root / 'ground/weapon'],
-            },
-            "console_ground": {
-                "Body": [icon_root / 'ground/armor'],
-                "Shield": [icon_root / 'ground/shield'],
-                "EV Suit": [icon_root / 'ground/ev_suit'],
-                "Kit": [icon_root / 'ground/kit_module'], # Console swaps "Kit Modules" to "Kit"
-                "Kit Frame": [icon_root / 'ground/kit'], # And "Kit" becomes "Kit Frame"
-                "Devices": [icon_root / 'ground/device'],
-                "Weapon": [icon_root / 'ground/weapon'],
-            }
-        },
     }
 
     # 3. build & run
