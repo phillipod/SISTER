@@ -256,7 +256,7 @@ def main():
     locator = LabelLocator(gpu=args.gpu, debug=args.debug)
     classifier = Classifier(debug=args.debug)
     regioner = RegionDetector(debug=args.debug)
-    slot_finder = IconSlotDetector(debug=args.debug)
+    slot_finder = IconSlotDetector(hash_index=hash_index, debug=args.debug)
     prefilter = IconPrefilter(hash_index=hash_index, debug=args.debug)
     matcher = IconMatcher(hash_index=hash_index, debug=args.debug)
 
