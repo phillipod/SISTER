@@ -145,9 +145,13 @@ class SSIMMatchEngine:
                     box = slot["Box"]
                     roi = slot["ROI"]
 
-                    if matches[region_label].get(idx) is not None:
+                    if (
+                        matches[region_label].get(idx) is not None
+                        and len(matches[region_label][idx]) > 0
+                    ):
+                        #logger.info(f"Skipping {region_label} {idx} as already matched")
                         continue
-
+                    
                     icons_for_slot = found_icons[region_label].get(box, {})
                     if not icons_for_slot:
                         continue
@@ -159,11 +163,11 @@ class SSIMMatchEngine:
                     predicted_quality = predicted_qualities[idx]
 
                     logger.info(
-                        f"Fallback matching {len(fallback_icons)} icons into label '{region_label}' at slot {original_idx}"
+                        f"Fallback matching {len(icons_for_slot.keys())} icons into label '{region_label}' at slot {idx}"
                     )
 
                     for idx_icon, (name, icon_color) in enumerate(
-                        fallback_icons.items(), 1
+                        region_filtered_icons.items(), 1
                     ):
                         if name not in icons_for_slot:
                             continue
