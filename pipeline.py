@@ -14,6 +14,8 @@ from src.exceptions import SISTERError, PipelineError, StageError
 from src.hashindex import HashIndex
 from log_config import setup_logging
 
+from src.utils.image import load_image
+
 import traceback
 
 setup_logging()
@@ -92,6 +94,7 @@ if __name__ == "__main__":
     p.add_argument("--icons", default="images", help="Directory containing downloaded icons. Defaults to 'images' in current directory.")
     p.add_argument("--overlays", default="overlays", help="Directory containing icon overlay images. Defaults to 'overlays' in current directory.")
     p.add_argument("--log-level", default="INFO", help="Log level: DEBUG, VERBOSE, INFO, WARNING, ERROR")
+    p.add_argument("--no-resize", action="store_true", help="Disable image downscaling to 1920x1080. Downscales only if screenshot is greater than 1920x1080.")
 
     args = p.parse_args()
 
@@ -99,7 +102,8 @@ if __name__ == "__main__":
         setup_logging(log_level=args.log_level)
 
     # 1. load image
-    img = cv2.imread(args.image)
+    img = load_image(args.image, resize_fullhd=not args.no_resize)
+    
     if img is None:
         raise RuntimeError("Could not read image")
 
@@ -112,12 +116,10 @@ if __name__ == "__main__":
     config = {
         "debug": True,
         
-        "prefilter": {
-            "engine": "phash",
-            "hash_index_dir": args.icons,
-            "hash_index_file": "hash_index.json",
-            "hash_max_size": (16, 16),
-        },
+        "engine": "phash",
+        "hash_index_dir": args.icons,
+        "hash_index_file": "hash_index.json",
+        "hash_max_size": (16, 16),
 
         "icon_dir": args.icons,
         "overlay_dir": args.overlays,
