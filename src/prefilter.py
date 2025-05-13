@@ -16,7 +16,7 @@ ENGINE_CLASSES = {
 
 class IconPrefilter:
     def __init__(
-        self, icon_root=None, hash_index=None, debug=False, engine_type="phash"
+        self, hash_index=None, debug=False, engine_type="phash"
     ):
         """
         IconPrefilter runner that delegates to a selected engine.
@@ -26,7 +26,6 @@ class IconPrefilter:
             engine_type (str): Engine backend to use. Options: 'phash', etc.
         """
         self.debug = debug
-        self.icon_root = Path(icon_root) if icon_root else None
         self.found_icons = None
         self.filtered_icons = None
 
@@ -34,7 +33,7 @@ class IconPrefilter:
 
         try:
             self.engine = ENGINE_CLASSES[engine_key](
-                debug=debug, hash_index=hash_index, icon_root=icon_root
+                debug=debug, hash_index=hash_index
             )
 
             self.engine_type = engine_key

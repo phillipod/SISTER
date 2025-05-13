@@ -20,9 +20,8 @@ class PHashEngine:
     Prefiltering engine using perceptual hash.
     """
 
-    def __init__(self, debug=False, icon_root=None, hash_index=None):
+    def __init__(self, debug=False, hash_index=None):
         self.debug = debug
-        self.icon_root = icon_root
         self.hash_index = hash_index
 
     def dynamic_hamming_score_cutoff(

@@ -110,7 +110,7 @@ if __name__ == "__main__":
         "debug": True,
         
         "prefilter": {
-            "icon_root": args.icons,
+            "engine": "phash",
             "hash_index_dir": args.icons,
             "hash_index_file": "hash_index.json",
             "hash_max_size": (16, 16),

@@ -160,16 +160,15 @@ class IconPrefilterStage(Stage):
 
         hash_index = HashIndex(
             opts.get("hash_index_dir"),
-            "phash",
+            opts.get("engine", "phash"),
             match_size=opts.get("hash_max_size", (16, 16)),
             output_file=opts.get("hash_index_file", "hash_index.json"),
         )
 
         self.prefilterer = IconPrefilter(
             hash_index=hash_index,
-            icon_root=opts.get("icon_root"),
             debug=opts.get("debug", False),
-            engine_type=opts.get("engine_type", "phash"),
+            engine_type=opts.get("engine", "phash"),
         )
 
     def run(
