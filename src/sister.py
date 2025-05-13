@@ -152,34 +152,6 @@ class IconSlotDetectionStage(Stage):
         return StageResult(ctx, ctx.slots)
 
 
-class IconMatchingQualityDetectionStage(Stage):
-    name = "icon_quality_detection"
-
-    def __init__(self, opts: Dict[str, Any]):
-        self.opts = opts
-
-        self.matcher = IconMatcher(
-            hash_index=opts.get("hash_index"),
-            debug=opts.get("debug", False),
-            engine_type=opts.get("engine_type", "ssim"),
-        )
-
-    def run(
-        self, ctx: PipelineContext, report: Callable[[str, float], None]
-    ) -> StageResult:
-        report(self.name, 0.0)
-
-        overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_dir", ""))
-
-        ctx.predicted_qualities = self.matcher.quality_predictions(
-            ctx.slots,
-            overlays,
-            threshold=self.opts.get("threshold", 0.8),
-        )
-        report(self.name, 1.0)
-        return StageResult(ctx, ctx.predicted_qualities)
-
-
 class IconPrefilterStage(Stage):
     name = "icon_prefilter"
 
@@ -214,6 +186,33 @@ class IconPrefilterStage(Stage):
 
         report(self.name, 1.0)
         return StageResult(ctx, ctx.predicted_icons)
+
+class IconMatchingQualityDetectionStage(Stage):
+    name = "icon_quality_detection"
+
+    def __init__(self, opts: Dict[str, Any]):
+        self.opts = opts
+
+        self.matcher = IconMatcher(
+            hash_index=opts.get("hash_index"),
+            debug=opts.get("debug", False),
+            engine_type=opts.get("engine_type", "ssim"),
+        )
+
+    def run(
+        self, ctx: PipelineContext, report: Callable[[str, float], None]
+    ) -> StageResult:
+        report(self.name, 0.0)
+
+        overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_dir", ""))
+
+        ctx.predicted_qualities = self.matcher.quality_predictions(
+            ctx.slots,
+            overlays,
+            threshold=self.opts.get("threshold", 0.8),
+        )
+        report(self.name, 1.0)
+        return StageResult(ctx, ctx.predicted_qualities)
 
 
 class IconMatchingStage(Stage):
