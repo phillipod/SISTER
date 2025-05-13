@@ -71,7 +71,7 @@ class PHashEngine:
             similar_icons[region_label] = {}
             found_icons[region_label] = {}
            
-            for slot in icon_slots[region_label]['Slots']:
+            for slot in icon_slots[region_label]:
                 idx = slot['Slot']
                 box = slot['Box']
                 roi = slot['ROI']
@@ -143,7 +143,7 @@ class PHashEngine:
         for region_label in icon_slots:
             predictions[region_label] = {}
 
-            for slot in icon_slots[region_label]['Slots']:
+            for slot in icon_slots[region_label]:
                 idx = slot['Slot']
                 box = slot['Box']
                 roi = slot['ROI']

@@ -35,7 +35,7 @@ class SSIMQualityEngine:
         region_slot_index = []
 
         for region_label in icon_slots:
-            for slot in icon_slots[region_label]['Slots']:
+            for slot in icon_slots[region_label]:
                 idx = slot['Slot']
                 box = slot['Box']
                 roi = slot['ROI']

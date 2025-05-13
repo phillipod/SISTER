@@ -57,12 +57,12 @@ class SSIMMatchEngine:
                 predicted_qualities = predicted_qualities_by_region.get(
                     region_label, []
                 )
-                if len(predicted_qualities) != len(icon_slots[region_label]['Slots']):
+                if len(predicted_qualities) != len(icon_slots[region_label]):
                     logger.warning(
                         f"Mismatch between candidate regions and predicted qualities for '{region_label}'"
                     )
 
-                for slot in icon_slots[region_label]['Slots']:
+                for slot in icon_slots[region_label]:
                     idx = slot['Slot']
                     box = slot['Box']
                     roi = slot['ROI']
@@ -141,7 +141,7 @@ class SSIMMatchEngine:
                     region_label, []
                 )
 
-                for slot in icon_slots[region_label]['Slots']:
+                for slot in icon_slots[region_label]:
                     idx = slot['Slot']
                     box = slot['Box']
                     roi = slot['ROI']
@@ -149,15 +149,6 @@ class SSIMMatchEngine:
                     if matches[region_label].get(idx) is not None:
                         continue
                     
-                    icons_for_slot = found_icons[region_label].get(region_key, {})    
-                    if not icons_for_slot:
-                        continue
-
-                    fallback_icons = list(icons_for_slot.keys())
-                    if not fallback_icons:
-                        continue
-
-
                     icons_for_slot = found_icons[region_label].get(box, {})
                     if not icons_for_slot:
                         continue

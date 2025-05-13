@@ -87,7 +87,7 @@ class IconSlotDetector:
 
         # Initialize region slots
         region_candidates: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
-            label: {"Slots": []} for label in region_bbox
+            label: [] for label in region_bbox
         }
 
         # Assign each candidate to its region
@@ -103,15 +103,13 @@ class IconSlotDetector:
                         "Box": (int(x), int(y), int(w), int(h)),
                         "ROI": candidate_rois[(x, y, w, h)],
                     }
-                    region_candidates[label]["Slots"].append(slot_info)
+                    region_candidates[label].append(slot_info)
                     break
 
         #print(f"region_candidates: {region_candidates}")
 
         # Sort slots and renumber per region
-        for label, data in region_candidates.items():
-            slots = data["Slots"]
-            
+        for label, slots in region_candidates.items():            
             if not slots:
                 continue
             boxes = [slot["Box"] for slot in slots]
@@ -131,7 +129,7 @@ class IconSlotDetector:
                         "Box": info["Box"],
                         "ROI": info["ROI"]
                     })
-            region_candidates[label]["Slots"] = sorted_slots
+            region_candidates[label] = sorted_slots
 
         # print(f"region_candidates: {region_candidates}")
 
