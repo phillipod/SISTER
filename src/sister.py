@@ -207,17 +207,12 @@ class IconPrefilterStage(Stage):
         icon_sets = ctx.config.get("icon_sets", {})
         icon_set = icon_sets[ctx.classification["icon_set"]]
 
-        # print(f"[Prefilter] Icon sets: {icon_sets}")
-        # print(f"[Prefilter] Overlays: {overlays}")
-
         ctx.predicted_icons = self.prefilterer.icon_predictions(
             ctx.screenshot, ctx.slots, icon_set
         )
         ctx.found_icons = self.prefilterer.found_icons
         ctx.filtered_icons = self.prefilterer.filtered_icons
 
-        # print(f"[Prefilter] Found icons: {ctx.found_icons}")
-        # print(f"[Prefilter] Filtered icons: {ctx.filtered_icons}")
         report(self.name, 1.0)
         return StageResult(ctx, ctx.predicted_icons)
 
@@ -351,14 +346,12 @@ class SISTER:
         return [{"name": name, "duration": metric["end"] - metric["start"]} for name, metric in self.metrics.items()]
 
     def run(self, screenshot: np.ndarray) -> PipelineContext:
-        pipeline_start = time.time()
-
+        self.start_metric("pipeline")
+        
         ctx = PipelineContext(screenshot=screenshot, config=self.config)
         results: Dict[str, Any] = {}
 
         for stage in self.stages:
-            metric = {}
-
             # notify start
             with self._handle_errors(stage.name, ctx):
                 self.start_metric(stage.name)
@@ -382,31 +375,34 @@ class SISTER:
                 self.end_metric(stage.name)
 
             # on_stage_complete hook
-            self.start_metric(stage.name + "_stage_complete")
-            with self._handle_errors(stage.name, ctx):
-                if self.on_stage_complete:
+            if self.on_stage_complete:
+                self.start_metric(stage.name + "_stage_complete")
+                with self._handle_errors(stage.name, ctx):
                     self.on_stage_complete(stage.name, ctx, stage_result.output)
-            self.end_metric(stage.name + "_stage_complete")
+                self.end_metric(stage.name + "_stage_complete")
 
             # interactive hook
-            self.start_metric(stage.name + "_interactive")
-            with self._handle_errors(stage.name, ctx):
-                if stage.interactive:
-                    ctx = self.on_interactive(stage.name, ctx)
-            self.end_metric(stage.name + "_interactive")
+            if stage.interactive:
+                self.start_metric(stage.name + "_interactive")
+                with self._handle_errors(stage.name, ctx):
+                        ctx = self.on_interactive(stage.name, ctx)
+                self.end_metric(stage.name + "_interactive")
+
+        # end pipeline metric
+        self.end_metric("pipeline")
 
         # on_pipeline_complete hook
-        self.start_metric("pipeline_complete")
-        with self._handle_errors("pipeline_complete", ctx):
-            if self.on_pipeline_complete:
+        if self.on_pipeline_complete:
+            self.start_metric("pipeline_complete")
+            with self._handle_errors("pipeline_complete", ctx):
                 self.on_pipeline_complete(
                     ctx, ctx.output if ctx.output else {}, results
-                )
-        self.end_metric("pipeline_complete")
+                    )
+            self.end_metric("pipeline_complete")
 
         # on_metrics_complete hook
-        with self._handle_errors("metrics_complete", ctx):
-            if self.on_metrics_complete:
+        if self.on_metrics_complete:
+            with self._handle_errors("metrics_complete", ctx):
                 self.on_metrics_complete(self.get_metrics())
 
         return ctx, results
