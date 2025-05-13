@@ -2,6 +2,7 @@
 import argparse
 import cv2
 import traceback
+import time
 
 from pathlib import Path
 
@@ -84,6 +85,8 @@ def on_metrics_complete(metrics):
 
 
 if __name__ == "__main__":
+    start_time = time.time()
+
     p = argparse.ArgumentParser()
     p.add_argument("image", help="Path to screenshot")
     p.add_argument("--icons", default="images", help="Directory containing downloaded icons. Defaults to 'images' in current directory.")
@@ -128,6 +131,9 @@ if __name__ == "__main__":
         print(e)
         import sys
         sys.exit(1)
+
+    end_time = time.time()
+    print(f"[pipeline.py] Total time: {end_time - start_time}")
 
     # 4. dump
     #for slot, match in result.icon_matches.items():
