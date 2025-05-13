@@ -186,6 +186,7 @@ class IconPrefilterStage(Stage):
         report(self.name, 1.0)
         return StageResult(ctx, ctx.predicted_icons)
 
+
 class IconMatchingQualityDetectionStage(Stage):
     name = "icon_quality_detection"
 

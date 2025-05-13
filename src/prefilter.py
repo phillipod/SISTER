@@ -15,9 +15,7 @@ ENGINE_CLASSES = {
 
 
 class IconPrefilter:
-    def __init__(
-        self, hash_index=None, debug=False, engine_type="phash"
-    ):
+    def __init__(self, hash_index=None, debug=False, engine_type="phash"):
         """
         IconPrefilter runner that delegates to a selected engine.
 
@@ -32,9 +30,7 @@ class IconPrefilter:
         engine_key = engine_type.lower()
 
         try:
-            self.engine = ENGINE_CLASSES[engine_key](
-                debug=debug, hash_index=hash_index
-            )
+            self.engine = ENGINE_CLASSES[engine_key](debug=debug, hash_index=hash_index)
 
             self.engine_type = engine_key
         except KeyError as e:
