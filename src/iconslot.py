@@ -106,35 +106,31 @@ class IconSlotDetector:
                     region_candidates[label].append(slot_info)
                     break
 
-        #print(f"region_candidates: {region_candidates}")
+        # print(f"region_candidates: {region_candidates}")
 
         # Sort slots and renumber per region
-        for label, slots in region_candidates.items():            
+        for label, slots in region_candidates.items():
             if not slots:
                 continue
             boxes = [slot["Box"] for slot in slots]
             sorted_boxes = self._sort_boxes_grid_order(boxes)
 
-
             # Map original slots by box for quick lookup
             slot_map = {slot["Box"]: slot for slot in slots}
-            #print (f"slot_map: {slot_map}")
+            # print (f"slot_map: {slot_map}")
             sorted_slots: List[Dict[str, Any]] = []
             for local_idx, box in enumerate(sorted_boxes):
                 info = slot_map.get(sorted_boxes[box], None)
-                
+
                 if info is not None:
-                    sorted_slots.append({
-                        "Slot": local_idx,
-                        "Box": info["Box"],
-                        "ROI": info["ROI"]
-                    })
+                    sorted_slots.append(
+                        {"Slot": local_idx, "Box": info["Box"], "ROI": info["ROI"]}
+                    )
             region_candidates[label] = sorted_slots
 
         # print(f"region_candidates: {region_candidates}")
 
         return region_candidates
-
 
     def _find_slot_candidates(
         self,

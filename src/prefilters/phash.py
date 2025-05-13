@@ -58,7 +58,7 @@ class PHashEngine:
         filtered_icons = {}
         similar_icons = {}
         found_icons = {}
-        
+
         for region_label in icon_slots:
             # print(f"region_label: {region_label}")
             folders = icon_set.get(region_label, [])
@@ -70,11 +70,11 @@ class PHashEngine:
             filtered_icons[region_label] = {}
             similar_icons[region_label] = {}
             found_icons[region_label] = {}
-           
+
             for slot in icon_slots[region_label]:
-                idx = slot['Slot']
-                box = slot['Box']
-                roi = slot['ROI']
+                idx = slot["Slot"]
+                box = slot["Box"]
+                roi = slot["ROI"]
 
                 logger.debug(
                     f"Predicting icons for region '{region_label}' at slot {idx}"
@@ -144,9 +144,9 @@ class PHashEngine:
             predictions[region_label] = {}
 
             for slot in icon_slots[region_label]:
-                idx = slot['Slot']
-                box = slot['Box']
-                roi = slot['ROI']
+                idx = slot["Slot"]
+                box = slot["Box"]
+                roi = slot["ROI"]
 
                 predictions[region_label][idx] = []
 
@@ -210,6 +210,5 @@ class PHashEngine:
                 # predictions.extend(candidate_predictions)
 
         logger.info("Completed all candidate predictions.")
-
 
         return predictions, found_icons, filtered_icons

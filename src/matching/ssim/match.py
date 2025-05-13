@@ -45,7 +45,7 @@ class SSIMMatchEngine:
             args_list = []
 
             for region_label in icon_slots:
-                matches[region_label] = {} 
+                matches[region_label] = {}
 
                 region_filtered_icons = filtered_icons.get(region_label, {})
                 if not region_filtered_icons:
@@ -63,14 +63,13 @@ class SSIMMatchEngine:
                     )
 
                 for slot in icon_slots[region_label]:
-                    idx = slot['Slot']
-                    box = slot['Box']
-                    roi = slot['ROI']
+                    idx = slot["Slot"]
+                    box = slot["Box"]
+                    roi = slot["ROI"]
 
                     if idx not in matches[region_label]:
                         matches[region_label][idx] = []
 
-                    
                     icons_for_slot = found_icons[region_label].get(box, {})
                     # print(f"icons_for_slot: {icons_for_slot}")
 
@@ -142,13 +141,13 @@ class SSIMMatchEngine:
                 )
 
                 for slot in icon_slots[region_label]:
-                    idx = slot['Slot']
-                    box = slot['Box']
-                    roi = slot['ROI']
+                    idx = slot["Slot"]
+                    box = slot["Box"]
+                    roi = slot["ROI"]
 
                     if matches[region_label].get(idx) is not None:
                         continue
-                    
+
                     icons_for_slot = found_icons[region_label].get(box, {})
                     if not icons_for_slot:
                         continue
@@ -279,9 +278,7 @@ class SSIMMatchEngine:
                 )
             else:
                 method = "ssim-predicted-overlay-all-scales-fallback"
-                best_match = multi_scale_match(
-                    roi, blended_icon, threshold=threshold
-                )
+                best_match = multi_scale_match(roi, blended_icon, threshold=threshold)
 
             # print(f"quality!=common: best_match: {best_match} scales: {scales} method: {method}")
 

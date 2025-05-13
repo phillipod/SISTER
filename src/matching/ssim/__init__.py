@@ -22,9 +22,7 @@ class SSIMEngine:
         overlays,
         threshold=0.8,
     ):
-        return self.quality_engine.quality_predictions(
-            icon_slots, overlays, threshold
-        )
+        return self.quality_engine.quality_predictions(icon_slots, overlays, threshold)
 
     def match_all(
         self,

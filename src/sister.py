@@ -204,9 +204,7 @@ class IconPrefilterStage(Stage):
         icon_sets = ctx.config.get("icon_sets", {})
         icon_set = icon_sets[ctx.classification["icon_set"]]
 
-        ctx.predicted_icons = self.prefilterer.icon_predictions(
-            ctx.slots, icon_set
-        )
+        ctx.predicted_icons = self.prefilterer.icon_predictions(ctx.slots, icon_set)
         ctx.found_icons = self.prefilterer.found_icons
         ctx.filtered_icons = self.prefilterer.filtered_icons
 
@@ -338,11 +336,14 @@ class SISTER:
         self.metrics[name]["end"] = time.time()
 
     def get_metrics(self) -> List[Dict[str, float]]:
-        return [{"name": name, "duration": metric["end"] - metric["start"]} for name, metric in self.metrics.items()]
+        return [
+            {"name": name, "duration": metric["end"] - metric["start"]}
+            for name, metric in self.metrics.items()
+        ]
 
     def run(self, screenshot: np.ndarray) -> PipelineContext:
         self.start_metric("pipeline")
-        
+
         ctx = PipelineContext(screenshot=screenshot, config=self.config)
         results: Dict[str, Any] = {}
 
@@ -380,7 +381,7 @@ class SISTER:
             if stage.interactive:
                 self.start_metric(stage.name + "_interactive")
                 with self._handle_errors(stage.name, ctx):
-                        ctx = self.on_interactive(stage.name, ctx)
+                    ctx = self.on_interactive(stage.name, ctx)
                 self.end_metric(stage.name + "_interactive")
 
         # end pipeline metric
@@ -392,7 +393,7 @@ class SISTER:
             with self._handle_errors("pipeline_complete", ctx):
                 self.on_pipeline_complete(
                     ctx, ctx.output if ctx.output else {}, results
-                    )
+                )
             self.end_metric("pipeline_complete")
 
         # on_metrics_complete hook

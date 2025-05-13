@@ -36,9 +36,9 @@ class SSIMQualityEngine:
 
         for region_label in icon_slots:
             for slot in icon_slots[region_label]:
-                idx = slot['Slot']
-                box = slot['Box']
-                roi = slot['ROI']
+                idx = slot["Slot"]
+                box = slot["Box"]
+                roi = slot["ROI"]
 
                 logger.debug(
                     f"Predicting quality for region '{region_label}', slot {idx}"
@@ -71,7 +71,7 @@ class SSIMQualityEngine:
 
                 predicted_qualities_by_label.setdefault(region_label, []).append(
                     (quality, scale, method)
-                    )
+                )
 
         logger.info("Performed all quality predictions.")
 
