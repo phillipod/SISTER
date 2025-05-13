@@ -157,7 +157,7 @@ class IconMatchingQualityDetectionStage(Stage):
 
     def __init__(self, opts: Dict[str, Any]):
         self.opts = opts
-        
+
         self.matcher = IconMatcher(
             hash_index=opts.get("hash_index"),
             debug=opts.get("debug", False),
@@ -331,51 +331,77 @@ class SISTER:
 
         self.config = config
 
-        self.app_config = { }
+        self.app_config = {}
 
         self.app_init()
 
     def app_init(self) -> None:
-
         icon_root = Path(self.config.get("icon_dir"))
 
         self.app_config["icon_sets"] = {
-                "ship": {
-                    "Fore Weapon": [icon_root / 'space/weapons/fore', icon_root / 'space/weapons/unrestricted'],
-                    "Aft Weapon": [icon_root / 'space/weapons/aft', icon_root / 'space/weapons/unrestricted'],
-                    "Experimental Weapon": [icon_root / 'space/weapons/experimental'],
-                    "Shield": [icon_root / 'space/shield'],
-                    "Secondary Deflector": [icon_root / 'space/secondary_deflector'],
-                    "Deflector": [icon_root / 'space/deflector', icon_root / 'space/secondary_deflector' ], # Console doesn't have a specific label for Secondary Deflector, it's located under the Deflector label.
-                    "Impulse": [icon_root / 'space/impulse'],
-                    "Warp": [icon_root / 'space/warp'],
-                    "Singularity": [icon_root / 'space/singularity'],
-                    "Hangar": [icon_root / 'space/hangar'],
-                    "Devices": [icon_root / 'space/device'],
-                    "Universal Console": [icon_root / 'space/consoles/universal', icon_root / 'space/consoles/engineering', icon_root / 'space/consoles/tactical', icon_root / 'space/consoles/science'],
-                    "Engineering Console": [icon_root / 'space/consoles/engineering', icon_root / 'space/consoles/universal'],
-                    "Tactical Console": [icon_root / 'space/consoles/tactical', icon_root / 'space/consoles/universal'],
-                    "Science Console": [icon_root / 'space/consoles/science', icon_root / 'space/consoles/universal']
-                },
-                "pc_ground": {
-                    "Body": [icon_root / 'ground/armor'],
-                    "Shield": [icon_root / 'ground/shield'],
-                    "EV Suit": [icon_root / 'ground/ev_suit'],
-                    "Kit Modules": [icon_root / 'ground/kit_module'],
-                    "Kit": [icon_root / 'ground/kit'],
-                    "Devices": [icon_root / 'ground/device'],
-                    "Weapon": [icon_root / 'ground/weapon'],
-                },
-                "console_ground": {
-                    "Body": [icon_root / 'ground/armor'],
-                    "Shield": [icon_root / 'ground/shield'],
-                    "EV Suit": [icon_root / 'ground/ev_suit'],
-                    "Kit": [icon_root / 'ground/kit_module'], # Console swaps "Kit Modules" to "Kit"
-                    "Kit Frame": [icon_root / 'ground/kit'], # And "Kit" becomes "Kit Frame"
-                    "Devices": [icon_root / 'ground/device'],
-                    "Weapon": [icon_root / 'ground/weapon'],
-                }
-            }
+            "ship": {
+                "Fore Weapon": [
+                    icon_root / "space/weapons/fore",
+                    icon_root / "space/weapons/unrestricted",
+                ],
+                "Aft Weapon": [
+                    icon_root / "space/weapons/aft",
+                    icon_root / "space/weapons/unrestricted",
+                ],
+                "Experimental Weapon": [icon_root / "space/weapons/experimental"],
+                "Shield": [icon_root / "space/shield"],
+                "Secondary Deflector": [icon_root / "space/secondary_deflector"],
+                "Deflector": [
+                    icon_root / "space/deflector",
+                    icon_root / "space/secondary_deflector",
+                ],  # Console doesn't have a specific label for Secondary Deflector, it's located under the Deflector label.
+                "Impulse": [icon_root / "space/impulse"],
+                "Warp": [icon_root / "space/warp"],
+                "Singularity": [icon_root / "space/singularity"],
+                "Hangar": [icon_root / "space/hangar"],
+                "Devices": [icon_root / "space/device"],
+                "Universal Console": [
+                    icon_root / "space/consoles/universal",
+                    icon_root / "space/consoles/engineering",
+                    icon_root / "space/consoles/tactical",
+                    icon_root / "space/consoles/science",
+                ],
+                "Engineering Console": [
+                    icon_root / "space/consoles/engineering",
+                    icon_root / "space/consoles/universal",
+                ],
+                "Tactical Console": [
+                    icon_root / "space/consoles/tactical",
+                    icon_root / "space/consoles/universal",
+                ],
+                "Science Console": [
+                    icon_root / "space/consoles/science",
+                    icon_root / "space/consoles/universal",
+                ],
+            },
+            "pc_ground": {
+                "Body": [icon_root / "ground/armor"],
+                "Shield": [icon_root / "ground/shield"],
+                "EV Suit": [icon_root / "ground/ev_suit"],
+                "Kit Modules": [icon_root / "ground/kit_module"],
+                "Kit": [icon_root / "ground/kit"],
+                "Devices": [icon_root / "ground/device"],
+                "Weapon": [icon_root / "ground/weapon"],
+            },
+            "console_ground": {
+                "Body": [icon_root / "ground/armor"],
+                "Shield": [icon_root / "ground/shield"],
+                "EV Suit": [icon_root / "ground/ev_suit"],
+                "Kit": [
+                    icon_root / "ground/kit_module"
+                ],  # Console swaps "Kit Modules" to "Kit"
+                "Kit Frame": [
+                    icon_root / "ground/kit"
+                ],  # And "Kit" becomes "Kit Frame"
+                "Devices": [icon_root / "ground/device"],
+                "Weapon": [icon_root / "ground/weapon"],
+            },
+        }
 
     def start_metric(self, name: str) -> None:
         self.metrics[name] = {
@@ -394,7 +420,9 @@ class SISTER:
     def run(self, screenshot: np.ndarray) -> PipelineContext:
         self.start_metric("pipeline")
 
-        ctx = PipelineContext(screenshot=screenshot, config=self.config, app_config=self.app_config)
+        ctx = PipelineContext(
+            screenshot=screenshot, config=self.config, app_config=self.app_config
+        )
         results: Dict[str, Any] = {}
 
         for stage in self.stages:
