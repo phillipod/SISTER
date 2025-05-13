@@ -94,9 +94,7 @@ class HashIndex:
     def _load_cache(self):
         if not self.output_file.exists():
             logger.info(f"No existing hash index at {self.output_file}")
-            raise HashIndexNotFoundError(
-                f"No existing hash index at {self.output_file}"
-            )
+            return
 
         try:
             with open(self.output_file, "r", encoding="utf-8") as f:
