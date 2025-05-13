@@ -129,7 +129,7 @@ class IconMatcher:
         )
 
         logger.info(
-            f"[IconMatcher] Total quality predictions: {len(self.predicted_qualities)}"
+            f"[IconMatcher] Total quality predictions: {sum(len(slots) for slots in self.predicted_qualities.values())}"
         )
 
         # if self.debug:

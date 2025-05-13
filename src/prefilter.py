@@ -62,26 +62,8 @@ class IconPrefilter:
         ) = self.engine.icon_predictions(icon_slots, icon_set)
 
         logger.info(
-            f"[IconPrefilter] Total icon predictions: {len(self.predicted_icons)}"
-        )
-
-        # print(f"[IconPrefilter] Total icon predictions: {len(self.predicted_icons)}")
-        # print(f"[IconPrefilter] Filtered icons: {self.filtered_icons}")
-        # print(f"[IconPrefilter] Found icons: {self.found_icons}")
-
-        i = 0
-        for region_label, region in self.found_icons.items():
-            for idx, (box, icons) in enumerate(region.items()):
-                logger.info(
-                    f"[IconPrefilter] Found {len(icons)} icons for region '{region_label}' at slot {idx}"
-                )
-                i += len(icons)
-
-        logger.info(f"[IconPrefilter] Total found icons: {i}")
-        for region_label, region in self.filtered_icons.items():
-            logger.info(
-                f"[IconPrefilter] Filtered icons for region '{region_label}': {len(self.filtered_icons[region_label])}"
-            )
+            f"[IconPrefilter] Total icon predictions: {sum(len(slots) for region in self.predicted_icons.values() for slots in region.values())}"
+        )      
 
         # if self.debug:
         #     debug_img = screenshot_color.copy()

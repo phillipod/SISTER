@@ -153,42 +153,57 @@ def save_match_summary(output_dir, screenshot_path, slots, matches):
     """
     base_name = Path(screenshot_path).stem
     output_file = Path(output_dir) / f"{base_name}_matches.txt"
-    
-    matches_by_region_slot = defaultdict(lambda: defaultdict(list))
-
-    for match in matches:
-        region = match["region"]
-        top_left = match["top_left"]
-        # Find the closest candidate region box and get its index
-        candidate_idx = None
-        for idx, box in slots[region].items():
-            x, y, w, h = box
-            if x <= top_left[0] <= x + w and y <= top_left[1] <= y + h:
-                candidate_idx = idx
-                break
-        if candidate_idx is not None:
-            matches_by_region_slot[region][candidate_idx].append(match)
 
     with open(output_file, "w") as f:
-        for region in sorted(matches_by_region_slot.keys()):
+        for region, slots in sorted(matches.items()):
             f.write(f"=== Region: {region} ===\n")
-            for slot_idx in sorted(matches_by_region_slot[region].keys()):
-                slot_matches = matches_by_region_slot[region][slot_idx]
+            for slot_idx, slot_matches in sorted(slots.items()):
+                f.write(f"  -- Slot {slot_idx} --\n")
                 
-                # Determine if this group is using hash method
-                is_hash_method = slot_matches and slot_matches[0]["method"] == "hash"
-                sorted_matches = sorted(slot_matches, key=lambda m: m["score"], reverse=not is_hash_method)
+                if not slot_matches:
+                    f.write("    <no matches>\n")
+                    continue
+
+                # detect hash-based methods (e.g. 'hash', 'hash-phash', etc.)
+                first_method = slot_matches[0].get("method", "")
+                is_hash_method = first_method.startswith("hash")
+
+                # sort descending for SSIM, ascending for hash
+                sorted_matches = sorted(
+                    slot_matches,
+                    key=lambda m: m.get("score", 0),
+                    reverse=not is_hash_method
+                )
+
+                # helper to pull out a quality_scale, even from predicted_quality
+                def get_quality_scale(m):
+                    if "quality_scale" in m:
+                        return m["quality_scale"]
+                    elif "predicted_quality" in m and isinstance(m["predicted_quality"], (list, tuple)):
+                        return m["predicted_quality"][1]
+                    return 0.0
 
                 best = sorted_matches[0]
-                f.write(f"  -- Slot {slot_idx} --\n")
-                f.write(f"  BEST: {best['name']} ({best.get('quality', '')}) using {best['method']} "
-                        f"(score {best['score']:.2f}, scale {best['scale']:.2f}, quality scale {best.get('quality_scale', 0):.2f})\n")
-                
+                best_qs = get_quality_scale(best)
+                best_scale = best.get("scale", 0.0)
+                f.write(
+                    f"    BEST: {best.get('name','<unknown>')} ({best.get('quality','')}) "
+                    f"using {best.get('method','')} "
+                    f"(score {best.get('score',0):.2f}, scale {best_scale:.2f}, "
+                    f"quality scale {best_qs:.2f})\n"
+                )
+
+                # if there are any runners-up, list them
                 if len(sorted_matches) > 1:
-                    f.write("  Others:\n")
-                    for match in sorted_matches[1:]:
-                        f.write(f"    - {match['name']} using {match['method']} "
-                                f"(score {match['score']:.2f}, scale {match['scale']:.2f}, quality scale {match.get('quality_scale', 0):.2f})\n")
+                    f.write("    Others:\n")
+                    for m in sorted_matches[1:]:
+                        qs = get_quality_scale(m)
+                        sc = m.get("scale", 0.0)
+                        f.write(
+                            f"      - {m.get('name','<unknown>')} using {m.get('method','')} "
+                            f"(score {m.get('score',0):.2f}, scale {sc:.2f}, quality scale {qs:.2f})\n"
+                        )
+
             f.write("\n")
 
     print(f"Saved match summary to {output_file}")
@@ -290,17 +305,17 @@ def main():
             }
 
             start = time.perf_counter()
-            predicted_icons = prefilter.icon_predictions(screenshot, slots, icon_dir_map)
+            predicted_icons = prefilter.icon_predictions(slots, icon_dir_map)
             timings["Icon Prefilter"] = time.perf_counter() - start
-            print(f"Found {len(predicted_icons)} icon predictions")
+            print(f"Found {sum(len(slots) for region in predicted_icons.values() for slots in region.values())} icon predictions")
 
             start = time.perf_counter()
-            predicted_qualities = matcher.quality_predictions(screenshot, build_info, slots, icon_dir_map, overlays, threshold=args.threshold)
+            predicted_qualities = matcher.quality_predictions(slots, overlays, threshold=args.threshold)
             timings["Quality Prediction"] = time.perf_counter() - start
-            print(f"Found {len(predicted_qualities)} quality predictions")
+            print(f"Found {sum(len(slots) for slots in predicted_qualities.values())} quality predictions")
 
             start = time.perf_counter()
-            matches = matcher.match_all(screenshot, build_info, slots, icon_dir_map, overlays, predicted_qualities, prefilter.filtered_icons, prefilter.found_icons, threshold=args.threshold)
+            matches = matcher.match_all(slots, icon_dir_map, overlays, predicted_qualities, prefilter.filtered_icons, prefilter.found_icons, threshold=args.threshold)
             timings["Icon Matching"] = time.perf_counter() - start
             print(f"Found {len(matches)} matches")
 
