@@ -38,9 +38,7 @@ class SSIMMatchEngine:
         Run icon matching using the selected engine.
         """
         matches = {}
-        matched_indexes_global = set()
-        matched_icon_slot_pairs = set()
-
+ 
         try:
             args_list = []
 
@@ -117,14 +115,10 @@ class SSIMMatchEngine:
 
                 for future in as_completed(future_to_args):
                     args = future_to_args[future]
-                    result, matched, slot_idx = future.result()
+                    result = future.result()
 
                     for item in result:
                         matches[item["region"]][item["slot"]].append(item)
-
-                    for idx in matched:
-                        matched_indexes_global.add((args[-2], args[1]))
-                        matched_icon_slot_pairs.add((args[-2], args[0], idx))
 
             # Fallback pass
             fallback_args_list = []
@@ -199,14 +193,11 @@ class SSIMMatchEngine:
 
                 for future in as_completed(future_to_args):
                     args = future_to_args[future]
-                    result, matched, slot_idx = future.result()
+                    result = future.result()
 
                     for item in result:
                         matches[item["region"]][item["slot"]].append(item)
 
-                    for idx in matched:
-                        matched_indexes_global.add((args[-2], args[1]))
-                        matched_icon_slot_pairs.add((args[-2], args[0], idx))
         except SISTERError as e:
             raise IconMatchingError(e) from e
 
@@ -314,4 +305,4 @@ class SSIMMatchEngine:
 
         # print(f"Completed {name} against {total} icons for label '{region_label}' at slot {slot_idx}")
         # print(f"found_matches: {found_matches}")
-        return found_matches, matched_candidate_indexes, slot_idx
+        return found_matches
