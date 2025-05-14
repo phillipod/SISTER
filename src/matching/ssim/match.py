@@ -38,7 +38,7 @@ class SSIMMatchEngine:
         Run icon matching using the selected engine.
         """
         matches = {}
- 
+
         try:
             args_list = []
 
@@ -143,9 +143,9 @@ class SSIMMatchEngine:
                         matches[region_label].get(idx) is not None
                         and len(matches[region_label][idx]) > 0
                     ):
-                        #logger.info(f"Skipping {region_label} {idx} as already matched")
+                        # logger.info(f"Skipping {region_label} {idx} as already matched")
                         continue
-                    
+
                     icons_for_slot = found_icons[region_label].get(box, {})
                     if not icons_for_slot:
                         continue
