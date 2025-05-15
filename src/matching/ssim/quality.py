@@ -3,6 +3,8 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import shared_memory
 import logging
 
+import traceback
+
 from .common import identify_overlay
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,9 @@ class SSIMQualityEngine:
                 box = slot["Box"]
                 roi = slot["ROI"]
 
+                # if region_label != "Hangar":
+                #     continue
+
                 logger.debug(
                     f"Predicting quality for region '{region_label}', slot {idx}"
                 )
@@ -48,9 +53,9 @@ class SSIMQualityEngine:
                 region_slot_index.append((region_label, idx))
 
         predicted_qualities_by_label = {}
-        with ProcessPoolExecutor() as executor:
+        with ProcessPoolExecutor(max_workers=4) as executor:
             futures = {
-                executor.submit(identify_overlay, roi, overlays): (
+                executor.submit(identify_overlay, roi, overlays, region_label, idx): (
                     region_label,
                     idx,
                 )
@@ -67,12 +72,16 @@ class SSIMQualityEngine:
                     logger.warning(
                         f"Overlay prediction failed for region '{region_label}', slot {idx}: {e}"
                     )
+                    traceback.print_exc()
                     quality, scale, method = "common", 1.0, "default"
 
-                predicted_qualities_by_label.setdefault(region_label, []).append(
-                    (quality, scale, method)
-                )
+                predicted_qualities_by_label.setdefault(region_label, {})[idx] = (quality, scale, method)
+                
 
         logger.info("Performed all quality predictions.")
 
+
+        print(predicted_qualities_by_label)
+#        import sys
+#        sys.exit()
         return predicted_qualities_by_label

@@ -17,7 +17,7 @@ class IconSlotDetector:
         debug (bool): If True, enables debug output and writes annotated images.
     """
 
-    def __init__(self, hash_index=None, debug=False):
+    def __init__(self, hash_index=None, debug=False, debug_output_path=None):
         """
         Initialize the IconSlotDetector.
 
@@ -26,7 +26,14 @@ class IconSlotDetector:
         """
 
         self.debug = debug
+        self.debug_output_path = debug_output_path
         self.hash_index = hash_index
+
+        # Esnure debug output directory exists
+        if self.debug and self.debug_output_path:
+            print(f"Saving debug output to {self.debug_output_path}")
+            base, _ = os.path.splitext(self.debug_output_path)
+            os.makedirs(os.path.dirname(base), exist_ok=True)
 
     # def detect_inventory(self, screenshot_color, debug_output_path=None):
     def detect_inventory(
@@ -108,21 +115,29 @@ class IconSlotDetector:
                     region_candidates[label].append(slot_info)
                     break
 
-        # print(f"region_candidates: {region_candidates}")
+        #print(f"region_candidates: {region_candidates}")
 
         # Sort slots and renumber per region
         for label, slots in region_candidates.items():
             if not slots:
+                print(f"No slots found for {label}")
                 continue
+            print(f"\n\nFound {len(slots)} slots for {label}")
             boxes = [slot["Box"] for slot in slots]
+
+            print(f"boxes: {boxes}")
             sorted_boxes = self._sort_boxes_grid_order(boxes)
 
+            print(f"sorted_boxes: {sorted_boxes}")
             # Map original slots by box for quick lookup
             slot_map = {slot["Box"]: slot for slot in slots}
-            # print (f"slot_map: {slot_map}")
+            print (f"slot_map: {slot_map}")
             sorted_slots: List[Dict[str, Any]] = []
+           
             for local_idx, box in enumerate(sorted_boxes):
+                print(f"local_idx: {local_idx}, box: {box}")
                 info = slot_map.get(sorted_boxes[box], None)
+                print (f"info: {info}")
 
                 if info is not None:
                     sorted_slots.append(
@@ -133,9 +148,11 @@ class IconSlotDetector:
                             "Hash": info["Hash"],
                         }
                     )
+                else:
+                    print(f"Slot {local_idx} not found for {label}")
             region_candidates[label] = sorted_slots
 
-        # print(f"region_candidates: {region_candidates}")
+        #print(f"region_candidates: {region_candidates}")
 
         return region_candidates
 
@@ -175,8 +192,8 @@ class IconSlotDetector:
         os.makedirs(os.path.dirname(debug_dir), exist_ok=True) if debug_dir else None
 
         denoised = cv2.fastNlMeansDenoising(binary, h=30)
-        if debug_dir:
-            cv2.imwrite(f"{debug_dir}_denoised.png", denoised)
+        if self.debug_output_path:
+            cv2.imwrite(f"{self.debug_output_path}_denoised.png", denoised)
 
         contours, _ = cv2.findContours(
             denoised, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
@@ -197,8 +214,8 @@ class IconSlotDetector:
             stddev = np.std(roi_gray)
             entropy = shannon_entropy(roi_gray)
 
-            if stddev < min_stddev or entropy < min_entropy:
-                continue
+            #if stddev < min_stddev or entropy < min_entropy:
+            #    continue
 
             candidates.append((x, y, w, h))
             candidate_rois[(x, y, w, h)] = roi.copy()
@@ -209,8 +226,12 @@ class IconSlotDetector:
         # Apply Non-Max Suppression
         candidates = self._non_max_suppression(candidates, overlapThresh=0.3)
 
-        if debug_dir:
-            cv2.imwrite(f"{debug_dir}_slot_candidates.png", debug_img)
+        if self.debug_output_path:
+            # Draw slot candidates onto debug_img
+            for x, y, w, h in candidates:
+                cv2.rectangle(debug_img, (x, y), (x + w, y + h), (0, 255, 0), 1)
+
+            cv2.imwrite(f"{self.debug_output_path}_slot_candidates.png", debug_img)
 
         return candidates, candidate_rois
 
@@ -286,4 +307,5 @@ class IconSlotDetector:
         if current_row:
             rows.append(sorted(current_row, key=lambda b: b[0]))
 
-        return {i: box for row in rows for i, box in enumerate(row)}
+        return {i: box for i, box in enumerate([box for row in rows for box in row])}
+    

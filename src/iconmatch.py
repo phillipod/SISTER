@@ -55,6 +55,7 @@ class IconMatcher:
         for name in [
             "common.png",
             "uncommon.png",
+            "rare.png",
             "very rare.png",
             "ultra rare.png",
             "epic.png",

@@ -53,9 +53,9 @@ class SSIMMatchEngine:
                     continue
 
                 predicted_qualities = predicted_qualities_by_region.get(
-                    region_label, []
+                    region_label, {}
                 )
-                if len(predicted_qualities) != len(icon_slots[region_label]):
+                if len(predicted_qualities.keys()) != len(icon_slots[region_label]):
                     logger.warning(
                         f"Mismatch between candidate regions and predicted qualities for '{region_label}'"
                     )
@@ -131,7 +131,7 @@ class SSIMMatchEngine:
                     continue
 
                 predicted_qualities = predicted_qualities_by_region.get(
-                    region_label, []
+                    region_label, {}
                 )
 
                 for slot in icon_slots[region_label]:
