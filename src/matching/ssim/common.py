@@ -369,17 +369,17 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
                                            tolerance_rows=1)
         barcode_region_stripes_expected = len(barcode_region_common_segments)
 
-        print(f"{region_label}#{slot}: Begin matching quality {quality_name}")  
+        #print(f"{region_label}#{slot}: Begin matching quality {quality_name}")  
 
 
         diff = compare_patches(barcode_region, barcode_overlay)
-        print(f"{region_label}#{slot}: Diff for overlay {quality_name}: {diff}")
-        if (region_label in ["Hangar"]) or ((region_label in ["Devices"] and slot == 5) and (quality_name == 'rare' or quality_name == 'very rare' or quality_name == 'common')): # or quality_name == 'very rare'): # or region_label in ["Hangar"]:
+        #print(f"{region_label}#{slot}: Diff for overlay {quality_name}: {diff}")
+        #if (region_label in ["Hangar"]) or ((region_label in ["Devices"] and slot == 5) and (quality_name == 'rare' or quality_name == 'very rare' or quality_name == 'common')): # or quality_name == 'very rare'): # or region_label in ["Hangar"]:
             #print(f"{region_label}#{slot}: Barcodes for overlay {quality_name}: {barcode_overlay_stripes_expected}, region {barcode_region_stripes_expected}")
         #    print(f"diff_mean_bgr: {barcode_diff['diff_mean_bgr']}, diff_std_bgr: {barcode_diff['diff_std_bgr']}, diff_mean_lum: {barcode_diff['diff_mean_lum']}, diff_std_lum: {barcode_diff['diff_std_lum']}")
             # print(f"barcode_overlay_stripes_expected: {barcode_overlay_stripes_expected}")
             # print(f"barcode_region_stripes_expected: {barcode_region_stripes_expected}")
-            show_img([region_crop, overlay_rgb, barcode_region, barcode_overlay])
+         #   show_img([region_crop, overlay_rgb, barcode_region, barcode_overlay])
 
 
         orig_mask = overlay_mask(quality_name, overlay_alpha.shape)
@@ -439,7 +439,7 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
                     # Check colour and intensity patch
                     barcode_diff = compare_patches(barcode_region, barcode_overlay, patch_size=3)
                     #print(f"{region_label}#{slot}: diff_mean_bgr: {barcode_diff['diff_mean_bgr']}, diff_std_bgr: {barcode_diff['diff_std_bgr']}, diff_mean_lum: {barcode_diff['diff_mean_lum']}, diff_std_lum: {barcode_diff['diff_std_lum']}")
-                    print(f"{region_label}#{slot}: {barcode_diff} ")
+                    #print(f"{region_label}#{slot}: {barcode_diff} ")
                     #if (barcode_diff['diff_mean_bgr'] > 0.1) or (barcode_diff['diff_std_bgr'] > 0.1) or (barcode_diff['diff_mean_lum'] > 0.1) or (barcode_diff['diff_std_lum'] > 0.1):
                         #continue
                     #    print(f"{region_label}#{slot}: Skipping due to mismatched barcodes: {barcode_diff['diff_mean_bgr']}, {barcode_diff['diff_std_bgr']}, {barcode_diff['diff_mean_lum']}, {barcode_diff['diff_std_lum']}")
@@ -462,15 +462,15 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
 
                     #print(f"{region_label}#{slot}: Score for overlay {quality_name}: {score:.4f} at scale {scale:.2f}")
 
-                    if (region_label in ["Hangar"]) or ((region_label in ["Devices"] and slot == 5) and (quality_name == 'rare' or quality_name == 'very rare' or quality_name == 'common')): # or region_label in ["Hangar"]:
+                    # if (region_label in ["Hangar"]) or ((region_label in ["Devices"] and slot == 5) and (quality_name == 'rare' or quality_name == 'very rare' or quality_name == 'common')): # or region_label in ["Hangar"]:
                         # print (f"Classify hue {quality_name} {region_label}#{slot}")
-                        print("Region color:", classify_hue(barcode_diff["reg_mean_hue"]))
-                        print("Overlay color:", classify_hue(barcode_diff["ovl_mean_hue"]))
-                        print("Significant hue difference?", is_significant_hue_diff(barcode_diff["hue_diff_deg"]))
+                        # print("Region color:", classify_hue(barcode_diff["reg_mean_hue"]))
+                        # print("Overlay color:", classify_hue(barcode_diff["ovl_mean_hue"]))
+                        # print("Significant hue difference?", is_significant_hue_diff(barcode_diff["hue_diff_deg"]))
                         #print(f"{region_label}#{slot}: [show_img] Score for overlay {quality_name}: {score:.4f} at scale {scale:.2f}")
                         #print(f"barcode_overlay_stripes_expected: {barcode_overlay_stripes_expected}")
                         #print(f"barcode_region_stripes_found: {barcode_region_stripes_found}")
-                        show_img([roi, masked_region, masked_overlay, barcode_region, barcode_overlay])
+                        # show_img([roi, masked_region, masked_overlay, barcode_region, barcode_overlay])
 
 
                     if score > 0.96 and score > best_score:
