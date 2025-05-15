@@ -382,7 +382,7 @@ class CargoDownloader:
                 with cache_lock:
                     self._write_image_cache(image_cache_path, cache_entries)
 
-        with ThreadPoolExecutor(max_workers=4) as executor:
+        with ThreadPoolExecutor() as executor:
             try:
                 futures = [
                     executor.submit(download_single_icon, item) for item in items
