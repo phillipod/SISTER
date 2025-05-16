@@ -96,97 +96,204 @@ def show_img(
 
 def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1, scales=np.linspace(0.6, 0.8, 20)):
     debug = True
-    def luminance_bgr(col_arr):
-        return 0.2126 * col_arr[...,2] + 0.7152 * col_arr[...,1] + 0.0722 * col_arr[...,0]
+    # def luminance_bgr(col_arr):
+    #     return 0.2126 * col_arr[...,2] + 0.7152 * col_arr[...,1] + 0.0722 * col_arr[...,0]
     
-    # def find_off_segments(bright_vals):
+    # # def find_off_segments(bright_vals):
+    # #     thr = bright_vals.mean()
+    # #     state, segments, start = 1, [], None
+    # #     for i, v in enumerate(bright_vals):
+    # #         if state == 1 and v < thr:
+    # #             state, start = 0, i
+    # #         elif state == 0 and v >= thr:
+    # #             segments.append((start, i-1))
+    # #             state, start = 1, None
+    # #     if state == 0 and start is not None:
+    # #         segments.append((start, len(bright_vals)-1))
+    # #     return [(s, e) for (s, e) in segments if e < len(bright_vals)-1]
+
+    # def find_off_segments(bright_vals, ignore_top_frac=0.1, ignore_top_rows=0):
+    #     """
+    #     Identify "off" segments (values below the mean threshold) in a 1-D brightness profile,
+    #     but ignore any segments whose end falls within the top part of the profile.
+
+    #     Parameters:
+    #     - bright_vals: 1-D array of brightness values.
+    #     - ignore_top_frac: float in [0,1], fraction of the profile height to ignore at the top.
+    #     - ignore_top_rows: int, exact number of rows to ignore at the top (overrides ignore_top_frac if > 0).
+
+    #     Returns:
+    #     - List of (start, end) tuples for each valid off-segment.
+    #     """
     #     thr = bright_vals.mean()
-    #     state, segments, start = 1, [], None
+    #     state = 1
+    #     segments = []
+    #     start = None
+
+    #     # Identify all off-segments
     #     for i, v in enumerate(bright_vals):
     #         if state == 1 and v < thr:
     #             state, start = 0, i
     #         elif state == 0 and v >= thr:
-    #             segments.append((start, i-1))
+    #             segments.append((start, i - 1))
     #             state, start = 1, None
+    #     # Close final segment if it runs to the end
     #     if state == 0 and start is not None:
-    #         segments.append((start, len(bright_vals)-1))
-    #     return [(s, e) for (s, e) in segments if e < len(bright_vals)-1]
+    #         segments.append((start, len(bright_vals) - 1))
 
-    def find_off_segments(bright_vals, ignore_top_frac=0.1, ignore_top_rows=0):
+    #     # Determine how many rows to exclude at the top
+    #     H = len(bright_vals)
+    #     if ignore_top_rows > 0:
+    #         margin = ignore_top_rows
+    #     else:
+    #         margin = int(H * ignore_top_frac)
+
+    #     # Filter out segments ending within the excluded top region
+    #     max_valid_end = H - 1 - margin
+    #     valid_segments = [(s, e) for (s, e) in segments if e <= max_valid_end]
+
+    #     return valid_segments
+
+    # def find_common_off_segments(bright2d, ignore_top_frac=0.1, ignore_top_rows=0, tolerance_rows=1):
+    #     """
+    #     Identify off-segments that appear across **all** columns of a 2-D brightness map,
+    #     allowing for slight misalignment in row indices.
+
+    #     Parameters:
+    #     - bright2d: 2-D array of shape (H, W), brightness values for each column.
+    #     - ignore_top_frac: fraction of rows at the top to ignore (per column).
+    #     - ignore_top_rows: exact rows at the top to ignore (overrides fraction if > 0).
+    #     - tolerance_rows: allowable vertical shift (in rows) when matching segments across columns.
+
+    #     Returns:
+    #     - List of (start, end) tuples of common segments (based on column 0's coordinates).
+    #     """
+    #     H, W = bright2d.shape
+    #     # Find per-column segments
+    #     per_col_segments = [
+    #         find_off_segments(bright2d[:, j], ignore_top_frac, ignore_top_rows)
+    #         for j in range(W)
+    #     ]
+
+    #     common = []
+    #     # For each segment in the first column, check for overlap in all others
+    #     for s0, e0 in per_col_segments[0]:
+    #         match = True
+    #         for segs in per_col_segments[1:]:
+    #             # requires at least one segment in this column overlapping within tolerance
+    #             if not any((e + tolerance_rows >= s0) and (s - tolerance_rows <= e0) for s, e in segs):
+    #                 match = False
+    #                 break
+    #         if match:
+    #             common.append((s0, e0))
+    #     return common
+
+    def luminance_bgr(patch):
+        """Rec.709 luminance on a BGR patch of shape (H, strip_width, 3)."""
+        return (
+            0.2126 * patch[...,2] +
+            0.7152 * patch[...,1] +
+            0.0722 * patch[...,0]
+        )
+
+    def find_off_segments(col, thr,
+                        min_height=3,
+                        max_height=6,
+                        ignore_top=0,
+                        ignore_bottom=1):
         """
-        Identify "off" segments (values below the mean threshold) in a 1-D brightness profile,
-        but ignore any segments whose end falls within the top part of the profile.
-
-        Parameters:
-        - bright_vals: 1-D array of brightness values.
-        - ignore_top_frac: float in [0,1], fraction of the profile height to ignore at the top.
-        - ignore_top_rows: int, exact number of rows to ignore at the top (overrides ignore_top_frac if > 0).
-
-        Returns:
-        - List of (start, end) tuples for each valid off-segment.
+        Find runs where col[i] < thr, skipping i <= ignore_top or
+        i >= len(col)-ignore_bottom, and only keep runs whose height
+        is between min_height and max_height (inclusive).
+        Returns list of (start, end) inclusive.
         """
-        thr = bright_vals.mean()
-        state = 1
-        segments = []
+        H = len(col)
+        segs = []
+        state = 1  # 1=above, 0=below
         start = None
 
-        # Identify all off-segments
-        for i, v in enumerate(bright_vals):
+        for i, v in enumerate(col):
+            # treat ignored margins as 'above'
+            if i <= ignore_top or i >= H - ignore_bottom:
+                if state == 0:
+                    segs.append((start, i-1))
+                    state = 1
+                continue
+
             if state == 1 and v < thr:
                 state, start = 0, i
             elif state == 0 and v >= thr:
-                segments.append((start, i - 1))
-                state, start = 1, None
-        # Close final segment if it runs to the end
-        if state == 0 and start is not None:
-            segments.append((start, len(bright_vals) - 1))
+                segs.append((start, i-1))
+                state = 1
 
-        # Determine how many rows to exclude at the top
-        H = len(bright_vals)
-        if ignore_top_rows > 0:
-            margin = ignore_top_rows
-        else:
-            margin = int(H * ignore_top_frac)
+        # close final if it runs to bottom-ignore
+        if state == 0:
+            segs.append((start, H - ignore_bottom - 1))
 
-        # Filter out segments ending within the excluded top region
-        max_valid_end = H - 1 - margin
-        valid_segments = [(s, e) for (s, e) in segments if e <= max_valid_end]
+        # filter by height range
+        filtered = []
+        for s, e in segs:
+            h = e - s + 1
+            if h >= min_height and h <= max_height:
+                filtered.append((s, e))
+        return filtered
 
-        return valid_segments
-
-    def find_common_off_segments(bright2d, ignore_top_frac=0.1, ignore_top_rows=0, tolerance_rows=1):
+    def count_slanted_stripes(
+        img,
+        strip_width=3,
+        min_height=3,
+        max_height=6,
+        ignore_top_frac=0.1,
+        ignore_top_rows=0,
+        ignore_bottom_rows=1,
+        tolerance_rows=1
+    ):
         """
-        Identify off-segments that appear across **all** columns of a 2-D brightness map,
-        allowing for slight misalignment in row indices.
-
-        Parameters:
-        - bright2d: 2-D array of shape (H, W), brightness values for each column.
-        - ignore_top_frac: fraction of rows at the top to ignore (per column).
-        - ignore_top_rows: exact rows at the top to ignore (overrides fraction if > 0).
-        - tolerance_rows: allowable vertical shift (in rows) when matching segments across columns.
-
-        Returns:
-        - List of (start, end) tuples of common segments (based on column 0's coordinates).
+        Extract the left‐hand strip (strip_width px), find dark segments
+        of allowable heights in each column, then count how many of col0’s
+        segments appear (within ±tolerance_rows) in EVERY other column.
         """
-        H, W = bright2d.shape
-        # Find per-column segments
-        per_col_segments = [
-            find_off_segments(bright2d[:, j], ignore_top_frac, ignore_top_rows)
-            for j in range(W)
+
+        H, _, _ = img.shape
+
+        # how many rows at the top to ignore
+        ignore_top = ignore_top_rows or int(H * ignore_top_frac)
+        # how many rows at the bottom to ignore
+        ignore_bottom = ignore_bottom_rows
+
+        # 1) extract and luminance‐threshold
+        strip = img[:, :strip_width, :]
+        lum   = luminance_bgr(strip)
+        thr   = lum.mean()
+
+        # 2) per‐column dark‐segment detection
+        per_col = [
+            find_off_segments(
+                lum[:, j], thr,
+                min_height=min_height,
+                max_height=max_height,
+                ignore_top=ignore_top,
+                ignore_bottom=ignore_bottom
+            )
+            for j in range(strip_width)
         ]
 
-        common = []
-        # For each segment in the first column, check for overlap in all others
-        for s0, e0 in per_col_segments[0]:
-            match = True
-            for segs in per_col_segments[1:]:
-                # requires at least one segment in this column overlapping within tolerance
-                if not any((e + tolerance_rows >= s0) and (s - tolerance_rows <= e0) for s, e in segs):
-                    match = False
-                    break
-            if match:
-                common.append((s0, e0))
-        return common
+        # 3) cluster: for each segment in column 0, check that every other
+        #    column has at least one segment overlapping it (±tolerance_rows)
+        count = 0
+        for s0, e0 in per_col[0]:
+            if all(
+                any(
+                    (e + tolerance_rows >= s0) and
+                    (s - tolerance_rows <= e0)
+                    for (s, e) in per_col[j]
+                )
+                for j in range(1, strip_width)
+            ):
+                count += 1
+
+        return count
+
         
     def overlay_mask(overlay_type, shape, box_width=8):
         """
@@ -351,37 +458,65 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
 
         # Barcode Overlay setup
         barcode_overlay = roi_crop(overlay_rgb.copy(), barcode_width)
-        barcode_overlay_bright_ref = luminance_bgr(barcode_overlay[::-1, :barcode_width])
-        barcode_overlay_common_segments = find_common_off_segments(barcode_overlay_bright_ref,
-                                           ignore_top_frac=0.1,
-                                           ignore_top_rows=0,
-                                           tolerance_rows=1)
-        barcode_overlay_stripes_expected = len(barcode_overlay_common_segments)
+        barcode_overlay_slanted_lines = count_slanted_stripes(
+            barcode_overlay,
+            strip_width=3,
+            min_height=3,
+            max_height=6,
+            ignore_top_frac=0.1,
+            ignore_bottom_rows=1,
+            tolerance_rows=1
+        )
+
+        #barcode_overlay_bright_ref = luminance_bgr(barcode_overlay[::-1, :barcode_width])
+        # barcode_overlay_common_segments = find_common_off_segments(barcode_overlay_bright_ref,
+        #                                    ignore_top_frac=0.1,
+        #                                    ignore_top_rows=0,
+        #                                    tolerance_rows=1)
+        # barcode_overlay_stripes_expected = len(barcode_overlay_common_segments)
+        # barcode_overlay_slanted_lines = count_slanted_lines(barcode_overlay_bright_ref, tol=1)
 
    
         # Barcode Region setup
         barcode_region = roi_crop(region_crop.copy(), barcode_width)
-        barcode_region_bright_ref = luminance_bgr(barcode_region[::-1, :barcode_width])
+        barcode_region_slanted_lines = count_slanted_stripes(
+            barcode_region,
+            strip_width=3,
+            min_height=3,
+            max_height=6,
+            ignore_top_frac=0.1,
+            ignore_bottom_rows=1,
+            tolerance_rows=1
+        )
+        #barcode_region_bright_ref = luminance_bgr(barcode_region[::-1, :barcode_width])
 
-        barcode_region_common_segments = find_common_off_segments(barcode_region_bright_ref,
-                                           ignore_top_frac=0.05,
-                                           ignore_top_rows=0,
-                                           tolerance_rows=1)
-        barcode_region_stripes_expected = len(barcode_region_common_segments)
+        # barcode_region_common_segments = find_common_off_segments(barcode_region_bright_ref,
+        #                                    ignore_top_frac=0.05,
+        #                                    ignore_top_rows=0,
+        #                                    tolerance_rows=1)
+        # barcode_region_stripes_expected = len(barcode_region_common_segments)
+        # barcode_region_slanted_lines = count_slanted_lines(barcode_region_bright_ref, tol=1)
 
         #print(f"{region_label}#{slot}: Begin matching quality {quality_name}")  
 
 
         diff = compare_patches(barcode_region, barcode_overlay)
+        
+        print(f"{region_label}#{slot}: Classify hue {quality_name} {region_label}#{slot}")
+        print(f"{region_label}#{slot}: Region color: {classify_hue(diff["reg_mean_hue"])}")
+        print(f"{region_label}#{slot}: Overlay color: {classify_hue(diff["ovl_mean_hue"])}")
+
         #print(f"{region_label}#{slot}: Diff for overlay {quality_name}: {diff}")
-        #if (region_label in ["Hangar"]) or ((region_label in ["Devices"] and slot == 5) and (quality_name == 'rare' or quality_name == 'very rare' or quality_name == 'common')): # or quality_name == 'very rare'): # or region_label in ["Hangar"]:
-            #print(f"{region_label}#{slot}: Barcodes for overlay {quality_name}: {barcode_overlay_stripes_expected}, region {barcode_region_stripes_expected}")
+        if region_label in ["Hangar"] or (region_label in ["Devices"] and slot == 4): # and (quality_name == 'rare' or quality_name == 'very rare' or quality_name == 'common')): # or quality_name == 'very rare'): # or region_label in ["Hangar"]:
+        #    print(f"{region_label}#{slot}: Barcodes for overlay {quality_name}: {barcode_overlay_stripes_expected}, region {barcode_region_stripes_expected}")
         #    print(f"diff_mean_bgr: {barcode_diff['diff_mean_bgr']}, diff_std_bgr: {barcode_diff['diff_std_bgr']}, diff_mean_lum: {barcode_diff['diff_mean_lum']}, diff_std_lum: {barcode_diff['diff_std_lum']}")
-            # print(f"barcode_overlay_stripes_expected: {barcode_overlay_stripes_expected}")
-            # print(f"barcode_region_stripes_expected: {barcode_region_stripes_expected}")
-         #   show_img([region_crop, overlay_rgb, barcode_region, barcode_overlay])
+            print(f"barcode_overlay_slanted_lines: {barcode_overlay_slanted_lines}")
+            print(f"barcode_region_slanted_lines: {barcode_region_slanted_lines}")
+        print(f"{region_label}#{slot}: {quality_name}: barcode_overlay_slanted_lines: {barcode_overlay_slanted_lines}")
+        print(f"{region_label}#{slot}: {quality_name}: barcode_region_slanted_lines: {barcode_region_slanted_lines}")
+            show_img([region_crop, overlay_rgb, barcode_region, barcode_overlay])
 
-
+        show_img([region_crop, overlay_rgb, barcode_region, barcode_overlay])    
         orig_mask = overlay_mask(quality_name, overlay_alpha.shape)
 
         for scale in scales:
@@ -426,16 +561,29 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
                     masked_region = (roi * final_alpha[..., np.newaxis]).astype(np.uint8)
                     masked_overlay = (resized_rgb * final_alpha[..., np.newaxis]).astype(np.uint8)
 
-                    barcode_region = roi_crop(masked_region.copy(), barcode_width)
-                    barcode_region = cv2.resize(barcode_region, (barcode_overlay.shape[1], barcode_overlay.shape[0]), interpolation=cv2.INTER_LINEAR)   
+                    #print(f"Shapes: region_crop: {region_crop.shape}, roi: {roi.shape}, masked_region: {masked_region.shape}, masked_overlay: {masked_overlay.shape}")
+                    #barcode_region = roi_crop(masked_region.copy(), barcode_width)
+                    barcode_region = roi_crop(cv2.resize(masked_region.copy(), (overlay_rgb.shape[1], overlay_rgb.shape[0])), barcode_width)
+                    #barcode_region = cv2.resize(barcode_region, (barcode_overlay.shape[1], barcode_overlay.shape[0]), interpolation=cv2.INTER_LINEAR)   
                     
                     # Convert to grayscale before SSIM calculation      
-                    gray_region  = cv2.cvtColor(masked_region,  cv2.COLOR_BGR2GRAY)
-                    gray_overlay = cv2.cvtColor(masked_overlay, cv2.COLOR_BGR2GRAY)
+                    #gray_region  = cv2.cvtColor(masked_region,  cv2.COLOR_BGR2GRAY)
+                    #gray_overlay = cv2.cvtColor(masked_overlay, cv2.COLOR_BGR2GRAY)
 
                     # Barcode Region setup
-                    barcode_region_bright_ref = luminance_bgr(barcode_region[::-1, :barcode_width])
+                    #barcode_region_bright_ref = luminance_bgr(barcode_region[::-1, :barcode_width])
 
+                    #show_img([region_crop, roi, masked_region, masked_overlay, barcode_region, barcode_overlay])
+
+                    barcode_region_slanted_lines = count_slanted_stripes(
+                        barcode_region,
+                        strip_width=3,
+                        min_height=3,
+                        max_height=6,
+                        ignore_top_frac=0.1,
+                        ignore_bottom_rows=1,
+                        tolerance_rows=1
+                    )
                     # Check colour and intensity patch
                     barcode_diff = compare_patches(barcode_region, barcode_overlay, patch_size=3)
                     #print(f"{region_label}#{slot}: diff_mean_bgr: {barcode_diff['diff_mean_bgr']}, diff_std_bgr: {barcode_diff['diff_std_bgr']}, diff_mean_lum: {barcode_diff['diff_mean_lum']}, diff_std_lum: {barcode_diff['diff_std_lum']}")
@@ -444,33 +592,47 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
                         #continue
                     #    print(f"{region_label}#{slot}: Skipping due to mismatched barcodes: {barcode_diff['diff_mean_bgr']}, {barcode_diff['diff_std_bgr']}, {barcode_diff['diff_mean_lum']}, {barcode_diff['diff_std_lum']}")
 
-                    barcode_region_common_segments = find_common_off_segments(barcode_region_bright_ref,
-                                           ignore_top_frac=0.05,
-                                           ignore_top_rows=0,
-                                           tolerance_rows=1)
-                    barcode_region_stripes_found = len(barcode_region_common_segments)
+                    # barcode_region_common_segments = find_common_off_segments(barcode_region_bright_ref,
+                    #                        ignore_top_frac=0.05,
+                    #                        ignore_top_rows=0,
+                    #                        tolerance_rows=1)
+                    # barcode_region_stripes_found = len(barcode_region_common_segments)
+                    # barcode_region_slanted_lines = count_slanted_lines(barcode_region_bright_ref, tol=1)
 
-                    if barcode_overlay_stripes_expected != barcode_region_stripes_found:
-                        #print(f"{region_label}#{slot}: Skipping due to mismatched barcodes: {barcode_overlay_stripes_expected} vs {barcode_region_stripes_found}")
+                    print(f"{region_label}#{slot}: Classify hue {quality_name} {region_label}#{slot}")
+                    print(f"{region_label}#{slot}: Region color: {classify_hue(barcode_diff["reg_mean_hue"])}")
+                    print(f"{region_label}#{slot}: Overlay color: {classify_hue(barcode_diff["ovl_mean_hue"])}")
+
+
+                    if region_label in ["Hangar"]:
+                        print(f"{region_label}#{slot}: {quality_name}: {barcode_overlay_slanted_lines} vs {barcode_region_slanted_lines}")
+
+                    if barcode_overlay_slanted_lines != barcode_region_slanted_lines:
+                        #print(f"{region_label}#{slot}: Skipping due to mismatched barcodes: {quality_name}: {barcode_overlay_slanted_lines} vs {barcode_region_slanted_lines}")
                         continue
+                    else:
+                        print(f"{region_label}#{slot}: {quality_name}: {barcode_overlay_slanted_lines} vs {barcode_region_slanted_lines}")
 
                     try:
                         score = ssim(masked_region, masked_overlay, channel_axis=-1)
-                        # score = ssim(gray_region, gray_overlay, window_size=3)
+                        #score = ssim(gray_region, gray_overlay)
                     except ValueError:
                         continue
 
                     #print(f"{region_label}#{slot}: Score for overlay {quality_name}: {score:.4f} at scale {scale:.2f}")
 
-                    # if (region_label in ["Hangar"]) or ((region_label in ["Devices"] and slot == 5) and (quality_name == 'rare' or quality_name == 'very rare' or quality_name == 'common')): # or region_label in ["Hangar"]:
-                        # print (f"Classify hue {quality_name} {region_label}#{slot}")
-                        # print("Region color:", classify_hue(barcode_diff["reg_mean_hue"]))
-                        # print("Overlay color:", classify_hue(barcode_diff["ovl_mean_hue"]))
-                        # print("Significant hue difference?", is_significant_hue_diff(barcode_diff["hue_diff_deg"]))
-                        #print(f"{region_label}#{slot}: [show_img] Score for overlay {quality_name}: {score:.4f} at scale {scale:.2f}")
-                        #print(f"barcode_overlay_stripes_expected: {barcode_overlay_stripes_expected}")
-                        #print(f"barcode_region_stripes_found: {barcode_region_stripes_found}")
-                        # show_img([roi, masked_region, masked_overlay, barcode_region, barcode_overlay])
+                    if (region_label in ["Devices"] and slot == 4): # and (quality_name == 'rare' or quality_name == 'very rare' or quality_name == 'common')): # or region_label in ["Hangar"]:
+                        print (f"Classify hue {quality_name} {region_label}#{slot}")
+                        print("Region color:", classify_hue(barcode_diff["reg_mean_hue"]))
+                        print("Overlay color:", classify_hue(barcode_diff["ovl_mean_hue"]))
+                        print("Significant hue difference?", is_significant_hue_diff(barcode_diff["hue_diff_deg"]))
+                        print(f"{region_label}#{slot}: [show_img] Score for overlay {quality_name}: {score:.4f} at scale {scale:.2f}")
+                        # print(f"barcode_overlay_stripes_expected: {barcode_overlay_stripes_expected}")
+                        # print(f"barcode_region_stripes_found: {barcode_region_stripes_found}")
+                        # print(f"barcode_overlay_slanted_lines: {barcode_overlay_slanted_lines}")
+                        print(f"barcode_region_slanted_lines: {barcode_region_slanted_lines}")
+                        show_img([roi, masked_region, masked_overlay, barcode_region, barcode_overlay])
+                        #show_img([roi, gray_region, gray_overlay, barcode_region, barcode_overlay])
 
 
                     if score > 0.96 and score > best_score:
@@ -479,8 +641,8 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
                         best_scale = scale
                         best_method = "ssim"
 
-                        best_masked_region = gray_region #masked_region
-                        best_masked_overlay = gray_overlay #masked_overlay
+                        best_masked_region = masked_region
+                        best_masked_overlay = masked_overlay
 
     # print(f"{region_label}#{slot}: Best matched overlay: {best_quality} with score {best_score:.4f} at scale {best_scale:.4f} using {best_method}")
     #show_img([region_crop, overlays[best_quality], best_masked_region, best_masked_overlay])
