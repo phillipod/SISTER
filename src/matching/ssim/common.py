@@ -97,7 +97,7 @@ def dynamic_hamming_cutoff(scores, best_score, max_next_ranks=2, max_allowed_gap
 
 
 
-def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1, scales=np.linspace(0.6, 0.8, 20)):
+def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1, scales=np.linspace(0.9, 1.0, 10)):
     debug = True
 
     def find_off_segments(bin_vals, ignore_top_frac=0.1, ignore_top_rows=0):
@@ -416,22 +416,68 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
         return False
     
     inspection_list = {
-        "Fore Weapon": {
-            "0": True
-        },
-        "Hangar": {
-            "_all": True
-        },
-        "Body": {
-            "_all": True
-        },
+        # "Fore Weapon": {
+        #     "0": True
+        # },
+        # "Hangar": {
+        #     "_all": True
+        # },
+        # "Body": {
+        #     "_all": True
+        # },
     }
+
+    region_crop_resized = False
     for quality_name, overlay in reversed(list(overlays.items())):
         if quality_name == "common" and best_score > 0.96:
             continue
         # logger.debug(f"Trying quality overlay {quality_name}")
         if must_inspect(inspection_list, region_label, slot):
             print(f"{region_label}#{slot}: {quality_name}: Begin: overlay=[{overlay.shape}] region=[{region_crop.shape}]")
+
+        # build a dynamic list of scales based on the overlay size compared to the region crop size
+        scale_factor = None
+        # if must_inspect(inspection_list, region_label, slot):   
+        if overlay.shape[0] < region_crop.shape[0] or overlay.shape[1] < region_crop.shape[1]:
+            # calculate scale factor to scale region size to overlay
+            scale_factor = max(region_crop.shape[0] / overlay.shape[0], region_crop.shape[1] / overlay.shape[1])
+        elif overlay.shape[0] > region_crop.shape[0] or overlay.shape[1] > region_crop.shape[1]:
+            # calculate scale factor to scale region size to overlay
+            scale_factor = min(region_crop.shape[0] / overlay.shape[0], region_crop.shape[1] / overlay.shape[1])
+            
+        # Region is always scaled to the same size as the overlay
+        if region_crop_resized is False:
+            region_crop = cv2.resize(region_crop, (overlay.shape[1], overlay.shape[0]), interpolation=cv2.INTER_AREA)
+            region_crop_resized = True
+
+            if must_inspect(inspection_list, region_label, slot):
+                print(f"{region_label}#{slot}: {quality_name}: scaled region: scale_factor=[{scale_factor:.2f}] overlay=[{overlay.shape}] region=[{region_crop.shape}]")
+
+
+
+        scale_factor = min(region_crop.shape[0] / overlay.shape[0], region_crop.shape[1] / overlay.shape[1])
+
+        # Compute the per‐axis steps:
+        step_h = 1.0 / region_crop.shape[0]
+        step_w = 1.0 / region_crop.shape[1]
+        min_step = min(step_h, step_w)
+        
+        if scale_factor is not None:    
+            # Build a sorted list of scales with 5 steps above and below the scale factor, including the scale factor :
+            scales = []
+            for i in range(10):
+                #scales.append(scale_factor * (1 + i * min_step))
+                scales.append(scale_factor * (1 - i * (min_step/3)))
+            scales = sorted(set(scales))
+
+            # remove duplicates
+            scales = [s for n, s in enumerate(scales) if s not in scales[n + 1:]]
+        else:
+            scales = [1.0]
+
+        if must_inspect(inspection_list, region_label, slot):   
+            print(f"{region_label}#{slot}: {quality_name}: Scale: Calculate : scale=[{scale_factor}], overlay=[{overlay.shape}], region=[{region_crop.shape}], step_w=[{step_w}], step_h=[{step_h}]")     
+
 
         overlay_rgb = overlay[:, :, :3]
         overlay_alpha = overlay[:, :, 3] / 255.0
@@ -471,7 +517,7 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
 
         # show_image([region_crop, overlay_rgb, barcode_region, barcode_overlay])    
         orig_mask = overlay_mask(quality_name, overlay_alpha.shape)
-
+        
         for scale in scales:
             
             # logger.debug(f"Trying scale {scale}")
@@ -503,7 +549,7 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
                     print(f"{region_label}#{slot}: {quality_name}: Scale: Skipping: scale=[{scale}], overlay=[{resized_rgb.shape}], region=[{region_crop.shape}]")
                 continue
 
-            step_limit = 4
+            step_limit = 5
 
             step_count_y = 0
             for y in range(0, H - h + 1, step):
@@ -549,10 +595,10 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
                     #print(f"{region_label}#{slot}: Overlay color: {classify_hue(barcode_diff["ovl_mean_hue"])}")
 
 
-                    # if barcode_overlay_stripes != barcode_region_stripes:
-                    #     # print(f"{region_label}#{slot}: Skipping due to mismatched barcodes: {quality_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
-                    #     #print(f"{region_label}#{slot}: Skipping due to mismatched barcodes: {quality_name}: {barcode_overlay_slanted_lines} vs {barcode_region_slanted_lines}")
-                    #     continue
+                    if barcode_overlay_stripes != barcode_region_stripes:
+                        # print(f"{region_label}#{slot}: Skipping due to mismatched barcodes: {quality_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
+                        #print(f"{region_label}#{slot}: Skipping due to mismatched barcodes: {quality_name}: {barcode_overlay_slanted_lines} vs {barcode_region_slanted_lines}")
+                        continue
                     # else:
                     #     #print(f"{region_label}#{slot}: {quality_name}: {barcode_overlay_slanted_lines} vs {barcode_region_slanted_lines}")
                     #     print(f"{region_label}#{slot}: {quality_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
@@ -562,8 +608,8 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
                     #    continue
 
                     
-                    # if barcode_region_detected_overlay_by_patch != quality_name:
-                    #     continue
+                    if barcode_region_detected_overlay_by_patch != quality_name:
+                        continue
 
                     #if classify_overlay_by_patch(extract_bottom_left_patch(barcode_region)) != classify_overlay_by_hue(barcode_diff["reg_mean_hue"]):
                     #    continue
@@ -688,7 +734,7 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
 
 
 def multi_scale_match(
-    region_color, template_color, scales=np.linspace(0.6, 0.8, 20), threshold=0.7
+    region_color, template_color, scales=np.linspace(0.9, 1.0, 10), threshold=0.7
 ):
     best_val = -np.inf
     best_match = None

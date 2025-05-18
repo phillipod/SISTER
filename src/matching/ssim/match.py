@@ -227,15 +227,24 @@ class SSIMMatchEngine:
 
         scale_factor = None
 
-        if roi.shape[0] > 43 * 1.1 or roi.shape[1] > 33 * 1.1:
-            scale_factor = min(43 / roi.shape[0], 33 / roi.shape[1])
-            roi = cv2.resize(
-                roi.copy(),
-                None,
-                fx=scale_factor,
-                fy=scale_factor,
-                interpolation=cv2.INTER_AREA,
-            )
+        # if roi.shape[0] > 43 * 1.1 or roi.shape[1] > 33 * 1.1:
+        #     scale_factor = min(43 / roi.shape[0], 33 / roi.shape[1])
+        #     roi = cv2.resize(
+        #         roi.copy(),
+        #         None,
+        #         fx=scale_factor,
+        #         fy=scale_factor,
+        #         interpolation=cv2.INTER_AREA,
+        #     )
+
+        for overlay_name, overlay_img in overlays.items():
+            if roi.shape[0] != overlay_img.shape[0] or roi.shape[1] != overlay_img.shape[1]:
+                roi = cv2.resize(
+                    roi.copy(),
+                    (overlay_img.shape[1], overlay_img.shape[0]),
+                    interpolation=cv2.INTER_AREA,
+                )
+                break
 
         best_match = None
         method = "ssim-all-overlays-all-scales-fallback"
@@ -262,7 +271,7 @@ class SSIMMatchEngine:
                 scales = [quality_scale]
                 method = "ssim-predicted-overlay-scale"
             else:
-                scales = np.linspace(0.6, 0.8, 20)
+                scales = np.linspace(0.9, 1.0, 10)
                 method = (
                     "ssim-predicted-overlays-all-scales-icon-size-mismatch-fallback"
                 )
