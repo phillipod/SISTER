@@ -91,6 +91,120 @@ def load_quality_overlays(overlay_folder):
     return overlays
 
 
+def show_image(
+    imgs, window_name='Images', bg_color=(0, 0, 0),
+    border_thickness=2, border_color=(0, 255, 0)
+):
+    """
+    Display a list of images side-by-side with optional borders, and allow saving via GUI dialogs.
+    Press 's' to save images.
+    Press 'x' or close window to exit.
+    """
+    if not imgs:
+        raise ValueError("No images to display")
+
+    def ensure_uint8(img):
+        if img.dtype == np.uint8:
+            return img
+        mn, mx = float(img.min()), float(img.max())
+        if mx == mn:
+            return np.zeros(img.shape, dtype=np.uint8)
+        norm = (img - mn) * (255.0 / (mx - mn))
+        return norm.astype(np.uint8)
+
+    def to_bgr8(img):
+        img8 = ensure_uint8(img)
+        if img8.ndim == 2:
+            return cv2.cvtColor(img8, cv2.COLOR_GRAY2BGR)
+        if img8.shape[2] == 4:
+            return cv2.cvtColor(img8, cv2.COLOR_BGRA2BGR)
+        return img8
+
+    def save_images(images):
+        # use tkinter dialogs instead of console input
+        try:
+            import tkinter as tk
+            from tkinter import filedialog, simpledialog, messagebox
+        except ImportError:
+            print("Tkinter not available; cannot prompt for save parameters.")
+            return
+        root = tk.Tk()
+        root.withdraw()
+        # ask which images
+        choice = simpledialog.askstring(
+            "Save Images",
+            f"Enter 'a' to save all or comma-separated indices (0-{len(images)-1}):"
+        )
+        if choice is None:
+            return
+        choice = choice.strip().lower()
+        if choice == 'a':
+            indices = range(len(images))
+        else:
+            try:
+                indices = [int(i) for i in choice.split(',')]
+                indices = [i for i in indices if 0 <= i < len(images)]
+                if not indices:
+                    messagebox.showerror("Error", "No valid indices selected.")
+                    return
+            except ValueError:
+                messagebox.showerror("Error", "Invalid input for indices.")
+                return
+        # ask directory and prefix
+        dirpath = filedialog.askdirectory(title="Select directory to save images")
+        if not dirpath:
+            return
+        prefix = simpledialog.askstring("Save Prefix", "Enter file prefix:")
+        if not prefix:
+            return
+        # save
+        os.makedirs(dirpath, exist_ok=True)
+        for idx in indices:
+            img = images[idx]
+            filename = f"{prefix}-{(idx+1):04d}.png"
+            filepath = os.path.join(dirpath, filename)
+            cv2.imwrite(filepath, img)
+        messagebox.showinfo("Save Complete", f"Saved {len(indices)} image(s) to {dirpath}")
+
+    # preprocess all to 3-channel uint8
+    processed = [to_bgr8(img) for img in imgs]
+
+    # compute full canvas size including separators
+    heights = [im.shape[0] for im in processed]
+    widths = [im.shape[1] for im in processed]
+    H = max(heights)
+    W = sum(widths) + border_thickness * (len(processed) - 1)
+
+    # build canvas
+    canvas = np.full((H, W, 3), bg_color, dtype=np.uint8)
+    x = 0
+    separators = []
+    for im in processed:
+        h, w = im.shape[:2]
+        canvas[0:h, x:x+w] = im
+        x += w
+        separators.append(x)
+        x += border_thickness
+
+    for sep_x in separators[:-1]:
+        canvas[:, sep_x:sep_x+border_thickness] = border_color
+
+    # display
+    flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO
+    cv2.namedWindow(window_name, flags)
+    cv2.resizeWindow(window_name, W, H)
+    cv2.setWindowProperty(window_name, cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
+    cv2.imshow(window_name, canvas)
+
+    while True:
+        key = cv2.waitKey(100) & 0xFF
+        if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1 or key == ord('x'):
+            break
+        if key == ord('s'):
+            save_images(processed)
+
+    cv2.destroyWindow(window_name)
+
 def resize_to_max_fullhd(image, max_width=1920, max_height=1080):
     """
     Resize an image to fit within 1920x1080 (or specified limits) while maintaining aspect ratio.
