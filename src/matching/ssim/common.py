@@ -416,16 +416,28 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
         return False
     
     inspection_list = {
-        "Fore Weapon": {
-            "0": True
-        },
-        "Hangar": {
-            "_all": True
-        },
-        "Body": {
-            "_all": True
-        },
+        # "Fore Weapon": {
+        #     "0": True
+        # },
+        # "Hangar": {
+        #     "_all": True
+        # },
+        # "Body": {
+        #     "_all": True
+        # },
     }
+
+
+    if region_crop.shape[0] > 43 * 1.1 or region_crop.shape[1] > 33 * 1.1:
+        scale_factor = min(43 / region_crop.shape[0], 33 / region_crop.shape[1])
+        region_crop = cv2.resize(
+            region_crop.copy(),
+            None,
+            fx=scale_factor,
+            fy=scale_factor,
+            interpolation=cv2.INTER_AREA,
+        )
+
     for quality_name, overlay in reversed(list(overlays.items())):
         if quality_name == "common" and best_score > 0.96:
             continue
@@ -549,10 +561,10 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
                     #print(f"{region_label}#{slot}: Overlay color: {classify_hue(barcode_diff["ovl_mean_hue"])}")
 
 
-                    # if barcode_overlay_stripes != barcode_region_stripes:
+                    if barcode_overlay_stripes != barcode_region_stripes:
                     #     # print(f"{region_label}#{slot}: Skipping due to mismatched barcodes: {quality_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
                     #     #print(f"{region_label}#{slot}: Skipping due to mismatched barcodes: {quality_name}: {barcode_overlay_slanted_lines} vs {barcode_region_slanted_lines}")
-                    #     continue
+                        continue
                     # else:
                     #     #print(f"{region_label}#{slot}: {quality_name}: {barcode_overlay_slanted_lines} vs {barcode_region_slanted_lines}")
                     #     print(f"{region_label}#{slot}: {quality_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
@@ -562,8 +574,8 @@ def identify_overlay(region_crop, overlays, region_label=None, slot=None, step=1
                     #    continue
 
                     
-                    # if barcode_region_detected_overlay_by_patch != quality_name:
-                    #     continue
+                    if barcode_region_detected_overlay_by_patch != quality_name:
+                        continue
 
                     #if classify_overlay_by_patch(extract_bottom_left_patch(barcode_region)) != classify_overlay_by_hue(barcode_diff["reg_mean_hue"]):
                     #    continue
