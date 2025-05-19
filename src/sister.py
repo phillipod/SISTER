@@ -277,10 +277,11 @@ class OutputTransformationStage(Stage):
                 predicted = ctx.predicted_icons.get(region_name, {}).get(slot_name, [])
 
                 # check current output for this region/slot
+                #print(f"region_name: {region_name}, slot_name: {slot_name} existing: {matches.get(region_name, {}).get(slot_name, [])}")
                 existing = matches.get(region_name, {}).get(slot_name, [])
 
                 # if there's a prediction and no existing match, copy it over
-                if predicted and not existing:
+                if predicted and len(existing) == 0:
                     # ensure the dicts exist
                     matches.setdefault(region_name, {})[slot_name] = predicted.copy()
 
