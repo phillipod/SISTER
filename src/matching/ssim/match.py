@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExecutor
 from multiprocessing import shared_memory
 import logging
 
@@ -74,10 +74,11 @@ class SSIMMatchEngine:
                     if not icons_for_slot:
                         continue
 
+                    
                     predicted_quality = predicted_qualities[idx]
 
                     logger.info(
-                        f"Matching {len(icons_for_slot)} icons into label '{region_label}' at slot {idx} with quality {predicted_quality}"
+                        f"Matching {len(icons_for_slot)} icons into label '{region_label}' at slot {idx} with quality {predicted_quality[0]["quality"]} at scale {predicted_quality[0]['scale']}"
                     )
 
                     for idx_icon, (name, icon_color) in enumerate(
@@ -105,20 +106,25 @@ class SSIMMatchEngine:
                         )
                         args_list.append(args)
 
-            future_to_args = {}
-            with ProcessPoolExecutor() as executor:
-                futures = [
-                    executor.submit(self.match_single_icon, args) for args in args_list
-                ]
-                for future, args in zip(futures, args_list):
-                    future_to_args[future] = args
-
-                for future in as_completed(future_to_args):
-                    args = future_to_args[future]
-                    result = future.result()
-
+            with ThreadPoolExecutor() as executor:
+                for result in executor.map(self.match_single_icon, args_list, chunksize=100):
                     for item in result:
                         matches[item["region"]][item["slot"]].append(item)
+
+            # future_to_args = {}
+            # with ProcessPoolExecutor() as executor:
+            #     futures = [
+            #         executor.submit(self.match_single_icon, args) for args in args_list
+            #     ]
+            #     for future, args in zip(futures, args_list):
+            #         future_to_args[future] = args
+
+            #     for future in as_completed(future_to_args):
+            #         args = future_to_args[future]
+            #         result = future.result()
+
+            #         for item in result:
+            #             matches[item["region"]][item["slot"]].append(item)
 
             # Fallback pass
             fallback_args_list = []
@@ -210,7 +216,7 @@ class SSIMMatchEngine:
             slot_idx,
             roi,
             icon_color,
-            predicted_quality,
+            predicted_qualities,
             threshold,
             overlays,
             region_label,
@@ -220,88 +226,106 @@ class SSIMMatchEngine:
         found_matches = []
         matched_candidate_indexes = set()
 
-        quality, quality_scale, quality_method = predicted_quality
+        
+        for quality_idx, predicted_quality in enumerate(predicted_qualities):
+            if predicted_quality is None:
+                continue
 
-        if not quality or quality not in overlays:
-            return found_matches, matched_candidate_indexes, slot_idx
+            #print(f"Predicted quality: {predicted_quality}")
+            quality = predicted_quality["quality"]
+            quality_scale = predicted_quality["scale"]
+            quality_method = predicted_quality["method"]
 
-        scale_factor = None
+            quality_steps = None
+            if predicted_quality["step_x"] is not None and predicted_quality["step_y"] is not None:
+                quality_steps = (predicted_quality["step_x"], predicted_quality["step_y"])
 
-        if roi.shape[0] > 43 * 1.1 or roi.shape[1] > 33 * 1.1:
-            scale_factor = min(43 / roi.shape[0], 33 / roi.shape[1])
-            roi = cv2.resize(
-                roi.copy(),
-                None,
-                fx=scale_factor,
-                fy=scale_factor,
-                interpolation=cv2.INTER_AREA,
-            )
+            # quality, quality_scale, quality_method = predicted_quality
 
-        best_match = None
-        method = "ssim-all-overlays-all-scales-fallback"
-        quality_used = quality
+            if not quality or quality not in overlays:
+                return found_matches, matched_candidate_indexes, slot_idx
 
-        if quality == "common":
-            best_score = -np.inf
-            for overlay_name, overlay_img in overlays.items():
-                blended_icon = apply_overlay(icon_color, overlay_img)
-                match = multi_scale_match(roi, blended_icon, threshold=threshold)
+            scale_factor = None
 
-                if match and match[2] > best_score:
-                    best_score = match[2]
-                    best_match = match
-                    quality_used = overlay_name
+            #if roi.shape[0] > 43 * 1.1 or roi.shape[1] > 33 * 1.1:
+            if roi.shape[0] != 47 or roi.shape[1] != 36:
+                scale_factor = min(47 / roi.shape[0], 36 / roi.shape[1])
+                roi = cv2.resize(
+                    roi.copy(),
+                    None,
+                    fx=scale_factor,
+                    fy=scale_factor,
+                    interpolation=cv2.INTER_AREA,
+                )
 
-            # print(f"quality==common: best_match: {best_match} best_score: {best_score} quality_used: {quality_used}")
-        else:
-            blended_icon = apply_overlay(icon_color, overlays[quality])
-            icon_h, icon_w = icon_color.shape[:2]
-            overlay_h, overlay_w = overlays[quality].shape[:2]
+            best_match = None
+            method = "ssim-all-overlays-all-scales-fallback"
+            quality_used = quality
 
-            if icon_h == overlay_h and icon_w == overlay_w and quality_scale:
+            if quality == "common":
+                best_score = -np.inf
+                for overlay_name, overlay_img in overlays.items():
+                    blended_icon = apply_overlay(icon_color, overlay_img)
+                    match = multi_scale_match(name, roi, blended_icon, threshold=threshold)
+
+                    if match and match[2] > best_score:
+                        best_score = match[2]
+                        best_match = match
+                        quality_used = overlay_name
+                        method_suffix = match[4]
+
+                # print(f"quality==common: best_match: {best_match} best_score: {best_score} quality_used: {quality_used}")
+            else:
+                blended_icon = apply_overlay(icon_color, overlays[quality])
+                icon_h, icon_w = icon_color.shape[:2]
+                overlay_h, overlay_w = overlays[quality].shape[:2]
+
+                #if icon_h == overlay_h and icon_w == overlay_w and quality_scale:
                 scales = [quality_scale]
-                method = "ssim-predicted-overlay-scale"
-            else:
-                scales = np.linspace(0.6, 0.8, 20)
-                method = (
-                    "ssim-predicted-overlays-all-scales-icon-size-mismatch-fallback"
+                method = f"ssim-predicted-overlay-scale"
+                # else:
+                #     scales = np.linspace(0.6, 0.7, 11)
+                #     method = (
+                #         "ssim-predicted-overlays-all-scales-icon-size-mismatch-fallback"
+                #     )
+
+                if not fallback_mode:
+                    best_match = multi_scale_match(
+                        name, roi, blended_icon, scales=scales, steps=quality_steps, threshold=threshold
+                    )
+                else:
+                    method = "ssim-predicted-overlay-all-scales-fallback"
+                    best_match = multi_scale_match(name, roi, blended_icon, threshold=threshold)
+
+                # print(f"quality!=common: best_match: {best_match} scales: {scales} method: {method}")
+
+            if best_match:
+                top_left, size, score, scale, method_suffix = best_match
+                gx, gy = top_left
+                match_w, match_h = size
+
+                if scale_factor:
+                    inv_scale = 1.0 / scale_factor
+                    gx = int(np.floor(gx * inv_scale))
+                    gy = int(np.floor(gy * inv_scale))
+                    match_w = int(np.ceil(match_w * inv_scale)) + 1
+                    match_h = int(np.ceil(match_h * inv_scale)) + 1
+
+                found_matches.append(
+                    {
+                        "region": region_label,
+                        "slot": slot_idx,
+                        "name": f"{name}",
+                        "score": score,
+                        "scale": scale,
+                        "quality_scale": quality_scale,
+                        "quality": quality_used,
+                        "method": f"{method}-{method_suffix}",
+                    }
                 )
-
-            if not fallback_mode:
-                best_match = multi_scale_match(
-                    roi, blended_icon, scales=scales, threshold=threshold
-                )
-            else:
-                method = "ssim-predicted-overlay-all-scales-fallback"
-                best_match = multi_scale_match(roi, blended_icon, threshold=threshold)
-
-            # print(f"quality!=common: best_match: {best_match} scales: {scales} method: {method}")
-
-        if best_match:
-            top_left, size, score, scale = best_match
-            gx, gy = top_left
-            match_w, match_h = size
-
-            if scale_factor:
-                inv_scale = 1.0 / scale_factor
-                gx = int(np.floor(gx * inv_scale))
-                gy = int(np.floor(gy * inv_scale))
-                match_w = int(np.ceil(match_w * inv_scale)) + 1
-                match_h = int(np.ceil(match_h * inv_scale)) + 1
-
-            found_matches.append(
-                {
-                    "region": region_label,
-                    "slot": slot_idx,
-                    "name": f"{name}",
-                    "score": score,
-                    "scale": scale,
-                    "quality_scale": quality_scale,
-                    "quality": quality_used,
-                    "method": method,
-                }
-            )
-            matched_candidate_indexes.add(slot_idx)
+                matched_candidate_indexes.add(slot_idx)
+                #print(f"Found match for {name} at slot {slot_idx}: {best_match}")
+                break
 
         # print(f"Completed {name} against {total} icons for label '{region_label}' at slot {slot_idx}")
         # print(f"found_matches: {found_matches}")
