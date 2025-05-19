@@ -92,8 +92,11 @@ def load_quality_overlays(overlay_folder):
 
 
 def show_image(
-    imgs, window_name='Images', bg_color=(0, 0, 0),
-    border_thickness=2, border_color=(0, 255, 0)
+    imgs,
+    window_name="Images",
+    bg_color=(0, 0, 0),
+    border_thickness=2,
+    border_color=(0, 255, 0),
 ):
     """
     Display a list of images side-by-side with optional borders, and allow saving via GUI dialogs.
@@ -135,16 +138,16 @@ def show_image(
         # ask which images
         choice = simpledialog.askstring(
             "Save Images",
-            f"Enter 'a' to save all or comma-separated indices (0-{len(images)-1}):"
+            f"Enter 'a' to save all or comma-separated indices (0-{len(images)-1}):",
         )
         if choice is None:
             return
         choice = choice.strip().lower()
-        if choice == 'a':
+        if choice == "a":
             indices = list(range(len(images)))
         else:
             try:
-                indices = [int(i) for i in choice.split(',')]
+                indices = [int(i) for i in choice.split(",")]
                 indices = [i for i in indices if 0 <= i < len(images)]
                 if not indices:
                     messagebox.showerror("Error", "No valid indices selected.")
@@ -156,11 +159,11 @@ def show_image(
         # ask which of the selected to save in grayscale
         gray_choice = simpledialog.askstring(
             "Grayscale Option",
-            "Enter comma-separated indices to save in grayscale (others saved in color),\nor leave blank for none:"
+            "Enter comma-separated indices to save in grayscale (others saved in color),\nor leave blank for none:",
         )
         if gray_choice:
             try:
-                gray_indices = {int(i) for i in gray_choice.split(',')}
+                gray_indices = {int(i) for i in gray_choice.split(",")}
             except ValueError:
                 messagebox.showerror("Error", "Invalid input for grayscale indices.")
                 return
@@ -192,7 +195,9 @@ def show_image(
             if cv2.imwrite(filepath, img_to_save):
                 saved_count += 1
 
-        messagebox.showinfo("Save Complete", f"Saved {saved_count} image(s) to {dirpath}")
+        messagebox.showinfo(
+            "Save Complete", f"Saved {saved_count} image(s) to {dirpath}"
+        )
 
     # preprocess all to 3-channel uint8
     processed = [to_bgr8(img) for img in imgs]
@@ -209,13 +214,13 @@ def show_image(
     separators = []
     for im in processed:
         h, w = im.shape[:2]
-        canvas[0:h, x:x+w] = im
+        canvas[0:h, x : x + w] = im
         x += w
         separators.append(x)
         x += border_thickness
 
     for sep_x in separators[:-1]:
-        canvas[:, sep_x:sep_x+border_thickness] = border_color
+        canvas[:, sep_x : sep_x + border_thickness] = border_color
 
     # display
     flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO
@@ -226,13 +231,16 @@ def show_image(
 
     while True:
         key = cv2.waitKey(100) & 0xFF
-        if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1 or key == ord('x'):
+        if cv2.getWindowProperty(window_name, cv2.WND_PROP_VISIBLE) < 1 or key == ord(
+            "x"
+        ):
             break
-        if key == ord('s'):
+        if key == ord("s"):
             save_images(processed)
 
     cv2.destroyWindow(window_name)
-    
+
+
 def resize_to_max_fullhd(image, max_width=1920, max_height=1080):
     """
     Resize an image to fit within 1920x1080 (or specified limits) while maintaining aspect ratio.

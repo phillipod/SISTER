@@ -106,7 +106,9 @@ class SSIMMatchEngine:
                         args_list.append(args)
 
             with ThreadPoolExecutor() as executor:
-                for result in executor.map(self.match_single_icon, args_list, chunksize=100):
+                for result in executor.map(
+                    self.match_single_icon, args_list, chunksize=100
+                ):
                     for item in result:
                         matches[item["region"]][item["slot"]].append(item)
 
@@ -225,19 +227,24 @@ class SSIMMatchEngine:
         found_matches = []
         matched_candidate_indexes = set()
 
-        
         for quality_idx, predicted_quality in enumerate(predicted_qualities):
             if predicted_quality is None:
                 continue
 
-            #print(f"Predicted quality: {predicted_quality}")
+            # print(f"Predicted quality: {predicted_quality}")
             quality = predicted_quality["quality"]
             quality_scale = predicted_quality["scale"]
             quality_method = predicted_quality["method"]
 
             quality_steps = None
-            if predicted_quality["step_x"] is not None and predicted_quality["step_y"] is not None:
-                quality_steps = (predicted_quality["step_x"], predicted_quality["step_y"])
+            if (
+                predicted_quality["step_x"] is not None
+                and predicted_quality["step_y"] is not None
+            ):
+                quality_steps = (
+                    predicted_quality["step_x"],
+                    predicted_quality["step_y"],
+                )
 
             # quality, quality_scale, quality_method = predicted_quality
 
@@ -246,7 +253,7 @@ class SSIMMatchEngine:
 
             scale_factor = None
 
-            #if roi.shape[0] > 43 * 1.1 or roi.shape[1] > 33 * 1.1:
+            # if roi.shape[0] > 43 * 1.1 or roi.shape[1] > 33 * 1.1:
             if roi.shape[0] != 47 or roi.shape[1] != 36:
                 scale_factor = min(47 / roi.shape[0], 36 / roi.shape[1])
                 roi = cv2.resize(
@@ -265,7 +272,9 @@ class SSIMMatchEngine:
                 best_score = -np.inf
                 for overlay_name, overlay_img in overlays.items():
                     blended_icon = apply_overlay(icon_color, overlay_img)
-                    match = multi_scale_match(name, roi, blended_icon, threshold=threshold)
+                    match = multi_scale_match(
+                        name, roi, blended_icon, threshold=threshold
+                    )
 
                     if match and match[2] > best_score:
                         best_score = match[2]
@@ -279,7 +288,7 @@ class SSIMMatchEngine:
                 icon_h, icon_w = icon_color.shape[:2]
                 overlay_h, overlay_w = overlays[quality].shape[:2]
 
-                #if icon_h == overlay_h and icon_w == overlay_w and quality_scale:
+                # if icon_h == overlay_h and icon_w == overlay_w and quality_scale:
                 scales = [quality_scale]
                 method = f"ssim-predicted-overlay-scale"
                 # else:
@@ -290,11 +299,18 @@ class SSIMMatchEngine:
 
                 if not fallback_mode:
                     best_match = multi_scale_match(
-                        name, roi, blended_icon, scales=scales, steps=quality_steps, threshold=threshold
+                        name,
+                        roi,
+                        blended_icon,
+                        scales=scales,
+                        steps=quality_steps,
+                        threshold=threshold,
                     )
                 else:
                     method = "ssim-predicted-overlay-all-scales-fallback"
-                    best_match = multi_scale_match(name, roi, blended_icon, threshold=threshold)
+                    best_match = multi_scale_match(
+                        name, roi, blended_icon, threshold=threshold
+                    )
 
                 # print(f"quality!=common: best_match: {best_match} scales: {scales} method: {method}")
 
@@ -323,7 +339,7 @@ class SSIMMatchEngine:
                     }
                 )
                 matched_candidate_indexes.add(slot_idx)
-                #print(f"Found match for {name} at slot {slot_idx}: {best_match}")
+                # print(f"Found match for {name} at slot {slot_idx}: {best_match}")
                 break
 
         # print(f"Completed {name} against {total} icons for label '{region_label}' at slot {slot_idx}")

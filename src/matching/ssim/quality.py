@@ -68,7 +68,9 @@ class SSIMQualityEngine:
                 region_label, idx = futures[future]
                 try:
                     # quality, scale, method = future.result()
-                    predicted_qualities_by_label.setdefault(region_label, {})[idx] = future.result()
+                    predicted_qualities_by_label.setdefault(region_label, {})[
+                        idx
+                    ] = future.result()
                 except Exception as e:
                     logger.warning(
                         f"Overlay prediction failed for region '{region_label}', slot {idx}: {e}"
@@ -77,10 +79,8 @@ class SSIMQualityEngine:
                     # quality, scale, method = "common", 1.0, "default"
 
                 # predicted_qualities_by_label.setdefault(region_label, {})[idx] = (quality, scale, method)
-                
 
         logger.info("Performed all quality predictions.")
-
 
         # print(predicted_qualities_by_label)
         # import sys

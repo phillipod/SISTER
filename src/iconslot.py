@@ -115,7 +115,7 @@ class IconSlotDetector:
                     region_candidates[label].append(slot_info)
                     break
 
-        #print(f"region_candidates: {region_candidates}")
+        # print(f"region_candidates: {region_candidates}")
 
         # Sort slots and renumber per region
         for label, slots in region_candidates.items():
@@ -131,13 +131,13 @@ class IconSlotDetector:
             print(f"sorted_boxes: {sorted_boxes}")
             # Map original slots by box for quick lookup
             slot_map = {slot["Box"]: slot for slot in slots}
-            print (f"slot_map: {slot_map}")
+            print(f"slot_map: {slot_map}")
             sorted_slots: List[Dict[str, Any]] = []
-           
+
             for local_idx, box in enumerate(sorted_boxes):
                 print(f"local_idx: {local_idx}, box: {box}")
                 info = slot_map.get(sorted_boxes[box], None)
-                print (f"info: {info}")
+                print(f"info: {info}")
 
                 if info is not None:
                     sorted_slots.append(
@@ -152,7 +152,7 @@ class IconSlotDetector:
                     print(f"Slot {local_idx} not found for {label}")
             region_candidates[label] = sorted_slots
 
-        #print(f"region_candidates: {region_candidates}")
+        # print(f"region_candidates: {region_candidates}")
 
         return region_candidates
 
@@ -214,7 +214,7 @@ class IconSlotDetector:
             stddev = np.std(roi_gray)
             entropy = shannon_entropy(roi_gray)
 
-            #if stddev < min_stddev or entropy < min_entropy:
+            # if stddev < min_stddev or entropy < min_entropy:
             #    continue
 
             candidates.append((x, y, w, h))
@@ -308,4 +308,3 @@ class IconSlotDetector:
             rows.append(sorted(current_row, key=lambda b: b[0]))
 
         return {i: box for i, box in enumerate([box for row in rows for box in row])}
-    

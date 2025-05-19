@@ -59,12 +59,12 @@ def compute(image, size=(32, 32), grayscale=False):
     pil_img = Image.fromarray(resized)
     return str(imagehash.phash(pil_img))
 
+
 class PHashHasher:
     """
     Computes perceptual hashes (pHash) from raw image bytes using the imagehash library.
     Resizes images to 32x32 for consistency before hashing.
     """
-
 
     def compute(self, image, size=(32, 32), grayscale=False):
         return compute(image, size, grayscale)
