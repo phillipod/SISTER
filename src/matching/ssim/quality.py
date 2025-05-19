@@ -3,6 +3,8 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import shared_memory
 import logging
 
+import traceback
+
 from .common import identify_overlay
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,9 @@ class SSIMQualityEngine:
                 box = slot["Box"]
                 roi = slot["ROI"]
 
+                # if region_label != "Hangar":
+                #     continue
+
                 logger.debug(
                     f"Predicting quality for region '{region_label}', slot {idx}"
                 )
@@ -50,7 +55,7 @@ class SSIMQualityEngine:
         predicted_qualities_by_label = {}
         with ProcessPoolExecutor() as executor:
             futures = {
-                executor.submit(identify_overlay, roi, overlays): (
+                executor.submit(identify_overlay, roi, overlays, region_label, idx): (
                     region_label,
                     idx,
                 )
@@ -62,17 +67,22 @@ class SSIMQualityEngine:
             for future in as_completed(futures):
                 region_label, idx = futures[future]
                 try:
-                    quality, scale, method = future.result()
+                    # quality, scale, method = future.result()
+                    predicted_qualities_by_label.setdefault(region_label, {})[
+                        idx
+                    ] = future.result()
                 except Exception as e:
                     logger.warning(
                         f"Overlay prediction failed for region '{region_label}', slot {idx}: {e}"
                     )
-                    quality, scale, method = "common", 1.0, "default"
+                    traceback.print_exc()
+                    # quality, scale, method = "common", 1.0, "default"
 
-                predicted_qualities_by_label.setdefault(region_label, []).append(
-                    (quality, scale, method)
-                )
+                # predicted_qualities_by_label.setdefault(region_label, {})[idx] = (quality, scale, method)
 
         logger.info("Performed all quality predictions.")
 
+        # print(predicted_qualities_by_label)
+        # import sys
+        # sys.exit()
         return predicted_qualities_by_label

@@ -253,10 +253,14 @@ def main():
     
     screenshot = load_image(args.screenshot, resize_fullhd=not args.no_resize)
 
+    # Get filename and prune extension from args.screenshot
+    base_name = Path(args.screenshot).stem
+
+
     locator = LabelLocator(gpu=args.gpu, debug=args.debug)
     classifier = Classifier(debug=args.debug)
     regioner = RegionDetector(debug=args.debug)
-    slot_finder = IconSlotDetector(hash_index=hash_index, debug=args.debug)
+    slot_finder = IconSlotDetector(hash_index=hash_index, debug=args.debug, debug_output_path=args.output + "/debug/slots/" + base_name)
     prefilter = IconPrefilter(hash_index=hash_index, debug=args.debug)
     matcher = IconMatcher(hash_index=hash_index, debug=args.debug)
 
