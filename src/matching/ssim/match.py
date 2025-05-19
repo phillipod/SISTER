@@ -74,7 +74,6 @@ class SSIMMatchEngine:
                     if not icons_for_slot:
                         continue
 
-                    
                     predicted_quality = predicted_qualities[idx]
 
                     logger.info(
