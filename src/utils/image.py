@@ -128,8 +128,10 @@ def show_image(
         except ImportError:
             print("Tkinter not available; cannot prompt for save parameters.")
             return
+
         root = tk.Tk()
         root.withdraw()
+
         # ask which images
         choice = simpledialog.askstring(
             "Save Images",
@@ -139,7 +141,7 @@ def show_image(
             return
         choice = choice.strip().lower()
         if choice == 'a':
-            indices = range(len(images))
+            indices = list(range(len(images)))
         else:
             try:
                 indices = [int(i) for i in choice.split(',')]
@@ -150,6 +152,21 @@ def show_image(
             except ValueError:
                 messagebox.showerror("Error", "Invalid input for indices.")
                 return
+
+        # ask which of the selected to save in grayscale
+        gray_choice = simpledialog.askstring(
+            "Grayscale Option",
+            "Enter comma-separated indices to save in grayscale (others saved in color),\nor leave blank for none:"
+        )
+        if gray_choice:
+            try:
+                gray_indices = {int(i) for i in gray_choice.split(',')}
+            except ValueError:
+                messagebox.showerror("Error", "Invalid input for grayscale indices.")
+                return
+        else:
+            gray_indices = set()
+
         # ask directory and prefix
         dirpath = filedialog.askdirectory(title="Select directory to save images")
         if not dirpath:
@@ -157,14 +174,25 @@ def show_image(
         prefix = simpledialog.askstring("Save Prefix", "Enter file prefix:")
         if not prefix:
             return
+
         # save
         os.makedirs(dirpath, exist_ok=True)
+        saved_count = 0
         for idx in indices:
             img = images[idx]
+            # convert to grayscale if requested
+            if idx in gray_indices:
+                # resulting img2 will be 2D, cv2.imwrite handles that
+                img_to_save = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            else:
+                img_to_save = img
+
             filename = f"{prefix}-{(idx+1):04d}.png"
             filepath = os.path.join(dirpath, filename)
-            cv2.imwrite(filepath, img)
-        messagebox.showinfo("Save Complete", f"Saved {len(indices)} image(s) to {dirpath}")
+            if cv2.imwrite(filepath, img_to_save):
+                saved_count += 1
+
+        messagebox.showinfo("Save Complete", f"Saved {saved_count} image(s) to {dirpath}")
 
     # preprocess all to 3-channel uint8
     processed = [to_bgr8(img) for img in imgs]
@@ -192,7 +220,7 @@ def show_image(
     # display
     flags = cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO
     cv2.namedWindow(window_name, flags)
-    cv2.resizeWindow(window_name, W, H)
+    cv2.resizeWindow(window_name, 600, 300)
     cv2.setWindowProperty(window_name, cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO)
     cv2.imshow(window_name, canvas)
 
@@ -204,7 +232,7 @@ def show_image(
             save_images(processed)
 
     cv2.destroyWindow(window_name)
-
+    
 def resize_to_max_fullhd(image, max_width=1920, max_height=1080):
     """
     Resize an image to fit within 1920x1080 (or specified limits) while maintaining aspect ratio.
