@@ -12,32 +12,6 @@ from imagehash import hex_to_hash
 import imagehash
 from PIL import Image
 
-def dynamic_hamming_cutoff(scores, best_score, max_next_ranks=2, max_allowed_gap=4):
-    freqs = Counter(scores)
-    sorted_scores = sorted(freqs.items())
-
-    threshold = best_score
-    previous = best_score
-
-    rank_count = 0
-    for score, count in sorted_scores:
-        if score == best_score:
-            continue
-
-        # if this next tier is a massive jump from the best, break
-        if score - previous > max_allowed_gap:
-            break
-
-        threshold = score
-        previous = score
-        rank_count += 1
-
-        if rank_count >= max_next_ranks:
-            break
-
-    return threshold
-
-
 def identify_overlay(
     region_crop,
     overlays,
