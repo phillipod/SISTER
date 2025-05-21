@@ -1,4 +1,3 @@
-from .quality import SSIMQualityEngine
 from .match import SSIMMatchEngine
 
 
@@ -9,20 +8,9 @@ class SSIMEngine:
         """
         Composite SSIM engine that delegates prefiltering, quality, and matching.
         """
-        self.quality_engine = SSIMQualityEngine(
-            debug, icon_loader, overlay_loader, hash_index
-        )
         self.match_engine = SSIMMatchEngine(
             debug, icon_loader, overlay_loader, hash_index
         )
-
-    def quality_predictions(
-        self,
-        icon_slots,
-        overlays,
-        threshold=0.8,
-    ):
-        return self.quality_engine.quality_predictions(icon_slots, overlays, threshold)
 
     def match_all(
         self,

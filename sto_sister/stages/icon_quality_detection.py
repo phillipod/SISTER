@@ -1,7 +1,10 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import Stage, StageResult, PipelineContext
-from ..components.icon_matcher import IconMatcher
+from ..components.overlay_detector import OverlayDetector
+
+from ..utils.image import apply_mask, load_quality_overlays, show_image
+
 
 class IconMatchingQualityDetectionStage(Stage):
     name = "icon_quality_detection"
@@ -9,10 +12,9 @@ class IconMatchingQualityDetectionStage(Stage):
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         super().__init__(opts, app_config)
 
-        self.matcher = IconMatcher(
+        self.strategy = OverlayDetector(
             hash_index=app_config.get("hash_index"),
             debug=opts.get("debug", False),
-            engine_type=opts.get("engine_type", "ssim"),
         )
 
     def run(
@@ -20,9 +22,9 @@ class IconMatchingQualityDetectionStage(Stage):
     ) -> StageResult:
         report(self.name, 0.0)
 
-        overlays = self.matcher.load_quality_overlays(ctx.config.get("overlay_dir", ""))
+        overlays = load_quality_overlays(ctx.config.get("overlay_dir", ""))
 
-        ctx.predicted_qualities = self.matcher.quality_predictions(
+        ctx.predicted_qualities = self.strategy.quality_predictions(
             ctx.slots,
             overlays,
             threshold=self.opts.get("threshold", 0.8),
