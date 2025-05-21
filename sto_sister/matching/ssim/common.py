@@ -3,7 +3,10 @@ import cv2
 import numpy as np
 from skimage.metrics import structural_similarity as ssim
 from collections import Counter
+
 from ...utils.image import apply_mask, show_image
+from ...metrics.barcode import find_off_strips, compare_barcodes
+from ...metrics.mean_hue import classify_overlay_by_patch
 
 from imagehash import hex_to_hash
 import imagehash
@@ -45,218 +48,6 @@ def identify_overlay(
 ):
     debug = True
 
-    # def find_off_segments(bin_vals, ignore_top_frac=0.1, ignore_top_rows=0):
-    #     """
-    #     Identify runs of 0s in a 1-D binary array, but ignore any segments
-    #     that start in the top ignored region (first ignore_top_frac of rows).
-    #     """
-    #     H = bin_vals.shape[0]
-
-    #     # find all zero runs
-    #     segments = []
-    #     in_zero = False
-    #     start = None
-    #     for i, v in enumerate(bin_vals):
-    #         if not in_zero and v == 0:
-    #             in_zero = True
-    #             start = i
-    #         elif in_zero and v == 1:
-    #             segments.append((start, i - 1))
-    #             in_zero = False
-    #     if in_zero:
-    #         segments.append((start, H - 1))
-
-    #     # compute top margin (rows to ignore at start of array)
-    #     margin = ignore_top_rows if ignore_top_rows > 0 else int(H * ignore_top_frac)
-    #     min_valid_start = margin
-
-    #     # filter out those that begin in the ignored zone
-    #     #return [(s, e) for (s, e) in segments if s >= min_valid_start]
-    #     #return [(s,e) for (s,e) in segments if e >= margin]
-    #     return [(s, e) for (s, e) in segments
-    #         if s >= margin and e >= margin]
-
-    # def find_common_off_segments(bin2d,
-    #                             ignore_top_frac=0.1,
-    #                             ignore_top_rows=0,
-    #                             tolerance_rows=1):
-    #     """
-    #     Find zero-runs (within tolerance) in EVERY column of a 2-D binary map—
-    #     but only in the leftmost 3 columns where the stripes live.
-    #     """
-    #     # — binarize if needed —
-    #     if bin2d.ndim == 3:
-    #         gray = cv2.cvtColor(bin2d, cv2.COLOR_BGR2GRAY)
-    #         # _, bmap = cv2.threshold(gray, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    #         bin2d = cv2.adaptiveThreshold(
-    #             gray,
-    #             maxValue=1,
-    #             adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-    #             thresholdType=cv2.THRESH_BINARY,
-    #             blockSize=11,
-    #             C=2
-    #         )
-
-    #     elif bin2d.ndim != 2:
-    #         raise ValueError(f"Expected 2D or 3D input, got shape {bin2d.shape!r}")
-
-    #     # restrict to the leftmost 3 columns
-    #     H, W = bin2d.shape
-    #     stripe_roi = bin2d[:, :3]
-
-    #     # get zero-runs per column
-    #     col_segs = [
-    #         find_off_segments(stripe_roi[:, j], ignore_top_frac, ignore_top_rows)
-    #         for j in range(3)
-    #     ]
-
-    #     # find common overlaps
-    #     common = []
-    #     for s0, e0 in col_segs[0]:
-    #         if all(
-    #             any((e + tolerance_rows >= s0) and (s - tolerance_rows <= e0)
-    #                 for s, e in segs_j)
-    #             for segs_j in col_segs[1:]
-    #         ):
-    #             common.append((s0, e0))
-    #     return common
-
-    def find_off_strips(strip_bgr, ignore_top_frac=0.3, min_off_cols=3):
-        """
-        strip_bgr: H×3×3 BGR image.
-        Returns a list of (start_row, end_row) for each run where
-        at least min_off_cols columns are black (0) in that row,
-        ignoring any runs that start or end above ignore_top_frac*H.
-        """
-        # 1) BGR → gray → 0/1 map
-        gray = cv2.cvtColor(strip_bgr, cv2.COLOR_BGR2GRAY)
-        # _, bmap = cv2.threshold(gray, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        bmap = cv2.adaptiveThreshold(
-            gray,
-            maxValue=1,
-            adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            thresholdType=cv2.THRESH_BINARY,
-            blockSize=11,
-            C=2,
-        )
-
-        # 2) count how many of the 3 cols are off in each row
-        off_rows = (bmap == 0).sum(axis=1) >= min_off_cols
-
-        # 3) one-pass run finder
-        H = off_rows.shape[0]
-        margin = int(H * ignore_top_frac)
-        segments = []
-        in_run = False
-        for i, is_off in enumerate(off_rows):
-            if not in_run and is_off:
-                start = i
-                in_run = True
-            elif in_run and not is_off:
-                # close run at i-1
-                if start >= margin and (i - 1) >= margin:
-                    segments.append((start, i - 1))
-                in_run = False
-        # if last run goes to bottom
-        if in_run and start >= margin:
-            segments.append((start, H - 1))
-
-        return segments
-
-    def compare_barcodes(
-        strip1_bgr,
-        strip2_bgr,
-        ignore_top_frac=0.3,
-        min_off_cols=3,
-        tolerance_rows=1,
-        pos_tol=2,
-        len_tol=2,
-    ):
-        """
-        Compare two BGR barcode strips by their black/off segments.
-        Returns True if they have the same number of runs and each
-        corresponding run aligns within tolerance_rows.
-        """
-        segs1 = find_off_strips(
-            strip1_bgr, ignore_top_frac=ignore_top_frac, min_off_cols=min_off_cols
-        )
-        segs2 = find_off_strips(
-            strip2_bgr, ignore_top_frac=ignore_top_frac, min_off_cols=min_off_cols
-        )
-
-        # 1) same count?
-        if len(segs1) != len(segs2):
-            return False, segs1, segs2
-
-        # 2) each run lines up within tolerance
-        for (s1, e1), (s2, e2) in zip(segs1, segs2):
-            # if abs(s1 - s2) > tolerance_rows or abs(e1 - e2) > tolerance_rows or abs((e1 - s1) - (e2 - s2)) > len_tol:
-            #    return False, segs1, segs2
-
-            # check that start‐rows line up
-            if abs(s1 - s2) > pos_tol:
-                return False, segs1, segs2
-            # check that end‐rows line up
-            if abs(e1 - e2) > pos_tol:
-                return False, segs1, segs2
-            # check that stripe‐lengths are similar
-            if abs((e1 - s1) - (e2 - s2)) > len_tol:
-                return False, segs1, segs2
-
-        return True, segs1, segs2
-
-    # def compare_barcodes(img_a,
-    #                         img_b,
-    #                         box_width=3,
-    #                         ignore_top_frac=0.3,
-    #                         ignore_top_rows=0,
-    #                         tolerance_rows=1,
-    #                         pos_tol=2,
-    #                         len_tol=2):
-    #     """
-    #     Compare the barcode stripes of img_a and img_b for:
-    #     1) same number of stripes,
-    #     2) each stripe starting and ending in about the same row,
-    #     3) each stripe having about the same length.
-
-    #     Returns:
-    #     match:        True if all stripes match within tolerances.
-    #     stripes_a:    list of (start,end) for img_a
-    #     stripes_b:    list of (start,end) for img_b
-    #     """
-    #     # Crop to the leftmost barcode region
-    #     roi_a = img_a[:, :box_width]
-    #     roi_b = img_b[:, :box_width]
-
-    #     # Reuse your existing find_common_off_segments
-    #     segs_a = find_common_off_segments(roi_a,
-    #                                     ignore_top_frac=ignore_top_frac,
-    #                                     ignore_top_rows=ignore_top_rows,
-    #                                     tolerance_rows=tolerance_rows)
-    #     segs_b = find_common_off_segments(roi_b,
-    #                                     ignore_top_frac=ignore_top_frac,
-    #                                     ignore_top_rows=ignore_top_rows,
-    #                                     tolerance_rows=tolerance_rows)
-
-    #     if len(segs_a) != len(segs_b):
-    #         return False, segs_a, segs_b
-
-    #     for (s1, e1), (s2, e2) in zip(segs_a, segs_b):
-    #         # check that start‐rows line up
-    #         if abs(s1 - s2) > pos_tol:
-    #             return False, segs_a, segs_b
-    #         # check that end‐rows line up
-    #         if abs(e1 - e2) > pos_tol:
-    #             return False, segs_a, segs_b
-    #         # check that stripe‐lengths are similar
-    #         if abs((e1 - s1) - (e2 - s2)) > len_tol:
-    #             return False, segs_a, segs_b
-
-    #     return True, segs_a, segs_b
-
-    # def luminance_bgr(col_arr):
-    #     return 0.2126 * col_arr[...,2] + 0.7152 * col_arr[...,1] + 0.0722 * col_arr[...,0]
-
     def overlay_mask(overlay_type, shape, box_width=8):
         """
         Returns an H×W float mask that is 1 inside the bottom-left box
@@ -267,15 +58,7 @@ def identify_overlay(
         start_row = H - (half_h * 5)
         bulge_row = H - (half_h * 3)
         mask = np.zeros((H, W), dtype=np.float32)
-        # mask[0:5, 0:W] = 1.0
-        # mask[start_row:H, 0:(box_width//2)] = 1.0
-        # mask[0:5, 0:W] = 1.0
         mask[0:H, 0 : (box_width // 2)] = 1.0
-        # mask[bulge_row:H, 0:(box_width)] = 1.0
-
-        # if overlay_type == "rare":
-        #    print(f"overlay_type: {overlay_type}")
-        # mask[bulge_row:10, 0:(box_width)] = 0.0
 
         return mask
 
@@ -283,56 +66,7 @@ def identify_overlay(
         H, W = roi.shape[:2]
         return roi[0:H, 0:(box_width)]
 
-    def classify_overlay_by_patch(patch, min_sat=0.2, min_val=0.3, frac_thresh=0.3):
-        """
-        Classify an overlay based on its bottom-left patch's hue,
-        ignoring grayscale/dark regions by requiring a minimum fraction of colorful pixels.
-
-        Parameters:
-        - patch: HxWx3 BGR image patch
-        - min_sat: minimum saturation (0–1) to consider a pixel colorful
-        - min_val: minimum value (0–1) to consider a pixel colorful
-        - frac_thresh: minimum fraction (0–1) of patch pixels that must be colorful
-
-        Returns one of: 'common', 'epic', 'uncommon', 'rare', 'ultra rare', 'very rare'
-        """
-        # Convert to HSV
-        hsv = cv2.cvtColor(patch.astype(np.uint8), cv2.COLOR_BGR2HSV)
-        h = hsv[..., 0].astype(np.float32) / 179.0 * 360.0
-        s = hsv[..., 1].astype(np.float32) / 255.0
-        v = hsv[..., 2].astype(np.float32) / 255.0
-
-        # Mask out non-colorful pixels
-        mask = (s >= min_sat) & (v >= min_val)
-        frac_colorful = mask.sum() / mask.size
-        if frac_colorful < frac_thresh:
-            return (
-                f"common",
-                f"({frac_colorful:.2f}) (s: {s.mean():.2f}, v: {v.mean():.2f})",
-            )
-
-        # Compute circular mean hue
-        h_f = h[mask]
-        rad = np.deg2rad(h_f)
-        sin_mean = np.mean(np.sin(rad))
-        cos_mean = np.mean(np.cos(rad))
-        mean_angle = np.arctan2(sin_mean, cos_mean)
-        mean_hue = (np.rad2deg(mean_angle) + 360) % 360
-
-        # Classify by narrowed hue bands
-        h_deg = mean_hue
-        if 40 <= h_deg < 60:
-            return "epic", h_deg  # ({h_deg:.1f}°)"
-        elif 100 <= h_deg < 115:
-            return "uncommon", h_deg  # ({h_deg:.1f}°)"
-        elif 205 <= h_deg < 220:
-            return "rare", h_deg  # ({h_deg:.1f}°)"
-        elif 240 <= h_deg < 263:
-            return "very rare", h_deg  # ({h_deg:.1f}°)"
-        elif 263 <= h_deg < 290:
-            return "ultra rare", h_deg  # ({h_deg:.1f}°)"
-        else:
-            return "unknown", h_deg
+ 
 
     # print(f"Identifying overlay for {region_label}#{slot}")
 
@@ -408,8 +142,9 @@ def identify_overlay(
     overlay_detections = []
 
     for quality_name, overlay in reversed(list(overlays.items())):
-        if quality_name == "common" and best_score > 0.75:
+        if quality_name == "common":
             continue
+
         # logger.debug(f"Trying quality overlay {quality_name}")
         if must_inspect(inspection_list, region_label, slot):
             print(
@@ -709,98 +444,3 @@ def identify_overlay(
         (sorted(overlay_detections, key=lambda x: x["ssim_score"], reverse=True))[0]
     ]
     # return overlay_detections
-
-def multi_scale_match(
-    name,
-    region_color,
-    template_color,
-    scales=np.linspace(0.6, 0.7, 11),
-    steps=None,
-    threshold=0.7,
-):
-    best_val = -np.inf
-    best_match = None
-    best_loc = None
-    best_scale = 1.0
-
-    # print(f"Region shape: {region_color.shape}, template shape: {template_color.shape}, scales: {scales}, threshold: {threshold}")
-    region_color = apply_mask(cv2.GaussianBlur(region_color, (3, 3), 0))
-    template_color = apply_mask(cv2.GaussianBlur(template_color, (3, 3), 0))
-
-    for scale in scales:
-        resized_template = cv2.resize(
-            template_color, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR
-        )
-        th, tw = resized_template.shape[:2]
-        if th > region_color.shape[0] or tw > region_color.shape[1]:
-            continue
-
-        found_by_predicted_stepping = False
-
-        if steps:
-            x = steps[0]
-            y = steps[1]
-
-            roi = region_color[y : y + th, x : x + tw]
-
-            # if name == "Nukara_Tribble.png":
-            #     print(f"Pre-stepped match: {name} scale: {scale} Stepping: x: {x} y: {y} Dimensions: w: {tw} h: {th}")
-            #     show_image([region_color, roi, resized_template])
-
-            try:
-                s = ssim(roi, resized_template, channel_axis=-1)
-            except ValueError:
-                continue
-
-            # if name == "Nukara_Tribble.png":
-            #     print(f"Score: {s}")
-
-            if s > best_val:
-                best_val = s
-                best_loc = (x, y)
-                best_match = (tw, th)
-                best_scale = scale
-                found_by_predicted_stepping = True
-                # print("found by predicted stepping")
-
-        if not found_by_predicted_stepping:
-            step_limit = 3
-            step_count_y = 0
-            for y in range(0, region_color.shape[0] - th, 1):
-                step_count_y += 1
-                # if step_count_y > step_limit:
-                #     break
-
-                step_count_x = 0
-                for x in range(0, region_color.shape[1] - tw, 1):
-                    if steps and x == steps[0] and y == steps[1]:
-                        continue
-                    # step_count_y += 1
-                    # if step_count_y > step_limit:
-                    #     break
-
-                    roi = region_color[y : y + th, x : x + tw]
-                    try:
-                        s = ssim(roi, resized_template, channel_axis=-1)
-                    except ValueError:
-                        continue
-
-                    # if s > threshold:
-                    #   if name == "Nukara_Tribble.png":
-                    #       print(f"Stepped match: {name} scale: {scale} Stepping: x: {x} y: {y} Dimensions: w: {tw} h: {th} score: {s}")
-                    #       show_image([region_color, roi, resized_template])
-                    if s > best_val:
-                        best_val = s
-                        best_loc = (x, y)
-                        best_match = (tw, th)
-                        best_scale = scale
-    if best_val >= threshold:
-        return (
-            best_loc,
-            best_match,
-            best_val,
-            best_scale,
-            "no-stepping" if found_by_predicted_stepping else "stepping",
-        )
-    else:
-        return None

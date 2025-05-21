@@ -4,13 +4,12 @@ from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExec
 from multiprocessing import shared_memory
 import logging
 
-from .common import multi_scale_match
+from ...metrics.ms_ssim import multi_scale_match
 from ...utils.image import apply_overlay
 
 from ...exceptions import SISTERError
 
 logger = logging.getLogger(__name__)
-
 
 class SSIMMatchEngine:
     def __init__(
