@@ -4,7 +4,7 @@ from collections import Counter
 import cv2
 
 # Import available engines
-from .matching.ssim import SSIMEngine
+from ..matching.ssim import SSIMEngine
 
 logger = logging.getLogger(__name__)
 

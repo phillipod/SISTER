@@ -8,7 +8,7 @@ from typing import Dict, Tuple
 
 import logging
 
-from .exceptions import (
+from ..exceptions import (
     RegionDetectionError,
     RegionDetectionComputeRegionError,
     RegionDetectionExpressionParseError,
