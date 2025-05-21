@@ -1,7 +1,14 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import Stage, StageResult, PipelineContext
-from ..prefilter import IconPrefilter
+#from ..prefilter import IconPrefilter
+
+from ..components.prefilter_phash import PHashEngine
+
+STRATEGY_CLASSES = {
+    "phash": PHashEngine,
+    # "dhash": DHashEngine,
+}
 
 class IconPrefilterStage(Stage):
     name = "icon_prefilter"
@@ -9,9 +16,17 @@ class IconPrefilterStage(Stage):
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         super().__init__(opts, app_config)
 
-        self.opts["hash_index"] = self.app_config.get("hash_index")
+        hash_index = self.app_config.get("hash_index")
+        method = self.opts["method"].lower()
 
-        self.prefilterer = IconPrefilter(**self.opts)
+        print(F"[Prefilter] Using method: {method}")
+
+        try:
+            self.strategy = STRATEGY_CLASSES[method](hash_index=hash_index)
+
+            self.method = method
+        except KeyError as e:
+            raise ValueError(f"Unknown prefilter method: '{method}'") from e
 
     def run(
         self, ctx: PipelineContext, report: Callable[[str, float], None]
@@ -21,10 +36,8 @@ class IconPrefilterStage(Stage):
         icon_sets = ctx.app_config.get("icon_sets", {})
         icon_set = icon_sets[ctx.classification["icon_set"]]
 
-        ctx.predicted_icons = self.prefilterer.icon_predictions(ctx.slots, icon_set)
-        ctx.found_icons = self.prefilterer.found_icons
-        ctx.filtered_icons = self.prefilterer.filtered_icons
-
+        (ctx.predicted_icons, ctx.found_icons, ctx.filtered_icons) = self.strategy.icon_predictions(ctx.slots, icon_set)
+        
         report(self.name, 1.0)
         return StageResult(ctx, ctx.predicted_icons)
 

@@ -116,6 +116,9 @@ if __name__ == "__main__":
     config = {
         "debug": True,
         
+        "prefilter": {
+            "method": "phash"
+        },
         "engine": "phash",
         "hash_index_dir": args.icons,
         "hash_index_file": "hash_index.json",
