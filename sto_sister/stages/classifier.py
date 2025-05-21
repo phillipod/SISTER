@@ -1,14 +1,14 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import Stage, StageResult, PipelineContext
-from ..classifier import Classifier
+from ..components.layout_classifier import LayoutClassifier
 
 class ClassifierStage(Stage):
     name = "classifier"
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         super().__init__(opts, app_config)
-        self.classifier = Classifier(**opts)
+        self.classifier = LayoutClassifier(**opts)
 
     def run(
         self, ctx: PipelineContext, report: Callable[[str, float], None]

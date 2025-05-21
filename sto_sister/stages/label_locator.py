@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import Stage, StageResult, PipelineContext
-from ..locator import LabelLocator
+from ..components.label_locator import LabelLocator
 
 class LabelLocatorStage(Stage):
     name = "label_locator"

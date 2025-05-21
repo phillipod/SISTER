@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import Stage, StageResult, PipelineContext
-from ..iconmatch import IconMatcher
+from ..components.icon_matcher import IconMatcher
 
 class IconMatchingQualityDetectionStage(Stage):
     name = "icon_quality_detection"

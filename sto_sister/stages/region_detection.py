@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import Stage, StageResult, PipelineContext
-from ..region import RegionDetector
+from ..components.region_detector import RegionDetector
 
 class RegionDetectionStage(Stage):
     name = "region_detection"

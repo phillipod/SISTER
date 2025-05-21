@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import Stage, StageResult, PipelineContext
-from ..iconslot import IconSlotDetector
+from ..components.icon_slot_detector import IconSlotDetector
 
 class IconSlotDetectionStage(Stage):
     name = "iconslot_detection"
