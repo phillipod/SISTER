@@ -9,12 +9,12 @@ from pathlib import Path
 from pprint import pprint
 
 
-from src.sister import build_default_pipeline, PipelineContext
-from src.exceptions import SISTERError, PipelineError, StageError
-from src.hashindex import HashIndex
+from sto_sister.pipeline import build_default_pipeline, PipelineContext
+from sto_sister.exceptions import SISTERError, PipelineError, StageError
+from sto_sister.hashindex import HashIndex
 from log_config import setup_logging
 
-from src.utils.image import load_image
+from sto_sister.utils.image import load_image
 
 import traceback
 
