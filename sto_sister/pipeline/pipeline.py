@@ -11,7 +11,7 @@ from pathlib import Path
 from .core import *
 from ..exceptions import *
 
-from ..hashindex import HashIndex
+from ..utils.hashindex import HashIndex
 
 from ..stages import (
     LabelLocatorStage,

@@ -9,9 +9,6 @@ from imagehash import hex_to_hash
 import imagehash
 from PIL import Image
 
-from ...hashers.phash import compute
-
-
 def dynamic_hamming_cutoff(scores, best_score, max_next_ranks=2, max_allowed_gap=4):
     freqs = Counter(scores)
     sorted_scores = sorted(freqs.items())

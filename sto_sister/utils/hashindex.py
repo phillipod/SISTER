@@ -1,23 +1,79 @@
 import os
-import json
-from pathlib import Path
-from datetime import datetime
-from PIL import Image
-import imagehash
 import logging
-from pybktree import BKTree
-from imagehash import hex_to_hash
+import json
+import imagehash
 
 import cv2
 import numpy as np
 
-from .exceptions import HashIndexError, HashIndexNotFoundError
-from .hashers.phash import PHashHasher
-from .utils.image import apply_overlay, apply_mask  # Adjust if needed
+from pathlib import Path
+from datetime import datetime
+from PIL import Image
+from pybktree import BKTree
+from imagehash import hex_to_hash
+
+from ..exceptions import HashIndexError, HashIndexNotFoundError
+from ..utils.image import apply_overlay, apply_mask
 
 logger = logging.getLogger(__name__)
-HASHER_FACTORY = {
-    "phash": PHashHasher,
+
+def compute_phash(image, size=(32, 32), grayscale=False):
+    """
+    Compute the perceptual hash from an image.
+
+    Args:
+        image (bytes or bytearray or array-like or numpy.ndarray):
+            - Raw encoded bytes (e.g. PNG/JPEG) or
+            - A NumPy array (any integer dtype) representing an image
+            - A Python list of lists/integers (will be turned into an array)
+        size (tuple):  Desired output size for hashing.
+        grayscale (bool): Convert to gray before hashing.
+
+    Returns:
+        str: Hex string of the computed perceptual hash.
+    """
+    # 1) Normalize input to a NumPy array of dtype uint8
+    if isinstance(image, (bytes, bytearray)):
+        arr = np.frombuffer(image, dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        if img is None:
+            raise ValueError("Failed to decode image from bytes.")
+    else:
+        # array-like or ndarray
+        arr = np.array(image, copy=False)
+        if arr.dtype != np.uint8:
+            arr = arr.astype(np.uint8)
+        # If it’s already a 2D (grayscale) or 3D array, we treat it as image pixels.
+        if arr.ndim == 2:
+            # single-channel grayscale → convert to BGR so later steps are uniform
+            img = cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
+        elif arr.ndim == 3 and arr.shape[2] in (1, 3, 4):
+            # 1‐channel, 3‐channel, or 4‐channel array
+            if arr.shape[2] == 4:
+                # drop alpha
+                img = cv2.cvtColor(arr, cv2.COLOR_BGRA2BGR)
+            else:
+                img = arr
+        else:
+            raise ValueError(f"Unsupported array shape for image: {arr.shape}")
+
+    # 2) Convert BGR→RGB
+    rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    # 3) Optionally force grayscale
+    if grayscale:
+        # if it’s already gray after cvtColor above, this is a no-op
+        rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+
+    # 4) Resize to target size
+    resized = cv2.resize(rgb, size, interpolation=cv2.INTER_AREA)
+
+    # 5) Compute perceptual hash
+    pil_img = Image.fromarray(resized)
+    return str(imagehash.phash(pil_img))
+
+HASH_TYPES = {
+    "phash": compute_phash,
     # "ahash": AHashHasher,  # If you add more
     # "dhash": DHashHasher,
 }
@@ -78,7 +134,7 @@ class HashIndex:
         hasher_key = hasher.lower()
 
         try:
-            self.hasher = HASHER_FACTORY[hasher_key]()
+            self.hasher = HASH_TYPES[hasher_key]
             self.hasher_name = hasher_key
         except KeyError as e:
             raise HashIndexError(f"Unknown hasher '{hasher_key}'") from e
@@ -162,7 +218,7 @@ class HashIndex:
 
                 with open(path, "rb") as f:
                     data = f.read()
-                    hash_val = self.hasher.compute(data)
+                    hash_val = self.hasher(data)
                 self.hashes[rel_path] = {"hash": hash_val, "mtime": mtime}
                 updated += 1
                 logger.verbose(f"Updated hash for {rel_path}")
@@ -207,7 +263,7 @@ class HashIndex:
                     masked = apply_mask(blended)
 
                     _, buf = cv2.imencode(".png", masked)
-                    hash_val = self.hasher.compute(
+                    hash_val = self.hasher(
                         buf.tobytes(), size=self.match_size, grayscale=False
                     )
                     key = f"{rel_path}::{quality}"
