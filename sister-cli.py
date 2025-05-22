@@ -47,7 +47,7 @@ def on_stage_complete(stage, ctx, output):
         return;
     elif stage == 'iconslot_detection':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.slots)}") # slots: {ctx.slots}")
-        #return
+        return
     elif stage == 'icon_quality_detection':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)}")
         return
@@ -75,8 +75,8 @@ def on_pipeline_complete(ctx, output, all_results):
     print(f"[Callback] [on_pipeline_complete] Pipeline is complete.")
     #print(f"[Callback] [on_pipeline_complete] Output: {ctx}")
 
-    print(f"[Callback] [on_pipeline_complete] Pretty output: ")
-    pprint(output['matches'])
+    #print(f"[Callback] [on_pipeline_complete] Pretty output: ")
+    #pprint(output['matches'])
     #pprint(output['predicted_qualities'])
 
 def on_error(err): 
@@ -85,6 +85,12 @@ def on_error(err):
 
 def on_metrics_complete(metrics): 
     print(f"[Callback] [on_metrics] {metrics}")
+    #metrics is [{'name': 'pipeline', 'duration': 29.64561438560486}, {'name': 'label_locator', 'duration': 3.5151760578155518}, {'name': 'label_locator_stage_complete', 'duration': 0.0009970664978027344}, {'name': 'classifier', 'duration': 0.001995086669921875}, {'name': 'classifier_stage_complete', 'duration': 0.0}, {'name': 'region_detection', 'duration': 0.00698089599609375}, {'name': 'region_detection_stage_complete', 'duration': 0.0}, {'name': 'region_detection_interactive', 'duration': 0.0}, {'name': 'iconslot_detection', 'duration': 0.25688862800598145}, {'name': 'iconslot_detection_stage_complete', 'duration': 0.0}, {'name': 'icon_prefilter', 'duration': 5.63228440284729}, {'name': 'icon_prefilter_stage_complete', 'duration': 0.0}, {'name': 'icon_quality_detection', 'duration': 7.352221727371216}, {'name': 'icon_quality_detection_stage_complete', 'duration': 0.000997781753540039}, {'name': 'icon_matching', 'duration': 12.877075433731079}, {'name': 'icon_matching_stage_complete', 'duration': 0.0}, {'name': 'output_transformation', 'duration': 0.0}, {'name': 'output_transformation_stage_complete', 'duration': 0.0}, {'name': 'pipeline_complete', 'duration': 0.010969877243041992}]
+    # Print out durations for all items except those with _complete at the end of the name
+    for metric in metrics:
+        if not metric['name'].endswith('_complete') and not metric['name'].endswith('_interactive'):
+            print(f"[Callback] [on_metrics] {metric['name']} took {metric['duration']:.2f} seconds")
+
 
 def download_icons(icons_dir):
     """
@@ -190,21 +196,18 @@ def save_match_summary(output_dir, screenshot_path, matches):
 
                 # helper to pull out a quality_scale, even from predicted_quality
                 def get_quality_scale(m):
-                    if "quality_scale" in m:
-                        return m["quality_scale"]
-                    elif "predicted_quality" in m and isinstance(m["predicted_quality"], (list, tuple)):
-                        print (f"predicted_quality: {m['predicted_quality']}")
+                    if "predicted_quality" in m and isinstance(m["predicted_quality"], (list, tuple)):
                         return m["predicted_quality"][0]["scale"]
+                    elif "quality_scale" in m:
+                        return m["quality_scale"]
                     return 0.0
 
                 # helper to pull out a quality, even from predicted_quality
                 def get_quality_name(m):
                     if "predicted_quality" in m and isinstance(m["predicted_quality"], (list, tuple)):
-                        print (f"predicted_quality: {m['predicted_quality']}")
                         return m["predicted_quality"][0]["quality"]
                     elif "quality" in m:
                         return m["quality"]
-                    
                     return "unknown"
 
                 best = sorted_matches[0]
