@@ -63,41 +63,41 @@ class PHashEngine:
         #    "Science Console": { 3: True },
         # }
 
-        for region_label in icon_slots:
-            # print(f"region_label: {region_label}")
-            folders = icon_set.get(region_label, [])
+        for icon_group_label in icon_slots:
+            # print(f"icon_group_label: {icon_group_label}")
+            folders = icon_set.get(icon_group_label, [])
             if not folders:
-                logger.warning(f"No icon directories found for region '{region_label}'")
+                logger.warning(f"No icon directories found for icon group '{icon_group_label}'")
                 continue
             folders = [Path(f) for f in folders]
 
-            filtered_icons[region_label] = {}
-            similar_icons[region_label] = {}
-            found_icons[region_label] = {}
-            target_hashes[region_label] = []
+            filtered_icons[icon_group_label] = {}
+            similar_icons[icon_group_label] = {}
+            found_icons[icon_group_label] = {}
+            target_hashes[icon_group_label] = []
 
-            for slot in icon_slots[region_label]:
+            for slot in icon_slots[icon_group_label]:
                 idx = slot["Slot"]
                 box = slot["Box"]
                 roi = slot["ROI"]
                 roi_hash = slot["Hash"]
 
                 logger.debug(
-                    f"Predicting icons for region '{region_label}' at slot {idx}"
+                    f"Predicting icons for icon group '{icon_group_label}' at slot {idx}"
                 )
 
-                found_icons[region_label][box] = {}
-                similar_icons[region_label][box] = {}
-                filtered_icons[region_label][box] = {}
+                found_icons[icon_group_label][box] = {}
+                similar_icons[icon_group_label][box] = {}
+                filtered_icons[icon_group_label][box] = {}
 
                 try:
                     results = self.hash_index.find_similar_to_image(
                         roi_hash, max_distance=18, top_n=None, grayscale=False
                     )
-                    target_hashes[region_label].append(roi_hash)
+                    target_hashes[icon_group_label].append(roi_hash)
                 except Exception as e:
                     raise PrefilterError(
-                        f"Hash prefilter failed for region '{region_label}' at {box}: {e}"
+                        f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
                     ) from e
 
                 for rel_path, dist in results:
@@ -129,7 +129,7 @@ class PHashEngine:
                     if not allowed or not full_path.exists():
                         continue
 
-                    box_icons = found_icons[region_label][box]
+                    box_icons = found_icons[icon_group_label][box]
                     if filename not in box_icons or box_icons[filename]["dist"] > dist:
                         box_icons[filename] = {
                             "dist": dist,
@@ -138,42 +138,42 @@ class PHashEngine:
                         }
 
                     try:
-                        if filename not in filtered_icons[region_label]:
+                        if filename not in filtered_icons[icon_group_label]:
                             icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
                             if icon is not None:
-                                filtered_icons[region_label][filename] = icon
+                                filtered_icons[icon_group_label][filename] = icon
                     except Exception as e:
                         raise PrefilterError(
-                            f"Hash prefilter failed for region '{region_label}' at {box}: {e}"
+                            f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
                         ) from e
 
-        for region_label in icon_slots:
+        for icon_group_label in icon_slots:
             if select_items:
-                if region_label not in select_items.keys():
-                    logger.info(f"Skipping region '{region_label}' - user selection")
+                if icon_group_label not in select_items.keys():
+                    logger.info(f"Skipping region '{icon_group_label}' - user selection")
                     continue
 
-            predictions[region_label] = {}
+            predictions[icon_group_label] = {}
 
-            for slot in icon_slots[region_label]:
+            for slot in icon_slots[icon_group_label]:
                 idx = slot["Slot"]
                 box = slot["Box"]
                 roi = slot["ROI"]
                 roi_hash = slot["Hash"]
 
-                if select_items and region_label in select_items:
+                if select_items and icon_group_label in select_items:
                     if (
-                        idx not in select_items[region_label]
-                        or select_items[region_label][idx] == False
+                        idx not in select_items[icon_group_label]
+                        or select_items[icon_group_label][idx] == False
                     ):
                         logger.info(
-                            f"Skipping region '{region_label}' at slot {idx} - user selection"
+                            f"Skipping region '{icon_group_label}' at slot {idx} - user selection"
                         )
                         continue
 
-                predictions[region_label][idx] = []
+                predictions[icon_group_label][idx] = []
 
-                candidates = found_icons[region_label][box]
+                candidates = found_icons[icon_group_label][box]
 
                 dists = [info["dist"] for info in candidates.values()]
                 if not dists:
@@ -194,18 +194,18 @@ class PHashEngine:
                     if info["dist"] > threshold_val:
                         continue
 
-                    predictions[region_label][idx].append(
+                    predictions[icon_group_label][idx].append(
                         {
                             "name": info["name"],
                             # "top_left": (x, y),
                             # "bottom_right": (x + w, y + h),
                             "score": info["dist"],
                             "match_threshold": int(threshold_val),
-                            "region": region_label,
+                            "region": icon_group_label,
                             "slot": idx,
                             "method": "hash-phash",
                             "quality": info["quality"],
-                            "roi_hash": target_hashes[region_label][idx],
+                            "roi_hash": target_hashes[icon_group_label][idx],
                             # "quality_scale": 1.0,
                             # "quality_score": 0.0,
                             # "scale": 1.0,
@@ -214,22 +214,22 @@ class PHashEngine:
 
                     filtered_slot_icons[filename] = info
 
-                found_icons[region_label][box] = filtered_slot_icons
+                found_icons[icon_group_label][box] = filtered_slot_icons
 
                 try:
                     for filename in filtered_slot_icons:
-                        if filename not in filtered_icons[region_label]:
+                        if filename not in filtered_icons[icon_group_label]:
                             full_path = self.hash_index.base_dir / filename
                             icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
                             if icon is not None:
-                                filtered_icons[region_label][filename] = icon
+                                filtered_icons[icon_group_label][filename] = icon
                 except Exception as e:
                     raise PrefilterError(
-                        f"Hash prefilter failed for region '{region_label}' at {box}: {e}"
+                        f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
                     ) from e
 
                 logger.debug(
-                    f"Predicted {len(predictions[region_label][idx])} icons for region '{region_label}' at slot {idx}."
+                    f"Predicted {len(predictions[icon_group_label][idx])} icons for icon group '{icon_group_label}' at slot {idx}."
                 )
                 # predictions.extend(candidate_predictions)
 

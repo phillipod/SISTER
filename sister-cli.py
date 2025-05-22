@@ -47,7 +47,7 @@ def on_stage_complete(stage, ctx, output):
         print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(region) for region in output.values())} icon slots") #
         return
     elif stage == 'icon_quality_detection':
-        print(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for region_dict in output.values() for slot_items in region_dict.values() for item in slot_items if item.get("quality") != "common")} icon overlays")
+        print(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("quality") != "common")} icon overlays")
         return
     elif stage == 'icon_matching':
         methods = {}
@@ -328,4 +328,4 @@ if __name__ == "__main__":
 
     # 4. dump
     #for slot, match in result.icon_matches.items():
-    #    print(f"{slot.region_label}[{slot.index}] → {match}")
+    #    print(f"{slot.icon_group_label}[{slot.index}] → {match}")

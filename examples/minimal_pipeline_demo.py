@@ -22,7 +22,7 @@ def on_progress(stage, pct, ctx):
     return ctx
     if stage == "label_locator":
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.labels}%")
-    elif stage == "region_detector":
+    elif stage == 'icon_group_locator':
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.icon_groups}%")
     elif stage == 'layout_classifier':
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.classification}%")
@@ -35,7 +35,7 @@ def on_stage_complete(stage, ctx, output):
     if stage == 'label_locator':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.labels)} labels")
         return
-    elif stage == 'region_detection':
+    elif stage == 'icon_group_locator':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.icon_groups)} icon groups")
         return
     elif stage == 'layout_classifier':
@@ -139,4 +139,4 @@ if __name__ == "__main__":
 
     # 4. dump
     #for slot, match in result.icon_matches.items():
-    #    print(f"{slot.region_label}[{slot.index}] → {match}")
+    #    print(f"{slot.icon_group_label}[{slot.index}] → {match}")

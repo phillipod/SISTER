@@ -6,7 +6,7 @@ import numpy as np
 
 @dataclass(frozen=True)
 class Slot:
-    region_label: str
+    icon_group_label: str
     index: int
     bbox: Tuple[int, int, int, int]
 

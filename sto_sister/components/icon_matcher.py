@@ -71,33 +71,33 @@ class IconMatcher:
         try:
             args_list = []
 
-            for region_label in icon_slots:
-                matches[region_label] = {}
+            for icon_group_label in icon_slots:
+                matches[icon_group_label] = {}
 
-                region_filtered_icons = filtered_icons.get(region_label, {})
-                if not region_filtered_icons:
+                icon_group_filtered_icons = filtered_icons.get(icon_group_label, {})
+                if not icon_group_filtered_icons:
                     logger.warning(
-                        f"No filtered icons available for region '{region_label}'"
+                        f"No filtered icons available for icon group '{icon_group_label}'"
                     )
                     continue
 
                 predicted_qualities = predicted_qualities_by_region.get(
-                    region_label, {}
+                    icon_group_label, {}
                 )
-                if len(predicted_qualities.keys()) != len(icon_slots[region_label]):
+                if len(predicted_qualities.keys()) != len(icon_slots[icon_group_label]):
                     logger.warning(
-                        f"Mismatch between candidate regions and predicted qualities for '{region_label}'"
+                        f"Mismatch between candidate regions and predicted qualities for '{icon_group_label}'"
                     )
 
-                for slot in icon_slots[region_label]:
+                for slot in icon_slots[icon_group_label]:
                     idx = slot["Slot"]
                     box = slot["Box"]
                     roi = slot["ROI"]
 
-                    if idx not in matches[region_label]:
-                        matches[region_label][idx] = []
+                    if idx not in matches[icon_group_label]:
+                        matches[icon_group_label][idx] = []
 
-                    icons_for_slot = found_icons[region_label].get(box, {})
+                    icons_for_slot = found_icons[icon_group_label].get(box, {})
                     # print(f"icons_for_slot: {icons_for_slot}")
 
                     if not icons_for_slot:
@@ -106,19 +106,19 @@ class IconMatcher:
                     predicted_quality = predicted_qualities[idx]
 
                     logger.info(
-                        f"Matching {len(icons_for_slot)} icons into label '{region_label}' at slot {idx} with quality {predicted_quality[0]["quality"]} at scale {predicted_quality[0]['scale']}"
+                        f"Matching {len(icons_for_slot)} icons into icon group '{icon_group_label}' at slot {idx} with quality {predicted_quality[0]["quality"]} at scale {predicted_quality[0]['scale']}"
                     )
 
                     for idx_icon, (name, icon_color) in enumerate(
-                        region_filtered_icons.items(), 1
+                        icon_group_filtered_icons.items(), 1
                     ):
-                        # print(f"Matching {name} against {len(icons_for_slot)} icons for label '{region_label}' at slot {idx_region} with quality {predicted_quality}")
+                        # print(f"Matching {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_region} with quality {predicted_quality}")
                         if name not in icons_for_slot:
-                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{region_label}' at slot {idx_region} with quality {predicted_quality}")
+                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_region} with quality {predicted_quality}")
                             continue
 
                         if icon_color is None:
-                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{region_label}' at slot {idx_region} with quality {predicted_quality} as ")
+                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_region} with quality {predicted_quality} as ")
                             continue
 
                         args = (
@@ -129,7 +129,7 @@ class IconMatcher:
                             predicted_quality,
                             threshold,
                             overlays,
-                            region_label,
+                            icon_group_label,
                             False,
                         )
                         args_list.append(args)
@@ -143,31 +143,31 @@ class IconMatcher:
 
             # Fallback pass
             fallback_args_list = []
-            for region_label in icon_slots:
-                region_filtered_icons = filtered_icons.get(region_label, {})
-                if not region_filtered_icons:
+            for icon_group_label in icon_slots:
+                icon_group_filtered_icons = filtered_icons.get(icon_group_label, {})
+                if not icon_group_filtered_icons:
                     logger.warning(
-                        f"No filtered icons available for region '{region_label}'"
+                        f"No filtered icons available for icon group '{icon_group_label}'"
                     )
                     continue
 
                 predicted_qualities = predicted_qualities_by_region.get(
-                    region_label, {}
+                    icon_group_label, {}
                 )
 
-                for slot in icon_slots[region_label]:
+                for slot in icon_slots[icon_group_label]:
                     idx = slot["Slot"]
                     box = slot["Box"]
                     roi = slot["ROI"]
 
                     if (
-                        matches[region_label].get(idx) is not None
-                        and len(matches[region_label][idx]) > 0
+                        matches[icon_group_label].get(idx) is not None
+                        and len(matches[icon_group_label][idx]) > 0
                     ):
-                        # logger.info(f"Skipping {region_label} {idx} as already matched")
+                        # logger.info(f"Skipping {icon_group_label} {idx} as already matched")
                         continue
 
-                    icons_for_slot = found_icons[region_label].get(box, {})
+                    icons_for_slot = found_icons[icon_group_label].get(box, {})
                     if not icons_for_slot:
                         continue
 
@@ -178,11 +178,11 @@ class IconMatcher:
                     predicted_quality = predicted_qualities[idx]
 
                     logger.info(
-                        f"Fallback matching {len(icons_for_slot.keys())} icons into label '{region_label}' at slot {idx}"
+                        f"Fallback matching {len(icons_for_slot.keys())} icons into icon group '{icon_group_label}' at slot {idx}"
                     )
 
                     for idx_icon, (name, icon_color) in enumerate(
-                        region_filtered_icons.items(), 1
+                        icon_group_filtered_icons.items(), 1
                     ):
                         if name not in icons_for_slot:
                             continue
@@ -198,7 +198,7 @@ class IconMatcher:
                             predicted_quality,
                             threshold,
                             overlays,
-                            region_label,
+                            icon_group_label,
                             True,
                         )
                         fallback_args_list.append(args)
@@ -258,7 +258,7 @@ class IconMatcher:
             predicted_qualities,
             threshold,
             overlays,
-            region_label,
+            icon_group_label,
             fallback_mode,
         ) = args
 
@@ -366,7 +366,7 @@ class IconMatcher:
 
                 found_matches.append(
                     {
-                        "region": region_label,
+                        "region": icon_group_label,
                         "slot": slot_idx,
                         "name": f"{name}",
                         "score": score,
@@ -380,7 +380,7 @@ class IconMatcher:
                 # print(f"Found match for {name} at slot {slot_idx}: {best_match}")
                 break
 
-        # print(f"Completed {name} against {total} icons for label '{region_label}' at slot {slot_idx}")
+        # print(f"Completed {name} against {total} icons for label '{icon_group_label}' at slot {slot_idx}")
         # print(f"found_matches: {found_matches}")
         return found_matches
     

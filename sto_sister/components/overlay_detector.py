@@ -45,49 +45,49 @@ class OverlayDetector:
         overlay_tasks = []
         region_slot_index = []
 
-        for region_label in icon_slots:
-            for slot in icon_slots[region_label]:
+        for icon_group_label in icon_slots:
+            for slot in icon_slots[icon_group_label]:
                 idx = slot["Slot"]
                 box = slot["Box"]
                 roi = slot["ROI"]
 
-                # if region_label != "Hangar":
+                # if icon_group_label != "Hangar":
                 #     continue
 
                 logger.debug(
-                    f"Predicting quality for region '{region_label}', slot {idx}"
+                    f"Predicting quality for icon group '{icon_group_label}', slot {idx}"
                 )
 
                 overlay_tasks.append((roi, overlays))
-                region_slot_index.append((region_label, idx))
+                region_slot_index.append((icon_group_label, idx))
 
         predicted_qualities_by_label = {}
         with ProcessPoolExecutor() as executor:
             futures = {
-                executor.submit(self.identify_overlay, roi, overlays, region_label, idx): (
-                    region_label,
+                executor.submit(self.identify_overlay, roi, overlays, icon_group_label, idx): (
+                    icon_group_label,
                     idx,
                 )
-                for (roi, overlays), (region_label, idx) in zip(
+                for (roi, overlays), (icon_group_label, idx) in zip(
                     overlay_tasks, region_slot_index
                 )
             }
 
             for future in as_completed(futures):
-                region_label, idx = futures[future]
+                icon_group_label, idx = futures[future]
                 try:
                     # quality, scale, method = future.result()
-                    predicted_qualities_by_label.setdefault(region_label, {})[
+                    predicted_qualities_by_label.setdefault(icon_group_label, {})[
                         idx
                     ] = future.result()
                 except Exception as e:
                     logger.warning(
-                        f"Overlay prediction failed for region '{region_label}', slot {idx}: {e}"
+                        f"Overlay prediction failed for icon group '{icon_group_label}', slot {idx}: {e}"
                     )
                     traceback.print_exc()
                     # quality, scale, method = "common", 1.0, "default"
 
-                # predicted_qualities_by_label.setdefault(region_label, {})[idx] = (quality, scale, method)
+                # predicted_qualities_by_label.setdefault(icon_group_label, {})[idx] = (quality, scale, method)
 
         logger.info("Performed all quality predictions.")
 
@@ -100,7 +100,7 @@ class OverlayDetector:
         self,
         region_crop,
         overlays,
-        region_label=None,
+        icon_group_label=None,
         slot=None,
         step=1,
         scales=np.linspace(0.6, 0.7, 11),
@@ -127,7 +127,7 @@ class OverlayDetector:
 
     
 
-        # print(f"Identifying overlay for {region_label}#{slot}")
+        # print(f"Identifying overlay for {icon_group_label}#{slot}")
 
         best_score = -np.inf
         best_quality = "common"
@@ -140,22 +140,22 @@ class OverlayDetector:
 
         barcode_width = 3
 
-        def must_inspect(inspection_list, region_label, slot):
-            if region_label in inspection_list:
-                # check if inspection_list[region_label] is a dict or a bool
-                if isinstance(inspection_list[region_label], dict):
-                    if "_all" in inspection_list[region_label]:
-                        return inspection_list[region_label]["_all"]
+        def must_inspect(inspection_list, icon_group_label, slot):
+            if icon_group_label in inspection_list:
+                # check if inspection_list[icon_group_label] is a dict or a bool
+                if isinstance(inspection_list[icon_group_label], dict):
+                    if "_all" in inspection_list[icon_group_label]:
+                        return inspection_list[icon_group_label]["_all"]
 
                     slot_key = str(slot)
 
-                    if slot_key in inspection_list[region_label]:
-                        return inspection_list[region_label][slot_key]
-                elif isinstance(inspection_list[region_label], bool):
-                    return inspection_list[region_label]
+                    if slot_key in inspection_list[icon_group_label]:
+                        return inspection_list[icon_group_label][slot_key]
+                elif isinstance(inspection_list[icon_group_label], bool):
+                    return inspection_list[icon_group_label]
                 else:
                     raise ValueError(
-                        f"inspection_list[{region_label}] must be a dict or a bool"
+                        f"inspection_list[{icon_group_label}] must be a dict or a bool"
                     )
 
             return False
@@ -205,9 +205,9 @@ class OverlayDetector:
                 continue
 
             # logger.debug(f"Trying quality overlay {quality_name}")
-            if must_inspect(inspection_list, region_label, slot):
+            if must_inspect(inspection_list, icon_group_label, slot):
                 print(
-                    f"{region_label}#{slot}: {quality_name}: Begin: overlay=[{overlay.shape}] region=[{region_crop.shape}]"
+                    f"{icon_group_label}#{slot}: {quality_name}: Begin: overlay=[{overlay.shape}] region=[{region_crop.shape}]"
                 )
 
             overlay_rgb = overlay[:, :, :3]
@@ -243,22 +243,22 @@ class OverlayDetector:
 
             # diff = compare_patches(barcode_region, barcode_overlay)
 
-            if must_inspect(inspection_list, region_label, slot):
+            if must_inspect(inspection_list, icon_group_label, slot):
                 print(
-                    f"{region_label}#{slot}: {quality_name}: Scale: Barcode spatial match: {barcode_match}"
+                    f"{icon_group_label}#{slot}: {quality_name}: Scale: Barcode spatial match: {barcode_match}"
                 )
                 print(
-                    f"{region_label}#{slot}: {quality_name}: Scale: Barcode stripe match: overlay={barcode_overlay_stripes} region={barcode_overlay_stripes}"
+                    f"{icon_group_label}#{slot}: {quality_name}: Scale: Barcode stripe match: overlay={barcode_overlay_stripes} region={barcode_overlay_stripes}"
                 )
                 print(
-                    f"{region_label}#{slot}: {quality_name}: Scale: Overlay detected by patch: {barcode_overlay_detected_overlay_by_patch} - {h_deg}°"
+                    f"{icon_group_label}#{slot}: {quality_name}: Scale: Overlay detected by patch: {barcode_overlay_detected_overlay_by_patch} - {h_deg}°"
                 )
 
             orig_mask = overlay_mask(quality_name, overlay_alpha.shape)
 
             for scale in scales:
                 # logger.debug(f"Trying scale {scale}")
-                # print(f"{region_label}#{slot}: Trying scale {scale}")
+                # print(f"{icon_group_label}#{slot}: Trying scale {scale}")
                 resized_rgb = cv2.resize(
                     overlay_rgb, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR
                 )
@@ -278,15 +278,15 @@ class OverlayDetector:
                 h, w = resized_rgb.shape[:2]
                 H, W = region_crop.shape[:2]
 
-                if must_inspect(inspection_list, region_label, slot):
+                if must_inspect(inspection_list, icon_group_label, slot):
                     print(
-                        f"{region_label}#{slot}: {quality_name}: Scale: Begin : scale=[{scale}], overlay=[{resized_rgb.shape}], region=[{region_crop.shape}], original_region=[{original_region_crop_shape}]"
+                        f"{icon_group_label}#{slot}: {quality_name}: Scale: Begin : scale=[{scale}], overlay=[{resized_rgb.shape}], region=[{region_crop.shape}], original_region=[{original_region_crop_shape}]"
                     )
 
                 if h > H or w > W:
-                    if must_inspect(inspection_list, region_label, slot):
+                    if must_inspect(inspection_list, icon_group_label, slot):
                         print(
-                            f"{region_label}#{slot}: {quality_name}: Scale: Skipping: scale=[{scale}], overlay=[{resized_rgb.shape}], region=[{region_crop.shape}]"
+                            f"{icon_group_label}#{slot}: {quality_name}: Scale: Skipping: scale=[{scale}], overlay=[{resized_rgb.shape}], region=[{region_crop.shape}]"
                         )
                     continue
 
@@ -303,7 +303,7 @@ class OverlayDetector:
                         step_count_x += 1
                         if step_count_x > step_limit:
                             break
-                        # print(f"{region_label}#{slot}: {quality_name}: {step_count_y}/{step_limit} {step_count_x}/{step_limit}")
+                        # print(f"{icon_group_label}#{slot}: {quality_name}: {step_count_y}/{step_limit} {step_count_x}/{step_limit}")
                         roi = region_crop[y : y + h, x : x + w]
 
                         masked_region = (roi * final_alpha[..., np.newaxis]).astype(
@@ -342,16 +342,16 @@ class OverlayDetector:
                         barcode_region_stripes = len(barcode_region_common_segments)
 
                         if not barcode_match and not must_inspect(
-                            inspection_list, region_label, slot
+                            inspection_list, icon_group_label, slot
                         ):
-                            # print(f"{region_label}#{slot}: Skipping due to mismatched barcodes: {quality_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
+                            # print(f"{icon_group_label}#{slot}: Skipping due to mismatched barcodes: {quality_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
                             continue
                         # else:
-                        #     print(f"{region_label}#{slot}: {quality_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
+                        #     print(f"{icon_group_label}#{slot}: {quality_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
 
                         if (
                             barcode_region_detected_overlay_by_patch != quality_name
-                        ):  #  and not must_inspect(inspection_list, region_label, slot):
+                        ):  #  and not must_inspect(inspection_list, icon_group_label, slot):
                             continue
 
                         # Binarise regions for SSIM
@@ -392,7 +392,7 @@ class OverlayDetector:
                                 value=0,
                             )
 
-                            # if must_inspect(inspection_list, region_label, slot):
+                            # if must_inspect(inspection_list, icon_group_label, slot):
                             #     show_image([barcode_region_ssim, barcode_overlay_ssim])
 
                             score = ssim(barcode_region_ssim, barcode_overlay_ssim)
@@ -401,11 +401,11 @@ class OverlayDetector:
                             # score = ssim(gray_region, gray_overlay)
                         except ValueError:
                             print(
-                                f"{region_label}#{slot}: Skipping due to ValueError: {quality_name}"
+                                f"{icon_group_label}#{slot}: Skipping due to ValueError: {quality_name}"
                             )
                             continue
 
-                        if must_inspect(inspection_list, region_label, slot):
+                        if must_inspect(inspection_list, icon_group_label, slot):
                             barcode_region_binarized = cv2.adaptiveThreshold(
                                 cv2.cvtColor(barcode_region, cv2.COLOR_BGR2GRAY),
                                 255,
@@ -424,22 +424,22 @@ class OverlayDetector:
                             )
 
                             print(
-                                f"{region_label}#{slot}: {quality_name}: Scale: After SSIM: scale=[{scale}] score=[{score:.4f}]"
+                                f"{icon_group_label}#{slot}: {quality_name}: Scale: After SSIM: scale=[{scale}] score=[{score:.4f}]"
                             )
                             print(
-                                f"{region_label}#{slot}: {quality_name}: Scale: Is best score? [{"Yes" if score > best_score else f"No - best score: {best_score:.4f}"}]"
+                                f"{icon_group_label}#{slot}: {quality_name}: Scale: Is best score? [{"Yes" if score > best_score else f"No - best score: {best_score:.4f}"}]"
                             )
                             print(
-                                f"{region_label}#{slot}: {quality_name}: Scale: Barcode spatial match: {barcode_match}"
+                                f"{icon_group_label}#{slot}: {quality_name}: Scale: Barcode spatial match: {barcode_match}"
                             )
                             print(
-                                f"{region_label}#{slot}: {quality_name}: Scale: Barcode stripe match: overlay={barcode_overlay_stripes} region={barcode_overlay_stripes}"
+                                f"{icon_group_label}#{slot}: {quality_name}: Scale: Barcode stripe match: overlay={barcode_overlay_stripes} region={barcode_overlay_stripes}"
                             )
                             print(
-                                f"{region_label}#{slot}: {quality_name}: Scale: Region by patch: {classify_overlay_by_patch(barcode_region)}"
+                                f"{icon_group_label}#{slot}: {quality_name}: Scale: Region by patch: {classify_overlay_by_patch(barcode_region)}"
                             )
                             print(
-                                f"{region_label}#{slot}: {quality_name}: Scale: Overlay by patch: {classify_overlay_by_patch(barcode_overlay)}"
+                                f"{icon_group_label}#{slot}: {quality_name}: Scale: Overlay by patch: {classify_overlay_by_patch(barcode_overlay)}"
                             )
                             show_image(
                                 [
@@ -456,7 +456,7 @@ class OverlayDetector:
                             print()
 
                         if score > 0.75 and score > best_score:
-                            if must_inspect(inspection_list, region_label, slot):
+                            if must_inspect(inspection_list, icon_group_label, slot):
                                 if not barcode_match:
                                     continue
                                 if barcode_region_detected_overlay_by_patch != quality_name:
@@ -476,15 +476,15 @@ class OverlayDetector:
                                     "scale": best_scale,
                                     "method": best_method,
                                     "ssim_score": best_score,
-                                    "region": region_label,
+                                    "region": icon_group_label,
                                     "slot": slot,
                                     "step_x": x,
                                     "step_y": y,
                                 }
                             )
 
-        # print(f"{region_label}#{slot}: Detected overlays: {overlay_detections.get(region_label, {})}")
-        # print(f"{region_label}#{slot}: Best matched overlay: {best_quality} with score {best_score:.4f} at scale {best_scale:.4f} using {best_method}")
+        # print(f"{icon_group_label}#{slot}: Detected overlays: {overlay_detections.get(icon_group_label, {})}")
+        # print(f"{icon_group_label}#{slot}: Best matched overlay: {best_quality} with score {best_score:.4f} at scale {best_scale:.4f} using {best_method}")
         # show_image([region_crop, overlays[best_quality], best_masked_region, best_masked_overlay])
 
         # return overlay_detections inline sorted on ssim_score descending

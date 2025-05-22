@@ -24,28 +24,28 @@ class OutputTransformationStage(PipelineStage):
         # this catches cases where we have predicted icons but no matches, so we at least provide some output that is hopefully useful
         matches = ctx.matches
         for region in ctx.predicted_icons:
-            region_name = region
+            icon_group_name = region
             for slot in ctx.predicted_icons[region]:
                 slot_name = slot
 
                 # find any predicted icons for this region/slot
-                predicted = ctx.predicted_icons.get(region_name, {}).get(slot_name, [])
+                predicted = ctx.predicted_icons.get(icon_group_name, {}).get(slot_name, [])
 
                 # check current output for this region/slot
-                # print(f"region_name: {region_name}, slot_name: {slot_name} existing: {matches.get(region_name, {}).get(slot_name, [])}")
-                existing = matches.get(region_name, {}).get(slot_name, [])
+                # print(f"icon_group_name: {icon_group_name}, slot_name: {slot_name} existing: {matches.get(icon_group_name, {}).get(slot_name, [])}")
+                existing = matches.get(icon_group_name, {}).get(slot_name, [])
 
                 # if there's a prediction and no existing match, copy it over
                 if predicted and len(existing) == 0:
                     # ensure the dicts exist
-                    matches.setdefault(region_name, {})[slot_name] = predicted.copy()
+                    matches.setdefault(icon_group_name, {})[slot_name] = predicted.copy()
 
                     # copy over the predicted quality if we have it
-                    if ctx.predicted_qualities[region_name]:
-                        for idx, item in enumerate(matches[region_name][slot_name]):
-                            matches[region_name][slot_name][idx][
+                    if ctx.predicted_qualities[icon_group_name]:
+                        for idx, item in enumerate(matches[icon_group_name][slot_name]):
+                            matches[icon_group_name][slot_name][idx][
                                 "predicted_quality"
-                            ] = ctx.predicted_qualities[region_name][slot_name]
+                            ] = ctx.predicted_qualities[icon_group_name][slot_name]
 
         report(self.name, 1.0)
         return StageOutput(ctx, ctx.output)
