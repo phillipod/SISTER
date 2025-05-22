@@ -36,14 +36,14 @@ def on_stage_start(stage, ctx):
 def on_stage_complete(stage, ctx, output):
     if stage == 'label_locator':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.labels)} labels")
-        return;
+        return
     elif stage == 'region_detection':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.regions)} regions")
-        return;
+        return
         print(f"[Callback] [on_stage_complete] [{stage}] Regions: {ctx.regions}")
     elif stage == 'classifier':
         print(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
-        return;
+        return
     elif stage == 'iconslot_detection':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(region) for region in output.values())} icon slots") #
         return
