@@ -9,7 +9,7 @@ from pprint import pprint
 
 from log_config import setup_logging
 
-from sto_sister.pipeline import build_default_pipeline, PipelineContext
+from sto_sister.pipeline import build_default_pipeline, PipelineState
 from sto_sister.exceptions import SISTERError, PipelineError, StageError
 from sto_sister.utils.hashindex import HashIndex
 from sto_sister.utils.image import load_image
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     # 3. build & run
     try:
         pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
-        result: PipelineContext = pipeline.run(img)
+        result: PipelineState = pipeline.run(img)
     except SISTERError as e:
         print(e)
         import sys

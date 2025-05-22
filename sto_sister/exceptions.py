@@ -9,7 +9,7 @@ class SISTERError(Exception):
 
 class PipelineError(SISTERError):
     """Raised when any stage of the pipeline fails.
-    Carries the stage name, the original exception, and the PipelineContext.
+    Carries the stage name, the original exception, and the PipelineState.
     """
 
     def __init__(self, stage: str, original: Exception, ctx: Any):

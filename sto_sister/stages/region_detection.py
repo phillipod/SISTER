@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageResult, PipelineContext
+from ..pipeline import Stage, StageOutput, PipelineState
 from ..components.region_detector import RegionDetector
 
 class RegionDetectionStage(Stage):
@@ -12,8 +12,8 @@ class RegionDetectionStage(Stage):
         self.detector = RegionDetector(**opts)
 
     def run(
-        self, ctx: PipelineContext, report: Callable[[str, float], None]
-    ) -> StageResult:
+        self, ctx: PipelineState, report: Callable[[str, float], None]
+    ) -> StageOutput:
         report(self.name, 0.0)
 
         ctx.regions = self.detector.detect_regions(
@@ -21,4 +21,4 @@ class RegionDetectionStage(Stage):
         )
 
         report(self.name, 1.0)
-        return StageResult(ctx, ctx.regions)
+        return StageOutput(ctx, ctx.regions)

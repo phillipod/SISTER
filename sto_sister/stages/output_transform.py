@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageResult, PipelineContext
+from ..pipeline import Stage, StageOutput, PipelineState
 
 class OutputTransformationStage(Stage):
     name = "output_transformation"
@@ -9,8 +9,8 @@ class OutputTransformationStage(Stage):
         super().__init__(opts, app_config)
 
     def run(
-        self, ctx: PipelineContext, report: Callable[[str, float], None]
-    ) -> StageResult:
+        self, ctx: PipelineState, report: Callable[[str, float], None]
+    ) -> StageOutput:
         report(self.name, 0.0)
 
         # start with whatever matches we already have
@@ -48,4 +48,4 @@ class OutputTransformationStage(Stage):
                             ] = ctx.predicted_qualities[region_name][slot_name]
 
         report(self.name, 1.0)
-        return StageResult(ctx, ctx.output)
+        return StageOutput(ctx, ctx.output)

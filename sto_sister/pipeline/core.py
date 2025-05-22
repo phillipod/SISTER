@@ -11,7 +11,7 @@ class Slot:
     bbox: Tuple[int, int, int, int]
 
 @dataclass
-class PipelineContext:
+class PipelineState:
     screenshot: np.ndarray
     config: Dict[str, Any] = field(default_factory=dict)
     app_config: Dict[str, Any] = field(default_factory=dict)
@@ -26,12 +26,12 @@ class PipelineContext:
 
 
 @dataclass
-class StageResult:
+class StageOutput:
     """
     Holds the context after a stage and any stage-specific output.
     """
 
-    context: PipelineContext
+    context: PipelineState
     output: Any
 
 
@@ -45,8 +45,8 @@ class Stage:
         self.app_config = app_config
 
     def run(
-        self, ctx: PipelineContext, report: Callable[[str, float], None]
-    ) -> StageResult:
+        self, ctx: PipelineState, report: Callable[[str, float], None]
+    ) -> StageOutput:
         """
         Execute the stage, updating ctx in place or returning a new one.
         Use report(stage_name, percent_complete) to emit progress.

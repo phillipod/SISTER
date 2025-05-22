@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageResult, PipelineContext
+from ..pipeline import Stage, StageOutput, PipelineState
 from ..components.icon_slot_detector import IconSlotDetector
 
 class IconSlotDetectionStage(Stage):
@@ -14,11 +14,11 @@ class IconSlotDetectionStage(Stage):
         self.slot_detector = IconSlotDetector(**self.opts)
 
     def run(
-        self, ctx: PipelineContext, report: Callable[[str, float], None]
-    ) -> StageResult:
+        self, ctx: PipelineState, report: Callable[[str, float], None]
+    ) -> StageOutput:
         report(self.name, 0.0)
 
         ctx.slots = self.slot_detector.detect_slots(ctx.screenshot, ctx.regions)
 
         report(self.name, 1.0)
-        return StageResult(ctx, ctx.slots)
+        return StageOutput(ctx, ctx.slots)

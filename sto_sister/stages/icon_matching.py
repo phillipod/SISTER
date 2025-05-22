@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageResult, PipelineContext
+from ..pipeline import Stage, StageOutput, PipelineState
 from ..utils.image import apply_mask, load_quality_overlays, show_image
 from ..components.icon_matcher import IconMatcher
 
@@ -15,8 +15,8 @@ class IconMatchingStage(Stage):
         )
 
     def run(
-        self, ctx: PipelineContext, report: Callable[[str, float], None]
-    ) -> StageResult:
+        self, ctx: PipelineState, report: Callable[[str, float], None]
+    ) -> StageOutput:
         report(self.name, 0.0)
         
         icon_sets = ctx.app_config.get("icon_sets", {})
@@ -34,4 +34,4 @@ class IconMatchingStage(Stage):
             threshold=self.opts.get("threshold", 0.7),
         )
         report(self.name, 1.0)
-        return StageResult(ctx, ctx.matches)
+        return StageOutput(ctx, ctx.matches)

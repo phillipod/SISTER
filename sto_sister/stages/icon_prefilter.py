@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageResult, PipelineContext
+from ..pipeline import Stage, StageOutput, PipelineState
 #from ..prefilter import IconPrefilter
 
 from ..components.prefilter_phash import PHashEngine
@@ -29,8 +29,8 @@ class IconPrefilterStage(Stage):
             raise ValueError(f"Unknown prefilter method: '{method}'") from e
 
     def run(
-        self, ctx: PipelineContext, report: Callable[[str, float], None]
-    ) -> StageResult:
+        self, ctx: PipelineState, report: Callable[[str, float], None]
+    ) -> StageOutput:
         report(self.name, 0.0)
 
         icon_sets = ctx.app_config.get("icon_sets", {})
@@ -39,5 +39,5 @@ class IconPrefilterStage(Stage):
         (ctx.predicted_icons, ctx.found_icons, ctx.filtered_icons) = self.strategy.icon_predictions(ctx.slots, icon_set)
         
         report(self.name, 1.0)
-        return StageResult(ctx, ctx.predicted_icons)
+        return StageOutput(ctx, ctx.predicted_icons)
 

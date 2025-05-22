@@ -28,17 +28,17 @@ from ..stages import (
 class SISTER:
     def __init__(
         self,
-        on_progress: Callable[[str, float, PipelineContext], None],
-        on_interactive: Callable[[str, PipelineContext], PipelineContext],
+        on_progress: Callable[[str, float, PipelineState], None],
+        on_interactive: Callable[[str, PipelineState], PipelineState],
         on_error: Callable[[PipelineError], None],
         config: Dict[str, Any],
         on_metrics_complete: Optional[
-            Callable[[str, PipelineContext, Any], None]
+            Callable[[str, PipelineState, Any], None]
         ] = None,
-        on_stage_start: Optional[Callable[[str, PipelineContext], None]] = None,
-        on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
+        on_stage_start: Optional[Callable[[str, PipelineState], None]] = None,
+        on_stage_complete: Optional[Callable[[str, PipelineState, Any], None]] = None,
         on_pipeline_complete: Optional[
-            Callable[[PipelineContext, Dict[str, Any], Dict[str, Any]], None]
+            Callable[[PipelineState, Dict[str, Any], Dict[str, Any]], None]
         ] = None,
     ):
         self.metrics: Dict[str, Dict[str, float]] = {}
@@ -162,10 +162,10 @@ class SISTER:
             for name, metric in self.metrics.items()
         ]
 
-    def run(self, screenshot: np.ndarray) -> PipelineContext:
+    def run(self, screenshot: np.ndarray) -> PipelineState:
         self.start_metric("pipeline")
 
-        ctx = PipelineContext(
+        ctx = PipelineState(
             screenshot=screenshot, config=self.config, app_config=self.app_config
         )
         results: Dict[str, Any] = {}
@@ -227,7 +227,7 @@ class SISTER:
         return ctx, results
 
     @contextmanager
-    def _handle_errors(self, stage_name: str, ctx: PipelineContext):
+    def _handle_errors(self, stage_name: str, ctx: PipelineState):
         try:
             yield
         except Exception as e:
@@ -243,14 +243,14 @@ class SISTER:
 
 
 def build_default_pipeline(
-    on_progress: Callable[[str, float, PipelineContext], None],
-    on_interactive: Callable[[str, PipelineContext], PipelineContext],
+    on_progress: Callable[[str, float, PipelineState], None],
+    on_interactive: Callable[[str, PipelineState], PipelineState],
     on_error: Callable[[PipelineError], None],
-    on_metrics_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
-    on_stage_start: Optional[Callable[[str, PipelineContext, Any], None]] = None,
-    on_stage_complete: Optional[Callable[[str, PipelineContext, Any], None]] = None,
+    on_metrics_complete: Optional[Callable[[str, PipelineState, Any], None]] = None,
+    on_stage_start: Optional[Callable[[str, PipelineState, Any], None]] = None,
+    on_stage_complete: Optional[Callable[[str, PipelineState, Any], None]] = None,
     on_pipeline_complete: Optional[
-        Callable[[PipelineContext, Dict[str, Any]], None]
+        Callable[[PipelineState, Dict[str, Any]], None]
     ] = None,
     config: Dict[str, Any] = {},
 ) -> SISTER:

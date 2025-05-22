@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageResult, PipelineContext
+from ..pipeline import Stage, StageOutput, PipelineState
 from ..components.label_locator import LabelLocator
 
 class LabelLocatorStage(Stage):
@@ -11,9 +11,9 @@ class LabelLocatorStage(Stage):
         self.locator = LabelLocator(**opts)
 
     def run(
-        self, ctx: PipelineContext, report: Callable[[str, float], None]
-    ) -> StageResult:
+        self, ctx: PipelineState, report: Callable[[str, float], None]
+    ) -> StageOutput:
         report(self.name, 0.0)
         ctx.labels = self.locator.locate(ctx.screenshot)
         report(self.name, 1.0)
-        return StageResult(ctx, ctx.labels)
+        return StageOutput(ctx, ctx.labels)

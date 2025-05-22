@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageResult, PipelineContext
+from ..pipeline import Stage, StageOutput, PipelineState
 from ..components.layout_classifier import LayoutClassifier
 
 class ClassifierStage(Stage):
@@ -11,8 +11,8 @@ class ClassifierStage(Stage):
         self.classifier = LayoutClassifier(**opts)
 
     def run(
-        self, ctx: PipelineContext, report: Callable[[str, float], None]
-    ) -> StageResult:
+        self, ctx: PipelineState, report: Callable[[str, float], None]
+    ) -> StageOutput:
         report(self.name, 0.0)
         ctx.classification = self.classifier.classify(ctx.labels)
 
@@ -29,4 +29,4 @@ class ClassifierStage(Stage):
             ctx.classification["icon_set"] = "console_ground"
 
         report(self.name, 1.0)
-        return StageResult(ctx, ctx.classification)
+        return StageOutput(ctx, ctx.classification)

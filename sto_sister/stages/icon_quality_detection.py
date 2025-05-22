@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageResult, PipelineContext
+from ..pipeline import Stage, StageOutput, PipelineState
 from ..components.overlay_detector import OverlayDetector
 
 from ..utils.image import apply_mask, load_quality_overlays, show_image
@@ -18,8 +18,8 @@ class IconMatchingQualityDetectionStage(Stage):
         )
 
     def run(
-        self, ctx: PipelineContext, report: Callable[[str, float], None]
-    ) -> StageResult:
+        self, ctx: PipelineState, report: Callable[[str, float], None]
+    ) -> StageOutput:
         report(self.name, 0.0)
 
         overlays = load_quality_overlays(ctx.config.get("overlay_dir", ""))
@@ -30,4 +30,4 @@ class IconMatchingQualityDetectionStage(Stage):
             threshold=self.opts.get("threshold", 0.8),
         )
         report(self.name, 1.0)
-        return StageResult(ctx, ctx.predicted_qualities)
+        return StageOutput(ctx, ctx.predicted_qualities)
