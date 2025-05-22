@@ -42,19 +42,32 @@ def on_stage_complete(stage, ctx, output):
         return;
         print(f"[Callback] [on_stage_complete] [{stage}] Regions: {ctx.regions}")
     elif stage == 'classifier':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.classification)} matches")   
+        print(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
         return;
     elif stage == 'iconslot_detection':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.slots)}") # slots: {ctx.slots}")
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(region) for region in output.values())} icon slots") #
         return
     elif stage == 'icon_quality_detection':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)}")
+        print(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for region_dict in output.values() for slot_items in region_dict.values() for item in slot_items if item.get("quality") != "common")} icon overlays")
         return
     elif stage == 'icon_matching':
-        print(f"[Callback] [on_stage_complete] [{stage}] ") #Found {len(ctx.matches)} matches") # 
+        methods = {}
+        match_count = 0
+        for region in output.keys():
+            for slot in output[region].keys():
+                match_count += len(output[region][slot])
+                for candidate in output[region][slot]:
+                    method = candidate["method"]
+                    methods[candidate["method"]] = (
+                        methods.get(candidate["method"], 0) + 1
+                    )
+        print(f"[Callback] [on_stage_complete] [{stage}] Matched {match_count} icons in total")
+        for method, count in methods.items():
+            print(f"[Callback] [on_stage_complete] [{stage}] Matched {count} icons with {method}")
+        
         return
     elif stage == 'icon_prefilter':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_icons)} matches")
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(slots) for region in output.values() for slots in region.values())} potential matches")
         return
     elif stage == 'output_transformation':
         print(f"[Callback] [on_stage_complete] [{stage}]")
@@ -83,10 +96,10 @@ def on_error(err):
     traceback.print_exc()
 
 def on_metrics_complete(metrics): 
-    print(f"[Callback] [on_metrics] {metrics}")
+    #print(f"[Callback] [on_metrics] {metrics}")
     for metric in metrics:
         if not metric['name'].endswith('_complete') and not metric['name'].endswith('_interactive'):
-            print(f"[Callback] [on_metrics] {metric['name']} took {metric['duration']:.2f} seconds")
+            print(f"[Callback] [on_metrics] {"\t" if metric['name'] != 'pipeline' else ""}{metric['name']} took {metric['duration']:.2f} seconds")
 
 
 def download_icons(icons_dir):

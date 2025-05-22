@@ -222,8 +222,6 @@ class IconMatcher:
         except SISTERError as e:
             raise IconMatchingError(e) from e
 
-        logger.info("Completed all region matches.")
-
         match_count = 0
         methods = {}
         for region in matches.keys():
@@ -235,10 +233,10 @@ class IconMatcher:
                         methods.get(candidate["method"], 0) + 1
                     )
 
-        logger.info(f"[IconMatcher] Total matches: {match_count}")
+        logger.verbose(f"[IconMatcher] Total matches: {match_count}")
 
         for method, count in methods.items():
-            logger.info(f"Summary: {count} matches via {method}")
+            logger.verbose(f"Summary: {count} matches via {method}")
 
         if self.debug:
             debug_img = screenshot_color.copy()

@@ -234,9 +234,9 @@ class PHashEngine:
                 # predictions.extend(candidate_predictions)
 
 
-        logger.info(
+        logger.verbose(
             f"Total icon predictions: {sum(len(slots) for region in predictions.values() for slots in region.values())}"
         )
-        logger.info("Completed all candidate predictions.")
+        logger.verbose("Completed all candidate predictions.")
 
         return predictions, found_icons, filtered_icons
