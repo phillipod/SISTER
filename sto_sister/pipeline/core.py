@@ -17,7 +17,7 @@ class PipelineState:
     config: Dict[str, Any] = field(default_factory=dict)
     app_config: Dict[str, Any] = field(default_factory=dict)
     labels: Dict[str, Tuple[int, int, int, int]] = field(default_factory=dict)
-    regions: Dict[str, Tuple[int, int, int, int]] = field(default_factory=dict)
+    icon_groups: Dict[str, Tuple[int, int, int, int]] = field(default_factory=dict)
     slots: Dict[str, List[Slot]] = field(default_factory=dict)
     classification: Dict[Slot, Any] = field(default_factory=dict)
     predicted_qualities: Any = None

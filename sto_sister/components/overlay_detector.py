@@ -61,7 +61,7 @@ class OverlayDetector:
                 overlay_tasks.append((roi, overlays))
                 icon_group_slot_index.append((icon_group_label, idx))
 
-        predicted_qualities_by_label = {}
+        predicted_qualities_by_icon_group = {}
         with ProcessPoolExecutor() as executor:
             futures = {
                 executor.submit(
@@ -79,7 +79,7 @@ class OverlayDetector:
                 icon_group_label, idx = futures[future]
                 try:
                     # quality, scale, method = future.result()
-                    predicted_qualities_by_label.setdefault(icon_group_label, {})[
+                    predicted_qualities_by_icon_group.setdefault(icon_group_label, {})[
                         idx
                     ] = future.result()
                 except Exception as e:
@@ -89,14 +89,14 @@ class OverlayDetector:
                     traceback.print_exc()
                     # quality, scale, method = "common", 1.0, "default"
 
-                # predicted_qualities_by_label.setdefault(icon_group_label, {})[idx] = (quality, scale, method)
+                # predicted_qualities_by_icon_group.setdefault(icon_group_label, {})[idx] = (quality, scale, method)
 
         logger.info("Performed all quality predictions.")
 
-        # print(predicted_qualities_by_label)
+        # print(predicted_qualities_by_icon_group)
         # import sys
         # sys.exit()
-        return predicted_qualities_by_label
+        return predicted_qualities_by_icon_group
 
     def identify_overlay(
         self,

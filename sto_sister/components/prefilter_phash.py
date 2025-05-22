@@ -205,7 +205,7 @@ class PHashEngine:
                             # "bottom_right": (x + w, y + h),
                             "score": info["dist"],
                             "match_threshold": int(threshold_val),
-                            "region": icon_group_label,
+                            "icon_group": icon_group_label,
                             "slot": idx,
                             "method": "hash-phash",
                             "quality": info["quality"],
@@ -238,7 +238,7 @@ class PHashEngine:
                 # predictions.extend(candidate_predictions)
 
         logger.verbose(
-            f"Total icon predictions: {sum(len(slots) for region in predictions.values() for slots in region.values())}"
+            f"Total icon predictions: {sum(len(slots) for icon_group in predictions.values() for slots in icon_group.values())}"
         )
         logger.verbose("Completed all candidate predictions.")
 

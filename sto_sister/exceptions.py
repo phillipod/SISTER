@@ -45,7 +45,7 @@ class IconGroupLocatorError(StageError):
 
 
 class IconGroupLocatorComputeIconGroupError(IconGroupLocatorError):
-    """Raised when the icon group locator stage fails with a compute_region error."""
+    """Raised when the icon group locator stage fails with a compute_icon_groups error."""
 
     pass
 

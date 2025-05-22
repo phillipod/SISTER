@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class IconSlotDetector:
     """
-    Pipeline aware icon slot detector. Detects icon slot candidates globally, then tags them into known regions based on icon_group_data.
+    Pipeline aware icon slot detector. Detects icon slot candidates globally, then tags them into known icon groups based on icon_group data.
 
     Attributes:
         debug (bool): If True, enables debug output and writes annotated images.
@@ -80,11 +80,11 @@ class IconSlotDetector:
 
         Args:
             image (np.ndarray): Full BGR screenshot.
-            icon_group_bbox (Dict[str, Any]): Mapping of region labels to region metadata.
+            icon_group_bbox (Dict[str, Any]): Mapping of icon group labels to icon group metadata.
 
         Returns:
-            Dict[str, Dict[str, List[Dict[str, Any]]]]: Mapping of region label to dict with key "Slots",
-            containing a list of dicts with keys "Slot" (index within region), "Box" (x, y, w, h), and "ROI" (cropped image).
+            Dict[str, Dict[str, List[Dict[str, Any]]]]: Mapping of icon group label to dict with key "Slots",
+            containing a list of dicts with keys "Slot" (index within icon group), "Box" (x, y, w, h), and "ROI" (cropped image).
         """
         # Convert to grayscale and threshold
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -93,12 +93,12 @@ class IconSlotDetector:
         # Find slot candidates and their corresponding ROIs
         candidates, candidate_rois = self._find_slot_candidates(binary, image)
 
-        # Initialize region slots
+        # Initialize icon group slots
         icon_group_candidates: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
             label: [] for label in icon_group_bbox
         }
 
-        # Assign each candidate to its region
+        # Assign each candidate to its icon group
         for idx, (x, y, w, h) in enumerate(candidates):
             cx, cy = x + w // 2, y + h // 2
             for label, entry in icon_group_bbox.items():
@@ -106,7 +106,7 @@ class IconSlotDetector:
                 x2, y2 = entry["IconGroup"]["bottom_right"]
                 if x1 <= cx <= x2 and y1 <= cy <= y2:
                     slot_info = {
-                        # Temporarily store global index; will renumber per region later
+                        # Temporarily store global index; will renumber per icon group later
                         "GlobalIdx": idx,
                         "Box": (int(x), int(y), int(w), int(h)),
                         "ROI": candidate_rois[(x, y, w, h)],
@@ -117,7 +117,7 @@ class IconSlotDetector:
 
         # print(f"icon_group_candidates: {icon_group_candidates}")
 
-        # Sort slots and renumber per region
+        # Sort slots and renumber per icon group
         for label, slots in icon_group_candidates.items():
             if not slots:
                 continue

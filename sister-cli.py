@@ -44,7 +44,7 @@ def on_stage_complete(stage, ctx, output):
         print(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
         return
     elif stage == 'iconslot_detection':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(region) for region in output.values())} icon slots") #
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots") #
         return
     elif stage == 'icon_quality_detection':
         print(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("quality") != "common")} icon overlays")
@@ -52,10 +52,10 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'icon_matching':
         methods = {}
         match_count = 0
-        for region in output.keys():
-            for slot in output[region].keys():
-                match_count += len(output[region][slot])
-                for candidate in output[region][slot]:
+        for icon_group in output.keys():
+            for slot in output[icon_group].keys():
+                match_count += len(output[icon_group][slot])
+                for candidate in output[icon_group][slot]:
                     method = candidate["method"]
                     methods[candidate["method"]] = (
                         methods.get(candidate["method"], 0) + 1
@@ -66,7 +66,7 @@ def on_stage_complete(stage, ctx, output):
         
         return
     elif stage == 'icon_prefilter':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(slots) for region in output.values() for slots in region.values())} potential matches")
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(slots) for icon_group in output.values() for slots in icon_group.values())} potential matches")
         return
     elif stage == 'output_transformation':
         print(f"[Callback] [on_stage_complete] [{stage}]")
@@ -165,7 +165,7 @@ def save_match_summary(output_dir, screenshot_path, matches):
     """
     Save the match results to a text file.
 
-    The match results are grouped by region and slot, and the best match is
+    The match results are grouped by icon group and slot, and the best match is
     highlighted along with its score and scale. If there are multiple good matches,
     they are also listed.
 
@@ -173,7 +173,7 @@ def save_match_summary(output_dir, screenshot_path, matches):
         output_dir (Path): Directory to save the output file.
         screenshot_path (str): Path to the screenshot file.
         matches (list[dict]): List of match results, each containing the keys
-            "region", "top_left", "name", "method", "score", "scale", and
+            "icon_group", "top_left", "name", "method", "score", "scale", and
             "quality_scale".
 
     Returns:
@@ -183,8 +183,8 @@ def save_match_summary(output_dir, screenshot_path, matches):
     output_file = Path(output_dir) / f"{base_name}_matches.txt"
 
     with open(output_file, "w") as f:
-        for region, slots in sorted(matches.items()):
-            f.write(f"=== Icon Group: {region} ===\n")
+        for icon_group, slots in sorted(matches.items()):
+            f.write(f"=== Icon Group: {icon_group} ===\n")
             for slot_idx, slot_matches in sorted(slots.items()):
                 f.write(f"  -- Slot {slot_idx} --\n")
                 

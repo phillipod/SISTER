@@ -50,7 +50,7 @@ class SISTER:
         self.stages: List[PipelineStage] = [
             LabelLocatorStage(config.get("locator", {"debug": True}), self.app_config),
             LayoutClassifierStage(config.get("classifier", {}), self.app_config),
-            IconGroupLocatorStage(config.get("region", {}), self.app_config),
+            IconGroupLocatorStage(config.get("icon_group", {}), self.app_config),
             IconSlotDetectionStage(config.get("iconslot", {}), self.app_config),
             IconPrefilterStage(
                 config.get("prefilter", {"debug": True}), self.app_config

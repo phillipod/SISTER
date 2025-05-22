@@ -59,7 +59,7 @@ class IconMatcher:
         icon_slots,
         icon_dir_map,
         overlays,
-        predicted_qualities_by_region,
+        predicted_qualities_by_icon_group,
         filtered_icons,
         found_icons,
         threshold=0.7,
@@ -82,12 +82,12 @@ class IconMatcher:
                     )
                     continue
 
-                predicted_qualities = predicted_qualities_by_region.get(
+                predicted_qualities = predicted_qualities_by_icon_group.get(
                     icon_group_label, {}
                 )
                 if len(predicted_qualities.keys()) != len(icon_slots[icon_group_label]):
                     logger.warning(
-                        f"Mismatch between candidate regions and predicted qualities for '{icon_group_label}'"
+                        f"Mismatch between candidate icon groups and predicted qualities for '{icon_group_label}'"
                     )
 
                 for slot in icon_slots[icon_group_label]:
@@ -113,13 +113,13 @@ class IconMatcher:
                     for idx_icon, (name, icon_color) in enumerate(
                         icon_group_filtered_icons.items(), 1
                     ):
-                        # print(f"Matching {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_region} with quality {predicted_quality}")
+                        # print(f"Matching {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with quality {predicted_quality}")
                         if name not in icons_for_slot:
-                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_region} with quality {predicted_quality}")
+                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with quality {predicted_quality}")
                             continue
 
                         if icon_color is None:
-                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_region} with quality {predicted_quality} as ")
+                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with quality {predicted_quality} as ")
                             continue
 
                         args = (
@@ -140,7 +140,7 @@ class IconMatcher:
                     self.match_single_icon, args_list, chunksize=100
                 ):
                     for item in result:
-                        matches[item["region"]][item["slot"]].append(item)
+                        matches[item["icon_group"]][item["slot"]].append(item)
 
             # Fallback pass
             fallback_args_list = []
@@ -152,7 +152,7 @@ class IconMatcher:
                     )
                     continue
 
-                predicted_qualities = predicted_qualities_by_region.get(
+                predicted_qualities = predicted_qualities_by_icon_group.get(
                     icon_group_label, {}
                 )
 
@@ -218,17 +218,17 @@ class IconMatcher:
                     result = future.result()
 
                     for item in result:
-                        matches[item["region"]][item["slot"]].append(item)
+                        matches[item["icon_group"]][item["slot"]].append(item)
 
         except SISTERError as e:
             raise IconMatchingError(e) from e
 
         match_count = 0
         methods = {}
-        for region in matches.keys():
-            for slot in matches[region].keys():
-                match_count += len(matches[region][slot])
-                for candidate in matches[region][slot]:
+        for icon_group in matches.keys():
+            for slot in matches[icon_group].keys():
+                match_count += len(matches[icon_group][slot])
+                for candidate in matches[icon_group][slot]:
                     method = candidate["method"]
                     methods[candidate["method"]] = (
                         methods.get(candidate["method"], 0) + 1
@@ -367,7 +367,7 @@ class IconMatcher:
 
                 found_matches.append(
                     {
-                        "region": icon_group_label,
+                        "icon_group": icon_group_label,
                         "slot": slot_idx,
                         "name": f"{name}",
                         "score": score,

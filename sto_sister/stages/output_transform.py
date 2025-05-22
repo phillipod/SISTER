@@ -24,17 +24,17 @@ class OutputTransformationStage(PipelineStage):
         # we're going to merge any predicted icons into ctx.matches if they don't already exist
         # this catches cases where we have predicted icons but no matches, so we at least provide some output that is hopefully useful
         matches = ctx.matches
-        for region in ctx.predicted_icons:
-            icon_group_name = region
-            for slot in ctx.predicted_icons[region]:
+        for icon_group_name in ctx.predicted_icons:
+            #icon_group_name = icon_group
+            for slot in ctx.predicted_icons[icon_group_name]:
                 slot_name = slot
 
-                # find any predicted icons for this region/slot
+                # find any predicted icons for this icon group/slot
                 predicted = ctx.predicted_icons.get(icon_group_name, {}).get(
                     slot_name, []
                 )
 
-                # check current output for this region/slot
+                # check current output for this icon group/slot
                 # print(f"icon_group_name: {icon_group_name}, slot_name: {slot_name} existing: {matches.get(icon_group_name, {}).get(slot_name, [])}")
                 existing = matches.get(icon_group_name, {}).get(slot_name, [])
 
