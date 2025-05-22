@@ -43,7 +43,7 @@ class OverlayDetector:
         matches = []
 
         overlay_tasks = []
-        region_slot_index = []
+        icon_group_slot_index = []
 
         for icon_group_label in icon_slots:
             for slot in icon_slots[icon_group_label]:
@@ -59,7 +59,7 @@ class OverlayDetector:
                 )
 
                 overlay_tasks.append((roi, overlays))
-                region_slot_index.append((icon_group_label, idx))
+                icon_group_slot_index.append((icon_group_label, idx))
 
         predicted_qualities_by_label = {}
         with ProcessPoolExecutor() as executor:
@@ -69,7 +69,7 @@ class OverlayDetector:
                     idx,
                 )
                 for (roi, overlays), (icon_group_label, idx) in zip(
-                    overlay_tasks, region_slot_index
+                    overlay_tasks, icon_group_slot_index
                 )
             }
 

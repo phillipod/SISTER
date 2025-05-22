@@ -150,7 +150,7 @@ class PHashEngine:
         for icon_group_label in icon_slots:
             if select_items:
                 if icon_group_label not in select_items.keys():
-                    logger.info(f"Skipping region '{icon_group_label}' - user selection")
+                    logger.info(f"Skipping icon group '{icon_group_label}' - user selection")
                     continue
 
             predictions[icon_group_label] = {}
@@ -167,7 +167,7 @@ class PHashEngine:
                         or select_items[icon_group_label][idx] == False
                     ):
                         logger.info(
-                            f"Skipping region '{icon_group_label}' at slot {idx} - user selection"
+                            f"Skipping icon group '{icon_group_label}' at slot {idx} - user selection"
                         )
                         continue
 
