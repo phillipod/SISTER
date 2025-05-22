@@ -1,9 +1,9 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageOutput, PipelineState
+from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..components.region_detector import RegionDetector
 
-class RegionDetectionStage(Stage):
+class RegionDetectionStage(PipelineStage):
     name = "region_detection"
     interactive = True  # allow UI confirmation
 

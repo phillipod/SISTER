@@ -35,8 +35,8 @@ class StageOutput:
     output: Any
 
 
-# --- Abstract Stage ---
-class Stage:
+# --- Abstract PipelineStage ---
+class PipelineStage:
     name: str = ""
     interactive: bool = False
 

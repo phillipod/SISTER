@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageOutput, PipelineState
+from ..pipeline import PipelineStage, StageOutput, PipelineState
 #from ..prefilter import IconPrefilter
 
 from ..components.prefilter_phash import PHashEngine
@@ -10,7 +10,7 @@ STRATEGY_CLASSES = {
     # "dhash": DHashEngine,
 }
 
-class IconPrefilterStage(Stage):
+class IconPrefilterStage(PipelineStage):
     name = "icon_prefilter"
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):

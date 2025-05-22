@@ -1,9 +1,9 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageOutput, PipelineState
+from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..components.icon_slot_detector import IconSlotDetector
 
-class IconSlotDetectionStage(Stage):
+class IconSlotDetectionStage(PipelineStage):
     name = "iconslot_detection"
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):

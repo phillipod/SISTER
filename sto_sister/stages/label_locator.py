@@ -1,9 +1,9 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageOutput, PipelineState
+from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..components.label_locator import LabelLocator
 
-class LabelLocatorStage(Stage):
+class LabelLocatorStage(PipelineStage):
     name = "label_locator"
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):

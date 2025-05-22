@@ -47,7 +47,7 @@ class SISTER:
         self.config = config
         self.app_init()
 
-        self.stages: List[Stage] = [
+        self.stages: List[PipelineStage] = [
             LabelLocatorStage(config.get("locator", {"debug": True}), self.app_config),
             ClassifierStage(config.get("classifier", {}), self.app_config),
             RegionDetectionStage(config.get("region", {}), self.app_config),

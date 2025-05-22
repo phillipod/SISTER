@@ -1,10 +1,10 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageOutput, PipelineState
+from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..utils.image import apply_mask, load_quality_overlays, show_image
 from ..components.icon_matcher import IconMatcher
 
-class IconMatchingStage(Stage):
+class IconMatchingStage(PipelineStage):
     name = "icon_matching"
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):

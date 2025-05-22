@@ -1,8 +1,8 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageOutput, PipelineState
+from ..pipeline import PipelineStage, StageOutput, PipelineState
 
-class OutputTransformationStage(Stage):
+class OutputTransformationStage(PipelineStage):
     name = "output_transformation"
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):

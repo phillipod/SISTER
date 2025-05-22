@@ -1,12 +1,12 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import Stage, StageOutput, PipelineState
+from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..components.overlay_detector import OverlayDetector
 
 from ..utils.image import apply_mask, load_quality_overlays, show_image
 
 
-class IconMatchingQualityDetectionStage(Stage):
+class IconMatchingQualityDetectionStage(PipelineStage):
     name = "icon_quality_detection"
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
