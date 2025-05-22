@@ -1,24 +1,24 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
-from ..components.region_detector import RegionDetector
+from ..components.icon_group_locator import IconGroupLocator
 
-class RegionDetectionStage(PipelineStage):
-    name = "region_detection"
+class IconGroupLocatorStage(PipelineStage):
+    name = "icon_group_locator"
     interactive = True  # allow UI confirmation
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         super().__init__(opts, app_config)
-        self.detector = RegionDetector(**opts)
+        self.detector = IconGroupLocator(**opts)
 
     def process(
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
         report(self.name, 0.0)
 
-        ctx.regions = self.detector.detect_regions(
+        ctx.icon_groups = self.detector.locate_icon_groups(
             ctx.screenshot, ctx.labels, ctx.classification
         )
 
         report(self.name, 1.0)
-        return StageOutput(ctx, ctx.regions)
+        return StageOutput(ctx, ctx.icon_groups)

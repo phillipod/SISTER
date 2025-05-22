@@ -18,7 +18,7 @@ class IconSlotDetectionStage(PipelineStage):
     ) -> StageOutput:
         report(self.name, 0.0)
 
-        ctx.slots = self.slot_detector.detect_slots(ctx.screenshot, ctx.regions)
+        ctx.slots = self.slot_detector.detect_slots(ctx.screenshot, ctx.icon_groups)
 
         report(self.name, 1.0)
         return StageOutput(ctx, ctx.slots)

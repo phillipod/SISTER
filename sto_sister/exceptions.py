@@ -38,26 +38,26 @@ class ClassificationError(StageError):
     pass
 
 
-class RegionDetectionError(StageError):
-    """Raised when the region detector stage fails."""
+class IconGroupLocatorError(StageError):
+    """Raised when the icon group locator stage fails."""
 
     pass
 
 
-class RegionDetectionComputeRegionError(RegionDetectionError):
-    """Raised when the region detector stage fails with a compute_region error."""
+class IconGroupLocatorComputeIconGroupError(IconGroupLocatorError):
+    """Raised when the icon group locator stage fails with a compute_region error."""
 
     pass
 
 
-class RegionDetectionExpressionParseError(RegionDetectionComputeRegionError):
-    """Raised when the region detector stage fails with an expression parse error."""
+class IconGroupLocatorExpressionParseError(IconGroupLocatorComputeIconGroupError):
+    """Raised when the icon group locator stage fails with an expression parse error."""
 
     pass
 
 
-class RegionDetectionExpressionEvaluationError(RegionDetectionComputeRegionError):
-    """Raised when the region detector stage fails with an expression evaluation error."""
+class IconGroupLocatorExpressionEvaluationError(IconGroupLocatorComputeIconGroupError):
+    """Raised when the icon group locator stage fails with an expression evaluation error."""
 
     pass
 
@@ -147,10 +147,10 @@ __all__ = [
     "CargoError",
     "LocatorError",
     "ClassificationError",
-    "RegionDetectionError",
-    "RegionDetectionComputeRegionError",
-    "RegionDetectionExpressionParseError",
-    "RegionDetectionExpressionEvaluationError",
+    "IconGroupLocatorError",
+    "IconGroupLocatorComputeIconGroupError",
+    "IconGroupLocatorExpressionParseError",
+    "IconGroupLocatorExpressionEvaluationError",
     "IconSlotError",
     "PrefilterError",
     "IconMatchError",

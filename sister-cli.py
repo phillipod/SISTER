@@ -24,8 +24,8 @@ def on_progress(stage, pct, ctx):
     return ctx
     if stage == "label_locator":
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.labels}%")
-    elif stage == "region_detector":
-        print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.regions}%")
+    elif stage == "icon_group_locator":
+        print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.icon_groups}%")
     elif stage == 'layout_classifier':
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.classification}%")
 
@@ -37,10 +37,9 @@ def on_stage_complete(stage, ctx, output):
     if stage == 'label_locator':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.labels)} labels")
         return
-    elif stage == 'region_detection':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.regions)} regions")
+    elif stage == 'icon_group_locator':
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.icon_groups)} icon groups")
         return
-        print(f"[Callback] [on_stage_complete] [{stage}] Regions: {ctx.regions}")
     elif stage == 'layout_classifier':
         print(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
         return
@@ -185,7 +184,7 @@ def save_match_summary(output_dir, screenshot_path, matches):
 
     with open(output_file, "w") as f:
         for region, slots in sorted(matches.items()):
-            f.write(f"=== Region: {region} ===\n")
+            f.write(f"=== Icon Group: {region} ===\n")
             for slot_idx, slot_matches in sorted(slots.items()):
                 f.write(f"  -- Slot {slot_idx} --\n")
                 
