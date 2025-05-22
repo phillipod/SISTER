@@ -13,7 +13,7 @@ class IconSlotDetectionStage(PipelineStage):
 
         self.slot_detector = IconSlotDetector(**self.opts)
 
-    def run(
+    def process(
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
         report(self.name, 0.0)

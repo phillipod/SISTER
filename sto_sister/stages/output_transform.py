@@ -8,7 +8,7 @@ class OutputTransformationStage(PipelineStage):
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         super().__init__(opts, app_config)
 
-    def run(
+    def process(
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
         report(self.name, 0.0)

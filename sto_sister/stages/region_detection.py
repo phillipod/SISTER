@@ -11,7 +11,7 @@ class RegionDetectionStage(PipelineStage):
         super().__init__(opts, app_config)
         self.detector = RegionDetector(**opts)
 
-    def run(
+    def process(
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
         report(self.name, 0.0)

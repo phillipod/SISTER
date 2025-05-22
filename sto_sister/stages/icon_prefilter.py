@@ -28,7 +28,7 @@ class IconPrefilterStage(PipelineStage):
         except KeyError as e:
             raise ValueError(f"Unknown prefilter method: '{method}'") from e
 
-    def run(
+    def process(
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
         report(self.name, 0.0)

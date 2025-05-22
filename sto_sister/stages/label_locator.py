@@ -10,7 +10,7 @@ class LabelLocatorStage(PipelineStage):
         super().__init__(opts, app_config)
         self.locator = LabelLocator(**opts)
 
-    def run(
+    def process(
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
         report(self.name, 0.0)

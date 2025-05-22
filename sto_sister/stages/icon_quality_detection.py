@@ -17,7 +17,7 @@ class IconMatchingQualityDetectionStage(PipelineStage):
             debug=opts.get("debug", False),
         )
 
-    def run(
+    def process(
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
         report(self.name, 0.0)

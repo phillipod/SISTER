@@ -181,7 +181,7 @@ class SISTER:
 
             # run stage
             with self._handle_errors(stage.name, ctx):
-                stage_result = stage.run(
+                stage_result = stage.process(
                     ctx, lambda pct, name=stage.name: self.on_progress(name, pct, ctx)
                 )
                 # update context and results
