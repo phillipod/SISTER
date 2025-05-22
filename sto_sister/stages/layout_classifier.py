@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, List, Tuple, Optional
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..components.layout_classifier import LayoutClassifier
 
-class ClassifierStage(PipelineStage):
+class LayoutClassifierStage(PipelineStage):
     name = "classifier"
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
