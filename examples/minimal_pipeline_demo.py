@@ -41,7 +41,7 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'layout_classifier':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.classification)} matches")   
         return
-    elif stage == 'iconslot_detection':
+    elif stage == 'icon_slot_locator':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.slots)}") # slots: {ctx.slots}")
         #return
     elif stage == 'icon_quality_detection':

@@ -43,7 +43,7 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'layout_classifier':
         print(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
         return
-    elif stage == 'iconslot_detection':
+    elif stage == 'icon_slot_locator':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots") #
         return
     elif stage == 'icon_quality_detection':

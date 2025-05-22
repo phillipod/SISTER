@@ -18,7 +18,7 @@ from ..stages import (
     LabelLocatorStage,
     LayoutClassifierStage,
     IconGroupLocatorStage,
-    IconSlotDetectionStage,
+    IconSlotLocatorStage,
     IconPrefilterStage,
     IconMatchingQualityDetectionStage,
     IconMatchingStage,
@@ -51,7 +51,7 @@ class SISTER:
             LabelLocatorStage(config.get("locator", {"debug": True}), self.app_config),
             LayoutClassifierStage(config.get("classifier", {}), self.app_config),
             IconGroupLocatorStage(config.get("icon_group", {}), self.app_config),
-            IconSlotDetectionStage(config.get("iconslot", {}), self.app_config),
+            IconSlotLocatorStage(config.get("iconslot", {}), self.app_config),
             IconPrefilterStage(
                 config.get("prefilter", {"debug": True}), self.app_config
             ),

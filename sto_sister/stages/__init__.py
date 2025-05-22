@@ -1,7 +1,7 @@
 from .label_locator import LabelLocatorStage
 from .layout_classifier import LayoutClassifierStage
 from .icon_group_locator import IconGroupLocatorStage
-from .icon_slot_detection import IconSlotDetectionStage
+from .icon_slot_locator import IconSlotLocatorStage
 from .icon_prefilter import IconPrefilterStage
 from .icon_quality_detection import IconMatchingQualityDetectionStage
 from .icon_matching import IconMatchingStage
@@ -11,7 +11,7 @@ __all__ = [
     "LabelLocatorStage",
     "LayoutClassifierStage",
     "IconGroupLocatorStage",
-    "IconSlotDetectionStage",
+    "IconSlotLocatorStage",
     "IconPrefilterStage",
     "IconMatchingQualityDetectionStage",
     "IconMatchingStage",

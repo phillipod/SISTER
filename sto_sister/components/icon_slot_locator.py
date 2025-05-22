@@ -9,9 +9,9 @@ from typing import List, Tuple, Dict, Any
 logger = logging.getLogger(__name__)
 
 
-class IconSlotDetector:
+class IconSlotLocator:
     """
-    Pipeline aware icon slot detector. Detects icon slot candidates globally, then tags them into known icon groups based on icon_group data.
+    Pipeline aware icon slot locator. Locates icon slot candidates globally, then tags them into known icon groups based on icon_group data.
 
     Attributes:
         debug (bool): If True, enables debug output and writes annotated images.
@@ -19,7 +19,7 @@ class IconSlotDetector:
 
     def __init__(self, hash_index=None, debug=False, debug_output_path=None):
         """
-        Initialize the IconSlotDetector.
+        Initialize the IconSlotLocator.
 
         Args:
             debug (bool): If True, enables debug output and writes annotated images.
@@ -35,8 +35,8 @@ class IconSlotDetector:
             base, _ = os.path.splitext(self.debug_output_path)
             os.makedirs(os.path.dirname(base), exist_ok=True)
 
-    # def detect_inventory(self, screenshot_color, debug_output_path=None):
-    def detect_inventory(
+    # def locate_inventory(self, screenshot_color, debug_output_path=None):
+    def locate_inventory(
         self, image: np.ndarray, icon_group_bbox: Tuple[int, int, int, int]
     ) -> List[Tuple[int, int, int, int]]:
         """
@@ -72,7 +72,7 @@ class IconSlotDetector:
 
         return icon_group_candidates
 
-    def detect_slots(
+    def locate_slots(
         self, image: np.ndarray, icon_group_bbox: Dict[str, Any]
     ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
         """
