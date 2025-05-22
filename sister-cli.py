@@ -26,7 +26,7 @@ def on_progress(stage, pct, ctx):
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.labels}%")
     elif stage == "region_detector":
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.regions}%")
-    elif stage == 'classifier':
+    elif stage == 'layout_classifier':
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.classification}%")
 
 
@@ -41,7 +41,7 @@ def on_stage_complete(stage, ctx, output):
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.regions)} regions")
         return
         print(f"[Callback] [on_stage_complete] [{stage}] Regions: {ctx.regions}")
-    elif stage == 'classifier':
+    elif stage == 'layout_classifier':
         print(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
         return
     elif stage == 'iconslot_detection':
