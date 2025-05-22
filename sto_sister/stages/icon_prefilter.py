@@ -1,7 +1,8 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
-#from ..prefilter import IconPrefilter
+
+# from ..prefilter import IconPrefilter
 
 from ..components.prefilter_phash import PHashEngine
 
@@ -9,6 +10,7 @@ STRATEGY_CLASSES = {
     "phash": PHashEngine,
     # "dhash": DHashEngine,
 }
+
 
 class IconPrefilterStage(PipelineStage):
     name = "icon_prefilter"
@@ -19,7 +21,7 @@ class IconPrefilterStage(PipelineStage):
         hash_index = self.app_config.get("hash_index")
         method = self.opts["method"].lower()
 
-        print(F"[Prefilter] Using method: {method}")
+        print(f"[Prefilter] Using method: {method}")
 
         try:
             self.strategy = STRATEGY_CLASSES[method](hash_index=hash_index)
@@ -36,8 +38,11 @@ class IconPrefilterStage(PipelineStage):
         icon_sets = ctx.app_config.get("icon_sets", {})
         icon_set = icon_sets[ctx.classification["icon_set"]]
 
-        (ctx.predicted_icons, ctx.found_icons, ctx.filtered_icons) = self.strategy.icon_predictions(ctx.slots, icon_set)
-        
+        (
+            ctx.predicted_icons,
+            ctx.found_icons,
+            ctx.filtered_icons,
+        ) = self.strategy.icon_predictions(ctx.slots, icon_set)
+
         report(self.name, 1.0)
         return StageOutput(ctx, ctx.predicted_icons)
-

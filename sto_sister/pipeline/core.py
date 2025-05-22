@@ -10,6 +10,7 @@ class Slot:
     index: int
     bbox: Tuple[int, int, int, int]
 
+
 @dataclass
 class PipelineState:
     screenshot: np.ndarray

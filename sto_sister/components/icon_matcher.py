@@ -14,6 +14,7 @@ from ..exceptions import SISTERError
 
 logger = logging.getLogger(__name__)
 
+
 class IconMatcher:
     def __init__(self, debug=False):
         """
@@ -383,4 +384,3 @@ class IconMatcher:
         # print(f"Completed {name} against {total} icons for label '{icon_group_label}' at slot {slot_idx}")
         # print(f"found_matches: {found_matches}")
         return found_matches
-    

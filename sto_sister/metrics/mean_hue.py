@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+
 def classify_overlay_by_patch(patch, min_sat=0.2, min_val=0.3, frac_thresh=0.3):
     """
     Classify an overlay based on its bottom-left patch's hue,

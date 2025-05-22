@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, List, Tuple, Optional
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..components.icon_group_locator import IconGroupLocator
 
+
 class IconGroupLocatorStage(PipelineStage):
     name = "icon_group_locator"
     interactive = True  # allow UI confirmation

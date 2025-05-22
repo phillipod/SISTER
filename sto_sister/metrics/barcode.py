@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+
 # def find_off_segments(bin_vals, ignore_top_frac=0.1, ignore_top_rows=0):
 #     """
 #     Identify runs of 0s in a 1-D binary array, but ignore any segments
@@ -76,6 +77,7 @@ import numpy as np
 #             common.append((s0, e0))
 #     return common
 
+
 def find_off_strips(strip_bgr, ignore_top_frac=0.3, min_off_cols=3):
     """
     strip_bgr: H×3×3 BGR image.
@@ -118,6 +120,7 @@ def find_off_strips(strip_bgr, ignore_top_frac=0.3, min_off_cols=3):
 
     return segments
 
+
 def compare_barcodes(
     strip1_bgr,
     strip2_bgr,
@@ -159,6 +162,7 @@ def compare_barcodes(
             return False, segs1, segs2
 
     return True, segs1, segs2
+
 
 # def compare_barcodes(img_a,
 #                         img_b,

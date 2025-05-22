@@ -67,7 +67,9 @@ class PHashEngine:
             # print(f"icon_group_label: {icon_group_label}")
             folders = icon_set.get(icon_group_label, [])
             if not folders:
-                logger.warning(f"No icon directories found for icon group '{icon_group_label}'")
+                logger.warning(
+                    f"No icon directories found for icon group '{icon_group_label}'"
+                )
                 continue
             folders = [Path(f) for f in folders]
 
@@ -150,7 +152,9 @@ class PHashEngine:
         for icon_group_label in icon_slots:
             if select_items:
                 if icon_group_label not in select_items.keys():
-                    logger.info(f"Skipping icon group '{icon_group_label}' - user selection")
+                    logger.info(
+                        f"Skipping icon group '{icon_group_label}' - user selection"
+                    )
                     continue
 
             predictions[icon_group_label] = {}
@@ -232,7 +236,6 @@ class PHashEngine:
                     f"Predicted {len(predictions[icon_group_label][idx])} icons for icon group '{icon_group_label}' at slot {idx}."
                 )
                 # predictions.extend(candidate_predictions)
-
 
         logger.verbose(
             f"Total icon predictions: {sum(len(slots) for region in predictions.values() for slots in region.values())}"

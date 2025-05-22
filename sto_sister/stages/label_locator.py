@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, List, Tuple, Optional
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..components.label_locator import LabelLocator
 
+
 class LabelLocatorStage(PipelineStage):
     name = "label_locator"
 

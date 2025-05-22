@@ -5,6 +5,7 @@ from skimage.metrics import structural_similarity as ssim
 
 from ..utils.image import apply_mask, show_image
 
+
 def multi_scale_match(
     name,
     region_color,

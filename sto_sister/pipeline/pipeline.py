@@ -1,5 +1,6 @@
 from contextlib import contextmanager
-#from dataclasses import dataclass, field
+
+# from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
 import time
@@ -22,7 +23,8 @@ from ..stages import (
     IconMatchingQualityDetectionStage,
     IconMatchingStage,
     OutputTransformationStage,
-)   
+)
+
 
 # --- The Pipeline Orchestrator ---
 class SISTER:
@@ -32,9 +34,7 @@ class SISTER:
         on_interactive: Callable[[str, PipelineState], PipelineState],
         on_error: Callable[[PipelineError], None],
         config: Dict[str, Any],
-        on_metrics_complete: Optional[
-            Callable[[str, PipelineState, Any], None]
-        ] = None,
+        on_metrics_complete: Optional[Callable[[str, PipelineState, Any], None]] = None,
         on_stage_start: Optional[Callable[[str, PipelineState], None]] = None,
         on_stage_complete: Optional[Callable[[str, PipelineState, Any], None]] = None,
         on_pipeline_complete: Optional[

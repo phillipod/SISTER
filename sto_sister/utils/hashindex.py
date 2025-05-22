@@ -17,6 +17,7 @@ from ..utils.image import apply_overlay, apply_mask
 
 logger = logging.getLogger(__name__)
 
+
 def compute_phash(image, size=(32, 32), grayscale=False):
     """
     Compute the perceptual hash from an image.
@@ -71,6 +72,7 @@ def compute_phash(image, size=(32, 32), grayscale=False):
     # 5) Compute perceptual hash
     pil_img = Image.fromarray(resized)
     return str(imagehash.phash(pil_img))
+
 
 HASH_TYPES = {
     "phash": compute_phash,

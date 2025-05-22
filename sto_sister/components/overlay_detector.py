@@ -64,7 +64,9 @@ class OverlayDetector:
         predicted_qualities_by_label = {}
         with ProcessPoolExecutor() as executor:
             futures = {
-                executor.submit(self.identify_overlay, roi, overlays, icon_group_label, idx): (
+                executor.submit(
+                    self.identify_overlay, roi, overlays, icon_group_label, idx
+                ): (
                     icon_group_label,
                     idx,
                 )
@@ -124,8 +126,6 @@ class OverlayDetector:
         def roi_crop(roi, box_width=3):
             H, W = roi.shape[:2]
             return roi[0:H, 0:(box_width)]
-
-    
 
         # print(f"Identifying overlay for {icon_group_label}#{slot}")
 
@@ -220,9 +220,10 @@ class OverlayDetector:
             #                                   ignore_top_frac=0.1,
             #                                   ignore_top_rows=0,
             #                                   tolerance_rows=1)
-            barcode_overlay_detected_overlay_by_patch, h_deg = classify_overlay_by_patch(
-                barcode_overlay
-            )
+            (
+                barcode_overlay_detected_overlay_by_patch,
+                h_deg,
+            ) = classify_overlay_by_patch(barcode_overlay)
 
             # Barcode Region setup
             barcode_region = roi_crop(region_crop.copy(), barcode_width)
@@ -260,7 +261,11 @@ class OverlayDetector:
                 # logger.debug(f"Trying scale {scale}")
                 # print(f"{icon_group_label}#{slot}: Trying scale {scale}")
                 resized_rgb = cv2.resize(
-                    overlay_rgb, None, fx=scale, fy=scale, interpolation=cv2.INTER_LINEAR
+                    overlay_rgb,
+                    None,
+                    fx=scale,
+                    fy=scale,
+                    interpolation=cv2.INTER_LINEAR,
                 )
                 resized_alpha = cv2.resize(
                     orig_mask,
@@ -459,7 +464,10 @@ class OverlayDetector:
                             if must_inspect(inspection_list, icon_group_label, slot):
                                 if not barcode_match:
                                     continue
-                                if barcode_region_detected_overlay_by_patch != quality_name:
+                                if (
+                                    barcode_region_detected_overlay_by_patch
+                                    != quality_name
+                                ):
                                     continue
 
                             best_score = score

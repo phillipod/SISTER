@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, List, Tuple, Optional
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..components.layout_classifier import LayoutClassifier
 
+
 class LayoutClassifierStage(PipelineStage):
     name = "layout_classifier"
 

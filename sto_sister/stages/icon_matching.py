@@ -4,6 +4,7 @@ from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..utils.image import apply_mask, load_quality_overlays, show_image
 from ..components.icon_matcher import IconMatcher
 
+
 class IconMatchingStage(PipelineStage):
     name = "icon_matching"
 
@@ -18,11 +19,9 @@ class IconMatchingStage(PipelineStage):
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
         report(self.name, 0.0)
-        
+
         icon_sets = ctx.app_config.get("icon_sets", {})
-        ctx.overlays = load_quality_overlays(
-            ctx.config.get("overlay_dir", "")
-        )
+        ctx.overlays = load_quality_overlays(ctx.config.get("overlay_dir", ""))
         # print(f"[Matching] ctx.filtered_icons: {ctx.filtered_icons}")
         ctx.matches = self.matcher.match_all(
             ctx.slots,

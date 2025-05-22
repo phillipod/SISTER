@@ -714,7 +714,12 @@ class IconGroupLocator:
                     for key in expr["first_of"]:
                         try:
                             result = self.evaluate_expression(
-                                key, labels, context, contours, current_label, icon_groups
+                                key,
+                                labels,
+                                context,
+                                contours,
+                                current_label,
+                                icon_groups,
                             )
                             if self.debug:
                                 logger.debug(f"first_of picked {key} = {result}")

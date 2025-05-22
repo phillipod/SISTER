@@ -2,6 +2,7 @@ from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 
+
 class OutputTransformationStage(PipelineStage):
     name = "output_transformation"
 
@@ -29,7 +30,9 @@ class OutputTransformationStage(PipelineStage):
                 slot_name = slot
 
                 # find any predicted icons for this region/slot
-                predicted = ctx.predicted_icons.get(icon_group_name, {}).get(slot_name, [])
+                predicted = ctx.predicted_icons.get(icon_group_name, {}).get(
+                    slot_name, []
+                )
 
                 # check current output for this region/slot
                 # print(f"icon_group_name: {icon_group_name}, slot_name: {slot_name} existing: {matches.get(icon_group_name, {}).get(slot_name, [])}")
@@ -38,7 +41,9 @@ class OutputTransformationStage(PipelineStage):
                 # if there's a prediction and no existing match, copy it over
                 if predicted and len(existing) == 0:
                     # ensure the dicts exist
-                    matches.setdefault(icon_group_name, {})[slot_name] = predicted.copy()
+                    matches.setdefault(icon_group_name, {})[
+                        slot_name
+                    ] = predicted.copy()
 
                     # copy over the predicted quality if we have it
                     if ctx.predicted_qualities[icon_group_name]:

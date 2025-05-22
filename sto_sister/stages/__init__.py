@@ -7,4 +7,13 @@ from .icon_quality_detection import IconMatchingQualityDetectionStage
 from .icon_matching import IconMatchingStage
 from .output_transform import OutputTransformationStage
 
-__all__ = ["LabelLocatorStage", "LayoutClassifierStage", "IconGroupLocatorStage", "IconSlotDetectionStage", "IconPrefilterStage", "IconMatchingQualityDetectionStage", "IconMatchingStage", "OutputTransformationStage"]
+__all__ = [
+    "LabelLocatorStage",
+    "LayoutClassifierStage",
+    "IconGroupLocatorStage",
+    "IconSlotDetectionStage",
+    "IconPrefilterStage",
+    "IconMatchingQualityDetectionStage",
+    "IconMatchingStage",
+    "OutputTransformationStage",
+]
