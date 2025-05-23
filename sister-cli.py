@@ -46,10 +46,10 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'locate_icon_slots':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots") #
         return
-    elif stage == 'icon_overlay_detector':
+    elif stage == 'detect_icon_overlays':
         print(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("overlay") != "common")} icon overlays")
         return
-    elif stage == 'icon_detector':
+    elif stage == 'detect_icons':
         methods = {}
         match_count = 0
         for icon_group in output.keys():
@@ -317,7 +317,7 @@ if __name__ == "__main__":
     try:
         pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
         result: PipelineState = pipeline.run(img)
-        save_match_summary(args.output, args.screenshot, result[1]["icon_detector"])
+        save_match_summary(args.output, args.screenshot, result[1]["detect_icons"])
     except SISTERError as e:
         print(e)
         import sys

@@ -20,8 +20,8 @@ from ..stages import (
     LocateIconGroupsStage,
     LocateIconSlotsStage,
     IconPrefilteringStage,
-    IconOverlayDetectorStage,
-    IconDetectorStage,
+    DetectIconOverlaysStage,
+    DetectIconsStage,
     OutputTransformationStage,
 )
 
@@ -55,10 +55,10 @@ class SISTER:
             IconPrefilteringStage(
                 config.get("icon_prefiltering", {"debug": True}), self.app_config
             ),
-            IconOverlayDetectorStage(
+            DetectIconOverlaysStage(
                 config.get("icon_overlay", {}), self.app_config
             ),
-            IconDetectorStage(config.get("icon_detector", {}), self.app_config),
+            DetectIconsStage(config.get("detect_icons", {}), self.app_config),
             OutputTransformationStage(config.get("output_transformation", {}), self.app_config),
         ]
 

@@ -5,8 +5,8 @@ from ..utils.image import apply_mask, load_overlays, show_image
 from ..components.icon_detector import IconDetector
 
 
-class IconDetectorStage(PipelineStage):
-    name = "icon_detector"
+class DetectIconsStage(PipelineStage):
+    name = "detect_icons"
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         super().__init__(opts, app_config)
