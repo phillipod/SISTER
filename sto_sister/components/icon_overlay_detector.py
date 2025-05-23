@@ -130,7 +130,7 @@ class IconOverlayDetector:
         # print(f"Identifying overlay for {icon_group_label}#{slot}")
 
         best_score = -np.inf
-        best_quality = "common"
+        best_overlay = "common"
         best_scale = 1.0
         best_method = "fallback"
 
@@ -200,14 +200,14 @@ class IconOverlayDetector:
 
         overlay_detections = []
 
-        for quality_name, overlay in reversed(list(overlays.items())):
-            if quality_name == "common":
+        for overlay_name, overlay in reversed(list(overlays.items())):
+            if overlay_name == "common":
                 continue
 
-            # logger.debug(f"Trying quality overlay {quality_name}")
+            # logger.debug(f"Trying quality overlay {overlay_name}")
             if must_inspect(inspection_list, icon_group_label, slot):
                 print(
-                    f"{icon_group_label}#{slot}: {quality_name}: Begin: overlay=[{overlay.shape}] region=[{region_crop.shape}]"
+                    f"{icon_group_label}#{slot}: {overlay_name}: Begin: overlay=[{overlay.shape}] region=[{region_crop.shape}]"
                 )
 
             overlay_rgb = overlay[:, :, :3]
@@ -246,16 +246,16 @@ class IconOverlayDetector:
 
             if must_inspect(inspection_list, icon_group_label, slot):
                 print(
-                    f"{icon_group_label}#{slot}: {quality_name}: Scale: Barcode spatial match: {barcode_match}"
+                    f"{icon_group_label}#{slot}: {overlay_name}: Scale: Barcode spatial match: {barcode_match}"
                 )
                 print(
-                    f"{icon_group_label}#{slot}: {quality_name}: Scale: Barcode stripe match: overlay={barcode_overlay_stripes} region={barcode_overlay_stripes}"
+                    f"{icon_group_label}#{slot}: {overlay_name}: Scale: Barcode stripe match: overlay={barcode_overlay_stripes} region={barcode_overlay_stripes}"
                 )
                 print(
-                    f"{icon_group_label}#{slot}: {quality_name}: Scale: Overlay detected by patch: {barcode_overlay_detected_overlay_by_patch} - {h_deg}°"
+                    f"{icon_group_label}#{slot}: {overlay_name}: Scale: Overlay detected by patch: {barcode_overlay_detected_overlay_by_patch} - {h_deg}°"
                 )
 
-            orig_mask = overlay_mask(quality_name, overlay_alpha.shape)
+            orig_mask = overlay_mask(overlay_name, overlay_alpha.shape)
 
             for scale in scales:
                 # logger.debug(f"Trying scale {scale}")
@@ -285,13 +285,13 @@ class IconOverlayDetector:
 
                 if must_inspect(inspection_list, icon_group_label, slot):
                     print(
-                        f"{icon_group_label}#{slot}: {quality_name}: Scale: Begin : scale=[{scale}], overlay=[{resized_rgb.shape}], region=[{region_crop.shape}], original_region=[{original_region_crop_shape}]"
+                        f"{icon_group_label}#{slot}: {overlay_name}: Scale: Begin : scale=[{scale}], overlay=[{resized_rgb.shape}], region=[{region_crop.shape}], original_region=[{original_region_crop_shape}]"
                     )
 
                 if h > H or w > W:
                     if must_inspect(inspection_list, icon_group_label, slot):
                         print(
-                            f"{icon_group_label}#{slot}: {quality_name}: Scale: Skipping: scale=[{scale}], overlay=[{resized_rgb.shape}], region=[{region_crop.shape}]"
+                            f"{icon_group_label}#{slot}: {overlay_name}: Scale: Skipping: scale=[{scale}], overlay=[{resized_rgb.shape}], region=[{region_crop.shape}]"
                         )
                     continue
 
@@ -308,7 +308,7 @@ class IconOverlayDetector:
                         step_count_x += 1
                         if step_count_x > step_limit:
                             break
-                        # print(f"{icon_group_label}#{slot}: {quality_name}: {step_count_y}/{step_limit} {step_count_x}/{step_limit}")
+                        # print(f"{icon_group_label}#{slot}: {overlay_name}: {step_count_y}/{step_limit} {step_count_x}/{step_limit}")
                         roi = region_crop[y : y + h, x : x + w]
 
                         masked_region = (roi * final_alpha[..., np.newaxis]).astype(
@@ -349,13 +349,13 @@ class IconOverlayDetector:
                         if not barcode_match and not must_inspect(
                             inspection_list, icon_group_label, slot
                         ):
-                            # print(f"{icon_group_label}#{slot}: Skipping due to mismatched barcodes: {quality_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
+                            # print(f"{icon_group_label}#{slot}: Skipping due to mismatched barcodes: {overlay_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
                             continue
                         # else:
-                        #     print(f"{icon_group_label}#{slot}: {quality_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
+                        #     print(f"{icon_group_label}#{slot}: {overlay_name}: {barcode_overlay_stripes} vs {barcode_region_stripes}")
 
                         if (
-                            barcode_region_detected_overlay_by_patch != quality_name
+                            barcode_region_detected_overlay_by_patch != overlay_name
                         ):  #  and not must_inspect(inspection_list, icon_group_label, slot):
                             continue
 
@@ -406,7 +406,7 @@ class IconOverlayDetector:
                             # score = ssim(gray_region, gray_overlay)
                         except ValueError:
                             print(
-                                f"{icon_group_label}#{slot}: Skipping due to ValueError: {quality_name}"
+                                f"{icon_group_label}#{slot}: Skipping due to ValueError: {overlay_name}"
                             )
                             continue
 
@@ -429,22 +429,22 @@ class IconOverlayDetector:
                             )
 
                             print(
-                                f"{icon_group_label}#{slot}: {quality_name}: Scale: After SSIM: scale=[{scale}] score=[{score:.4f}]"
+                                f"{icon_group_label}#{slot}: {overlay_name}: Scale: After SSIM: scale=[{scale}] score=[{score:.4f}]"
                             )
                             print(
-                                f"{icon_group_label}#{slot}: {quality_name}: Scale: Is best score? [{"Yes" if score > best_score else f"No - best score: {best_score:.4f}"}]"
+                                f"{icon_group_label}#{slot}: {overlay_name}: Scale: Is best score? [{"Yes" if score > best_score else f"No - best score: {best_score:.4f}"}]"
                             )
                             print(
-                                f"{icon_group_label}#{slot}: {quality_name}: Scale: Barcode spatial match: {barcode_match}"
+                                f"{icon_group_label}#{slot}: {overlay_name}: Scale: Barcode spatial match: {barcode_match}"
                             )
                             print(
-                                f"{icon_group_label}#{slot}: {quality_name}: Scale: Barcode stripe match: overlay={barcode_overlay_stripes} region={barcode_overlay_stripes}"
+                                f"{icon_group_label}#{slot}: {overlay_name}: Scale: Barcode stripe match: overlay={barcode_overlay_stripes} region={barcode_overlay_stripes}"
                             )
                             print(
-                                f"{icon_group_label}#{slot}: {quality_name}: Scale: Region by patch: {classify_overlay_by_patch(barcode_region)}"
+                                f"{icon_group_label}#{slot}: {overlay_name}: Scale: Region by patch: {classify_overlay_by_patch(barcode_region)}"
                             )
                             print(
-                                f"{icon_group_label}#{slot}: {quality_name}: Scale: Overlay by patch: {classify_overlay_by_patch(barcode_overlay)}"
+                                f"{icon_group_label}#{slot}: {overlay_name}: Scale: Overlay by patch: {classify_overlay_by_patch(barcode_overlay)}"
                             )
                             show_image(
                                 [
@@ -466,12 +466,12 @@ class IconOverlayDetector:
                                     continue
                                 if (
                                     barcode_region_detected_overlay_by_patch
-                                    != quality_name
+                                    != overlay_name
                                 ):
                                     continue
 
                             best_score = score
-                            best_quality = quality_name
+                            best_overlay = overlay_name
                             best_scale = scale
                             best_method = "ssim"
 
@@ -480,7 +480,7 @@ class IconOverlayDetector:
 
                             overlay_detections.append(
                                 {
-                                    "quality": best_quality,
+                                    "quality": best_overlay,
                                     "scale": best_scale,
                                     "method": best_method,
                                     "ssim_score": best_score,
@@ -492,8 +492,8 @@ class IconOverlayDetector:
                             )
 
         # print(f"{icon_group_label}#{slot}: Detected overlays: {overlay_detections.get(icon_group_label, {})}")
-        # print(f"{icon_group_label}#{slot}: Best matched overlay: {best_quality} with score {best_score:.4f} at scale {best_scale:.4f} using {best_method}")
-        # show_image([region_crop, overlays[best_quality], best_masked_region, best_masked_overlay])
+        # print(f"{icon_group_label}#{slot}: Best matched overlay: {best_overlay} with score {best_score:.4f} at scale {best_scale:.4f} using {best_method}")
+        # show_image([region_crop, overlays[best_overlay], best_masked_region, best_masked_overlay])
 
         # return overlay_detections inline sorted on ssim_score descending
         if len(overlay_detections) == 0:

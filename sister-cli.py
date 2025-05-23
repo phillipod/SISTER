@@ -212,7 +212,7 @@ def save_match_summary(output_dir, screenshot_path, matches):
                     return 0.0
 
                 # helper to pull out a quality, even from predicted_quality
-                def get_quality_name(m):
+                def get_overlay_name(m):
                     if "predicted_quality" in m and isinstance(m["predicted_quality"], (list, tuple)):
                         return m["predicted_quality"][0]["quality"]
                     elif "quality" in m:
@@ -220,7 +220,7 @@ def save_match_summary(output_dir, screenshot_path, matches):
                     return "unknown"
 
                 best = sorted_matches[0]
-                best_quality = get_quality_name(best)
+                best_quality = get_overlay_name(best)
                 best_qs = get_quality_scale(best)
                 best_scale = best.get("scale", 0.0)
                 f.write(
@@ -234,7 +234,7 @@ def save_match_summary(output_dir, screenshot_path, matches):
                 if len(sorted_matches) > 1:
                     f.write("    Others:\n")
                     for m in sorted_matches[1:]:
-                        quality = get_quality_name(best)
+                        quality = get_overlay_name(best)
                         qs = get_quality_scale(m)
                         sc = m.get("scale", 0.0)
                         f.write(
