@@ -17,8 +17,8 @@ from ..utils.hashindex import HashIndex
 from ..stages import (
     LocateLabelsStage,
     ClassifyLayoutStage,
-    IconGroupLocatorStage,
-    IconSlotLocatorStage,
+    LocateIconGroupsStage,
+    LocateIconSlotsStage,
     IconPrefilterStage,
     IconOverlayDetectorStage,
     IconDetectorStage,
@@ -50,8 +50,8 @@ class SISTER:
         self.stages: List[PipelineStage] = [
             LocateLabelsStage(config.get("locate_labels", {"debug": True}), self.app_config),
             ClassifyLayoutStage(config.get("classify_layout", {}), self.app_config),
-            IconGroupLocatorStage(config.get("icon_group", {}), self.app_config),
-            IconSlotLocatorStage(config.get("icon_slot", {}), self.app_config),
+            LocateIconGroupsStage(config.get("icon_group", {}), self.app_config),
+            LocateIconSlotsStage(config.get("icon_slot", {}), self.app_config),
             IconPrefilterStage(
                 config.get("icon_prefilter", {"debug": True}), self.app_config
             ),

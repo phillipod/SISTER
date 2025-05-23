@@ -24,7 +24,7 @@ def on_progress(stage, pct, ctx):
     return ctx
     if stage == "locate_labels":
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.labels}%")
-    elif stage == "icon_group_locator":
+    elif stage == "locate_icon_groups":
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.icon_groups}%")
     elif stage == 'classify_layout':
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.classification}%")
@@ -37,13 +37,13 @@ def on_stage_complete(stage, ctx, output):
     if stage == 'locate_labels':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.labels)} labels")
         return
-    elif stage == 'icon_group_locator':
+    elif stage == 'locate_icon_groups':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.icon_groups)} icon groups")
         return
     elif stage == 'classify_layout':
         print(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
         return
-    elif stage == 'icon_slot_locator':
+    elif stage == 'locate_icon_slots':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots") #
         return
     elif stage == 'icon_overlay_detector':
