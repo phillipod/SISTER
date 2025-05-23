@@ -59,7 +59,7 @@ class IconMatcher:
         icon_slots,
         icon_dir_map,
         overlays,
-        predicted_qualities_by_icon_group,
+        detected_overlays_by_icon_group,
         filtered_icons,
         found_icons,
         threshold=0.7,
@@ -82,10 +82,10 @@ class IconMatcher:
                     )
                     continue
 
-                predicted_qualities = predicted_qualities_by_icon_group.get(
+                detected_overlays = detected_overlays_by_icon_group.get(
                     icon_group_label, {}
                 )
-                if len(predicted_qualities.keys()) != len(icon_slots[icon_group_label]):
+                if len(detected_overlays.keys()) != len(icon_slots[icon_group_label]):
                     logger.warning(
                         f"Mismatch between candidate icon groups and predicted qualities for '{icon_group_label}'"
                     )
@@ -104,22 +104,22 @@ class IconMatcher:
                     if not icons_for_slot:
                         continue
 
-                    predicted_quality = predicted_qualities[idx]
+                    detected_overlay = detected_overlays[idx]
 
                     logger.info(
-                        f"Matching {len(icons_for_slot)} icons into icon group '{icon_group_label}' at slot {idx} with quality {predicted_quality[0]["quality"]} at scale {predicted_quality[0]['scale']}"
+                        f"Matching {len(icons_for_slot)} icons into icon group '{icon_group_label}' at slot {idx} with quality {detected_overlay[0]["quality"]} at scale {detected_overlay[0]['scale']}"
                     )
 
                     for idx_icon, (name, icon_color) in enumerate(
                         icon_group_filtered_icons.items(), 1
                     ):
-                        # print(f"Matching {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with quality {predicted_quality}")
+                        # print(f"Matching {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with quality {detected_overlay}")
                         if name not in icons_for_slot:
-                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with quality {predicted_quality}")
+                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with quality {detected_overlay}")
                             continue
 
                         if icon_color is None:
-                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with quality {predicted_quality} as ")
+                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with quality {detected_overlay} as ")
                             continue
 
                         args = (
@@ -127,7 +127,7 @@ class IconMatcher:
                             idx,
                             roi,
                             icon_color,
-                            predicted_quality,
+                            detected_overlay,
                             threshold,
                             overlays,
                             icon_group_label,
@@ -152,7 +152,7 @@ class IconMatcher:
                     )
                     continue
 
-                predicted_qualities = predicted_qualities_by_icon_group.get(
+                detected_overlays = detected_overlays_by_icon_group.get(
                     icon_group_label, {}
                 )
 
@@ -176,7 +176,7 @@ class IconMatcher:
                     if not fallback_icons:
                         continue
 
-                    predicted_quality = predicted_qualities[idx]
+                    detected_overlay = detected_overlays[idx]
 
                     logger.info(
                         f"Fallback matching {len(icons_for_slot.keys())} icons into icon group '{icon_group_label}' at slot {idx}"
@@ -196,7 +196,7 @@ class IconMatcher:
                             idx,
                             roi,
                             icon_color,
-                            predicted_quality,
+                            detected_overlay,
                             threshold,
                             overlays,
                             icon_group_label,
@@ -256,7 +256,7 @@ class IconMatcher:
             slot_idx,
             roi,
             icon_color,
-            predicted_qualities,
+            detected_overlays,
             threshold,
             overlays,
             icon_group_label,
@@ -266,26 +266,26 @@ class IconMatcher:
         found_matches = []
         matched_candidate_indexes = set()
 
-        for quality_idx, predicted_quality in enumerate(predicted_qualities):
-            if predicted_quality is None:
+        for quality_idx, detected_overlay in enumerate(detected_overlays):
+            if detected_overlay is None:
                 continue
 
-            # print(f"Predicted quality: {predicted_quality}")
-            quality = predicted_quality["quality"]
-            quality_scale = predicted_quality["scale"]
-            quality_method = predicted_quality["method"]
+            # print(f"Predicted quality: {detected_overlay}")
+            quality = detected_overlay["quality"]
+            quality_scale = detected_overlay["scale"]
+            quality_method = detected_overlay["method"]
 
             quality_steps = None
             if (
-                predicted_quality["step_x"] is not None
-                and predicted_quality["step_y"] is not None
+                detected_overlay["step_x"] is not None
+                and detected_overlay["step_y"] is not None
             ):
                 quality_steps = (
-                    predicted_quality["step_x"],
-                    predicted_quality["step_y"],
+                    detected_overlay["step_x"],
+                    detected_overlay["step_y"],
                 )
 
-            # quality, quality_scale, quality_method = predicted_quality
+            # quality, quality_scale, quality_method = detected_overlay
 
             if not quality or quality not in overlays:
                 return found_matches, matched_candidate_indexes, slot_idx

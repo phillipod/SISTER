@@ -18,7 +18,7 @@ class OutputTransformationStage(PipelineStage):
         ctx.output = {
             "matches": ctx.matches,
             "predicted_icons": ctx.predicted_icons,
-            "predicted_qualities": ctx.predicted_qualities,
+            "detected_overlays": ctx.detected_overlays,
         }
 
         # we're going to merge any predicted icons into ctx.matches if they don't already exist
@@ -46,11 +46,11 @@ class OutputTransformationStage(PipelineStage):
                     ] = predicted.copy()
 
                     # copy over the predicted quality if we have it
-                    if ctx.predicted_qualities[icon_group_name]:
+                    if ctx.detected_overlays[icon_group_name]:
                         for idx, item in enumerate(matches[icon_group_name][slot_name]):
                             matches[icon_group_name][slot_name][idx][
-                                "predicted_quality"
-                            ] = ctx.predicted_qualities[icon_group_name][slot_name]
+                                "detected_overlay"
+                            ] = ctx.detected_overlays[icon_group_name][slot_name]
 
         report(self.name, 1.0)
         return StageOutput(ctx, ctx.output)

@@ -88,7 +88,7 @@ def on_pipeline_complete(ctx, output, all_results):
 
     #print(f"[Callback] [on_pipeline_complete] Pretty output: ")
     #pprint(output['matches'])
-    #pprint(output['predicted_qualities'])
+    #pprint(output['detected_overlays'])
 
 def on_error(err): 
     print(f"[Callback] [on_error] {err}")
@@ -203,18 +203,18 @@ def save_match_summary(output_dir, screenshot_path, matches):
                     reverse=not is_hash_method
                 )
 
-                # helper to pull out a quality_scale, even from predicted_quality
+                # helper to pull out a quality_scale, even from detected_overlay
                 def get_quality_scale(m):
-                    if "predicted_quality" in m and isinstance(m["predicted_quality"], (list, tuple)):
-                        return m["predicted_quality"][0]["scale"]
+                    if "detected_overlay" in m and isinstance(m["detected_overlay"], (list, tuple)):
+                        return m["detected_overlay"][0]["scale"]
                     elif "quality_scale" in m:
                         return m["quality_scale"]
                     return 0.0
 
-                # helper to pull out a quality, even from predicted_quality
+                # helper to pull out a quality, even from detected_overlay
                 def get_overlay_name(m):
-                    if "predicted_quality" in m and isinstance(m["predicted_quality"], (list, tuple)):
-                        return m["predicted_quality"][0]["quality"]
+                    if "detected_overlay" in m and isinstance(m["detected_overlay"], (list, tuple)):
+                        return m["detected_overlay"][0]["quality"]
                     elif "quality" in m:
                         return m["quality"]
                     return "unknown"

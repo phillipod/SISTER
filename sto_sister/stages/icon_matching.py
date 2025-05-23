@@ -27,7 +27,7 @@ class IconMatchingStage(PipelineStage):
             ctx.slots,
             icon_sets,
             ctx.overlays,
-            ctx.predicted_qualities,
+            ctx.detected_overlays,
             ctx.filtered_icons,
             ctx.found_icons,
             threshold=self.opts.get("threshold", 0.7),

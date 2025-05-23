@@ -45,7 +45,7 @@ def on_stage_complete(stage, ctx, output):
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.slots)}") # slots: {ctx.slots}")
         #return
     elif stage == 'icon_overlay_detector':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)}")
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.detected_overlays)}")
         return
     elif stage == 'icon_matching':
         print(f"[Callback] [on_stage_complete] [{stage}] ") #Found {len(ctx.matches)} matches") # 
@@ -73,7 +73,7 @@ def on_pipeline_complete(ctx, output, all_results):
 
     print(f"[Callback] [on_pipeline_complete] Pretty output: ")
     pprint(output['matches'])
-    #pprint(output['predicted_qualities'])
+    #pprint(output['detected_overlays'])
 
 def on_error(err): 
     print(f"[Callback] [on_error] {err}")
