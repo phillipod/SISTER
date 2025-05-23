@@ -15,10 +15,10 @@ from ..exceptions import SISTERError
 logger = logging.getLogger(__name__)
 
 
-class IconMatcher:
+class IconDetector:
     def __init__(self, debug=False):
         """
-        IconMatcher runner that delegates to a selected engine.
+        IconDetector runner that delegates to a selected engine.
 
         Args:
             debug (bool): Enable debug mode.
@@ -54,7 +54,7 @@ class IconMatcher:
                 overlays[name.split(".")[0]] = overlay
         return overlays
 
-    def match_all(
+    def detect(
         self,
         icon_slots,
         icon_dir_map,
@@ -234,7 +234,7 @@ class IconMatcher:
                         methods.get(candidate["method"], 0) + 1
                     )
 
-        logger.verbose(f"[IconMatcher] Total matches: {match_count}")
+        logger.verbose(f"[IconDetector] Total matches: {match_count}")
 
         for method, count in methods.items():
             logger.verbose(f"Summary: {count} matches via {method}")

@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..utils.image import apply_mask, load_overlays, show_image
-from ..components.icon_matcher import IconMatcher
+from ..components.icon_detector import IconDetector
 
 
 class IconMatchingStage(PipelineStage):
@@ -11,7 +11,7 @@ class IconMatchingStage(PipelineStage):
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         super().__init__(opts, app_config)
 
-        self.matcher = IconMatcher(
+        self.detector = IconDetector(
             debug=opts.get("debug", False),
         )
 
@@ -23,7 +23,7 @@ class IconMatchingStage(PipelineStage):
         icon_sets = ctx.app_config.get("icon_sets", {})
         ctx.overlays = load_overlays(ctx.config.get("overlay_dir", ""))
         # print(f"[Matching] ctx.filtered_icons: {ctx.filtered_icons}")
-        ctx.matches = self.matcher.match_all(
+        ctx.matches = self.detector.detect(
             ctx.slots,
             icon_sets,
             ctx.overlays,

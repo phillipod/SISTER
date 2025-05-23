@@ -24,7 +24,7 @@ class IconOverlayDetector:
         self, debug=False, icon_loader=None, overlay_loader=None, hash_index=None
     ):
         """
-        Initialize the IconMatcher.
+        Initialize the IconOverlayDetector.
         """
         self.debug = debug
         self.load_icons = icon_loader
