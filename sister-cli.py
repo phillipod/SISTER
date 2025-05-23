@@ -65,7 +65,7 @@ def on_stage_complete(stage, ctx, output):
             print(f"[Callback] [on_stage_complete] [{stage}] Matched {count} icons with {method}")
         
         return
-    elif stage == 'icon_prefiltering':
+    elif stage == 'prefilter_icons':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(slots) for icon_group in output.values() for slots in icon_group.values())} potential matches")
         return
     elif stage == 'output_transformation':
@@ -301,7 +301,7 @@ if __name__ == "__main__":
     config = {
         "debug": True,
         
-        "icon_prefiltering": {
+        "prefilter_icons": {
             "method": "phash"
         },
         "engine": "phash",

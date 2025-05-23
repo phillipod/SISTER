@@ -12,8 +12,8 @@ STRATEGY_CLASSES = {
 }
 
 
-class IconPrefilteringStage(PipelineStage):
-    name = "icon_prefiltering"
+class PrefilterIconsStage(PipelineStage):
+    name = "prefilter_icons"
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         super().__init__(opts, app_config)

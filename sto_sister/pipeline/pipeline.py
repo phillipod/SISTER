@@ -19,7 +19,7 @@ from ..stages import (
     ClassifyLayoutStage,
     LocateIconGroupsStage,
     LocateIconSlotsStage,
-    IconPrefilteringStage,
+    PrefilterIconsStage,
     DetectIconOverlaysStage,
     DetectIconsStage,
     OutputTransformationStage,
@@ -52,8 +52,8 @@ class SISTER:
             ClassifyLayoutStage(config.get("classify_layout", {}), self.app_config),
             LocateIconGroupsStage(config.get("icon_group", {}), self.app_config),
             LocateIconSlotsStage(config.get("icon_slot", {}), self.app_config),
-            IconPrefilteringStage(
-                config.get("icon_prefiltering", {"debug": True}), self.app_config
+            PrefilterIconsStage(
+                config.get("prefilter_icons", {"debug": True}), self.app_config
             ),
             DetectIconOverlaysStage(
                 config.get("icon_overlay", {}), self.app_config
