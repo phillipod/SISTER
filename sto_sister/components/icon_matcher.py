@@ -107,19 +107,19 @@ class IconMatcher:
                     detected_overlay = detected_overlays[idx]
 
                     logger.info(
-                        f"Matching {len(icons_for_slot)} icons into icon group '{icon_group_label}' at slot {idx} with quality {detected_overlay[0]["quality"]} at scale {detected_overlay[0]['scale']}"
+                        f"Matching {len(icons_for_slot)} icons into icon group '{icon_group_label}' at slot {idx} with overlay {detected_overlay[0]["quality"]} at scale {detected_overlay[0]['scale']}"
                     )
 
                     for idx_icon, (name, icon_color) in enumerate(
                         icon_group_filtered_icons.items(), 1
                     ):
-                        # print(f"Matching {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with quality {detected_overlay}")
+                        # print(f"Matching {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with overlay {detected_overlay}")
                         if name not in icons_for_slot:
-                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with quality {detected_overlay}")
+                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with overlay {detected_overlay}")
                             continue
 
                         if icon_color is None:
-                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with quality {detected_overlay} as ")
+                            # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with overlay {detected_overlay} as ")
                             continue
 
                         args = (
@@ -266,28 +266,28 @@ class IconMatcher:
         found_matches = []
         matched_candidate_indexes = set()
 
-        for quality_idx, detected_overlay in enumerate(detected_overlays):
+        for overlay_idx, detected_overlay in enumerate(detected_overlays):
             if detected_overlay is None:
                 continue
 
-            # print(f"Predicted quality: {detected_overlay}")
-            quality = detected_overlay["quality"]
-            quality_scale = detected_overlay["scale"]
-            quality_method = detected_overlay["method"]
+            # print(f"Predicted overlay: {detected_overlay}")
+            overlay = detected_overlay["quality"]
+            overlay_scale = detected_overlay["scale"]
+            overlay_method =detected_overlay["method"]
 
-            quality_steps = None
+            overlay_steps =None
             if (
                 detected_overlay["step_x"] is not None
                 and detected_overlay["step_y"] is not None
             ):
-                quality_steps = (
+                overlay_steps =(
                     detected_overlay["step_x"],
                     detected_overlay["step_y"],
                 )
 
-            # quality, quality_scale, quality_method = detected_overlay
+            # overlay, overlay_scale, overlay_method =detected_overlay
 
-            if not quality or quality not in overlays:
+            if not overlay or overlay not in overlays:
                 return found_matches, matched_candidate_indexes, slot_idx
 
             scale_factor = None
@@ -305,9 +305,9 @@ class IconMatcher:
 
             best_match = None
             method = "ssim-all-overlays-all-scales-fallback"
-            quality_used = quality
+            overlay_used =overlay
 
-            if quality == "common":
+            if overlay == "common":
                 best_score = -np.inf
                 for overlay_name, overlay_img in overlays.items():
                     blended_icon = apply_overlay(icon_color, overlay_img)
@@ -318,17 +318,17 @@ class IconMatcher:
                     if match and match[2] > best_score:
                         best_score = match[2]
                         best_match = match
-                        quality_used = overlay_name
+                        overlay_used = overlay_name
                         method_suffix = match[4]
 
-                # print(f"quality==common: best_match: {best_match} best_score: {best_score} quality_used: {quality_used}")
+                # print(f"overlay==common: best_match: {best_match} best_score: {best_score} overlay_used:{overlay_used}")
             else:
-                blended_icon = apply_overlay(icon_color, overlays[quality])
+                blended_icon = apply_overlay(icon_color, overlays[overlay])
                 icon_h, icon_w = icon_color.shape[:2]
-                overlay_h, overlay_w = overlays[quality].shape[:2]
+                overlay_h, overlay_w = overlays[overlay].shape[:2]
 
-                # if icon_h == overlay_h and icon_w == overlay_w and quality_scale:
-                scales = [quality_scale]
+                # if icon_h == overlay_h and icon_w == overlay_w and overlay_scale:
+                scales = [overlay_scale]
                 method = f"ssim-predicted-overlay-scale"
                 # else:
                 #     scales = np.linspace(0.6, 0.7, 11)
@@ -342,7 +342,7 @@ class IconMatcher:
                         roi,
                         blended_icon,
                         scales=scales,
-                        steps=quality_steps,
+                        steps=overlay_steps,
                         threshold=threshold,
                     )
                 else:
@@ -351,7 +351,7 @@ class IconMatcher:
                         name, roi, blended_icon, threshold=threshold
                     )
 
-                # print(f"quality!=common: best_match: {best_match} scales: {scales} method: {method}")
+                # print(f"overlay!=common: best_match: {best_match} scales: {scales} method: {method}")
 
             if best_match:
                 top_left, size, score, scale, method_suffix = best_match
@@ -372,8 +372,8 @@ class IconMatcher:
                         "name": f"{name}",
                         "score": score,
                         "scale": scale,
-                        "quality_scale": quality_scale,
-                        "quality": quality_used,
+                        "overlay_scale": overlay_scale,
+                        "quality": overlay_used,
                         "method": f"{method}-{method_suffix}",
                     }
                 )

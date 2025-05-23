@@ -174,7 +174,7 @@ def save_match_summary(output_dir, screenshot_path, matches):
         screenshot_path (str): Path to the screenshot file.
         matches (list[dict]): List of match results, each containing the keys
             "icon_group", "top_left", "name", "method", "score", "scale", and
-            "quality_scale".
+            "overlay_scale".
 
     Returns:
         None
@@ -203,15 +203,15 @@ def save_match_summary(output_dir, screenshot_path, matches):
                     reverse=not is_hash_method
                 )
 
-                # helper to pull out a quality_scale, even from detected_overlay
-                def get_quality_scale(m):
+                # helper to pull out a overlay_scale, even from detected_overlay
+                def get_overlay_scale(m):
                     if "detected_overlay" in m and isinstance(m["detected_overlay"], (list, tuple)):
                         return m["detected_overlay"][0]["scale"]
-                    elif "quality_scale" in m:
-                        return m["quality_scale"]
+                    elif "overlay_scale" in m:
+                        return m["overlay_scale"]
                     return 0.0
 
-                # helper to pull out a quality, even from detected_overlay
+                # helper to pull out a overlay, even from detected_overlay
                 def get_overlay_name(m):
                     if "detected_overlay" in m and isinstance(m["detected_overlay"], (list, tuple)):
                         return m["detected_overlay"][0]["quality"]
@@ -220,26 +220,26 @@ def save_match_summary(output_dir, screenshot_path, matches):
                     return "unknown"
 
                 best = sorted_matches[0]
-                best_quality = get_overlay_name(best)
-                best_qs = get_quality_scale(best)
+                best_overlay = get_overlay_name(best)
+                best_qs = get_overlay_scale(best)
                 best_scale = best.get("scale", 0.0)
                 f.write(
-                    f"    BEST: {best.get('name','<unknown>')} ({best_quality}) "
+                    f"    BEST: {best.get('name','<unknown>')} ({best_overlay}) "
                     f"using {best.get('method','')} "
                     f"(score {best.get('score',0):.2f}, scale {best_scale:.2f}, "
-                    f"quality scale {best_qs:.2f})\n"
+                    f"overlay scale {best_qs:.2f})\n"
                 )
 
                 # if there are any runners-up, list them
                 if len(sorted_matches) > 1:
                     f.write("    Others:\n")
                     for m in sorted_matches[1:]:
-                        quality = get_overlay_name(best)
-                        qs = get_quality_scale(m)
+                        overlay = get_overlay_name(best)
+                        qs = get_overlay_scale(m)
                         sc = m.get("scale", 0.0)
                         f.write(
-                            f"      - {m.get('name','<unknown>')} ({quality}) using {m.get('method','')} "
-                            f"(score {m.get('score',0):.2f}, scale {sc:.2f}, quality scale {qs:.2f})\n"
+                            f"      - {m.get('name','<unknown>')} ({overlay}) using {m.get('method','')} "
+                            f"(score {m.get('score',0):.2f}, scale {sc:.2f}, overlay scale {qs:.2f})\n"
                         )
 
             f.write("\n")
@@ -274,7 +274,7 @@ if __name__ == "__main__":
             
             icon_root = Path(args.icons)
             hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
-            overlays = load_overlays(args.overlays)  # Must return dict of quality -> RGBA overlay np.array
+            overlays = load_overlays(args.overlays)  # Must return dict of overlay -> RGBA overlay np.array
             hash_index.build_with_overlays(overlays)
 
             print(f"[DONE] Built PHash index with {len(hash_index.hashes)} entries.")

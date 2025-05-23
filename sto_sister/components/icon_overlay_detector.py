@@ -55,7 +55,7 @@ class IconOverlayDetector:
                 #     continue
 
                 logger.debug(
-                    f"Predicting quality for icon group '{icon_group_label}', slot {idx}"
+                    f"Running overlay detection for icon group '{icon_group_label}', slot {idx}"
                 )
 
                 overlay_tasks.append((roi, overlays))
@@ -87,11 +87,8 @@ class IconOverlayDetector:
                         f"Overlay prediction failed for icon group '{icon_group_label}', slot {idx}: {e}"
                     )
                     traceback.print_exc()
-                    # quality, scale, method = "common", 1.0, "default"
 
-                # detected_overlays_by_icon_group.setdefault(icon_group_label, {})[idx] = (quality, scale, method)
-
-        logger.info("Performed all quality predictions.")
+        logger.debug("Overlay detection complete.")
 
         # print(detected_overlays_by_icon_group)
         # import sys

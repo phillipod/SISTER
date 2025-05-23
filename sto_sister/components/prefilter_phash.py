@@ -104,9 +104,9 @@ class PHashEngine:
 
                 for rel_path, dist in results:
                     if "::" in rel_path:
-                        path_part, quality = rel_path.split("::", 1)
+                        path_part, overlay = rel_path.split("::", 1)
                     else:
-                        path_part, quality = rel_path, None
+                        path_part, overlay = rel_path, None
 
                     full_path = self.hash_index.base_dir / path_part
                     filename = os.path.basename(path_part)
@@ -135,7 +135,7 @@ class PHashEngine:
                     if filename not in box_icons or box_icons[filename]["dist"] > dist:
                         box_icons[filename] = {
                             "dist": dist,
-                            "quality": quality,
+                            "overlay": overlay,
                             "name": filename,
                         }
 
@@ -208,10 +208,10 @@ class PHashEngine:
                             "icon_group": icon_group_label,
                             "slot": idx,
                             "method": "hash-phash",
-                            "quality": info["quality"],
+                            "quality": info["overlay"],
                             "roi_hash": target_hashes[icon_group_label][idx],
-                            # "quality_scale": 1.0,
-                            # "quality_score": 0.0,
+                            # "overlay_scale": 1.0,
+                            # "overlay_score":0.0,
                             # "scale": 1.0,
                         }
                     )

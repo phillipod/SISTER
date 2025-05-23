@@ -244,7 +244,7 @@ class HashIndex:
         Apply each overlay to each icon and compute perceptual hashes.
 
         Args:
-            overlays (dict): Mapping of quality label (e.g., 'ultra') to RGBA overlay images (numpy arrays).
+            overlays (dict): Mapping of overlay names to RGBA overlay images (numpy arrays).
         """
         pattern = "**/*.png" if self.recursive else "*.png"
         updated = 0
@@ -259,8 +259,8 @@ class HashIndex:
                     logger.warning(f"Failed to load or incomplete image: {rel_path}")
                     continue
 
-                for quality, overlay in overlays.items():
-                    blended = apply_overlay(image_bgr[:, :, :3], overlay)
+                for overlay_name, overlay_image in overlays.items():
+                    blended = apply_overlay(image_bgr[:, :, :3], overlay_image)
 
                     masked = apply_mask(blended)
 
@@ -268,7 +268,7 @@ class HashIndex:
                     hash_val = self.hasher(
                         buf.tobytes(), size=self.match_size, grayscale=False
                     )
-                    key = f"{rel_path}::{quality}"
+                    key = f"{rel_path}::{overlay_name}"
                     self.hashes[key] = {"hash": hash_val, "mtime": mtime}
                     found_keys.add(key)
                     updated += 1
