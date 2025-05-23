@@ -21,7 +21,7 @@ from ..stages import (
     IconSlotLocatorStage,
     IconPrefilterStage,
     IconOverlayDetectorStage,
-    IconMatchingStage,
+    IconDetectorStage,
     OutputTransformationStage,
 )
 
@@ -48,18 +48,18 @@ class SISTER:
         self.app_init()
 
         self.stages: List[PipelineStage] = [
-            LabelLocatorStage(config.get("locator", {"debug": True}), self.app_config),
-            LayoutClassifierStage(config.get("classifier", {}), self.app_config),
+            LabelLocatorStage(config.get("label_locator", {"debug": True}), self.app_config),
+            LayoutClassifierStage(config.get("layout_classifier", {}), self.app_config),
             IconGroupLocatorStage(config.get("icon_group", {}), self.app_config),
-            IconSlotLocatorStage(config.get("iconslot", {}), self.app_config),
+            IconSlotLocatorStage(config.get("icon_slot", {}), self.app_config),
             IconPrefilterStage(
-                config.get("prefilter", {"debug": True}), self.app_config
+                config.get("icon_prefilter", {"debug": True}), self.app_config
             ),
             IconOverlayDetectorStage(
-                config.get("overlay", {}), self.app_config
+                config.get("icon_overlay", {}), self.app_config
             ),
-            IconMatchingStage(config.get("matching", {}), self.app_config),
-            OutputTransformationStage(config.get("transform", {}), self.app_config),
+            IconDetectorStage(config.get("icon_detector", {}), self.app_config),
+            OutputTransformationStage(config.get("output_transformation", {}), self.app_config),
         ]
 
         self.on_progress = on_progress

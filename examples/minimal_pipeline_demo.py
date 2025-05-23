@@ -47,7 +47,7 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'icon_overlay_detector':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.detected_overlays)}")
         return
-    elif stage == 'icon_matching':
+    elif stage == 'icon_detector':
         print(f"[Callback] [on_stage_complete] [{stage}] ") #Found {len(ctx.matches)} matches") # 
         return
     elif stage == 'icon_prefilter':

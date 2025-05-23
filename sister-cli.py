@@ -49,7 +49,7 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'icon_overlay_detector':
         print(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("overlay") != "common")} icon overlays")
         return
-    elif stage == 'icon_matching':
+    elif stage == 'icon_detector':
         methods = {}
         match_count = 0
         for icon_group in output.keys():
@@ -301,7 +301,7 @@ if __name__ == "__main__":
     config = {
         "debug": True,
         
-        "prefilter": {
+        "icon_prefilter": {
             "method": "phash"
         },
         "engine": "phash",
@@ -317,7 +317,7 @@ if __name__ == "__main__":
     try:
         pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
         result: PipelineState = pipeline.run(img)
-        save_match_summary(args.output, args.screenshot, result[1]["icon_matching"])
+        save_match_summary(args.output, args.screenshot, result[1]["icon_detector"])
     except SISTERError as e:
         print(e)
         import sys

@@ -68,8 +68,8 @@ class IconSlotError(StageError):
     pass
 
 
-class IconMatchError(StageError):
-    """Raised when the icon matching stage fails."""
+class IconDetectorError(StageError):
+    """Raised when the icon detector stage fails."""
 
     pass
 
@@ -153,7 +153,7 @@ __all__ = [
     "IconGroupLocatorExpressionEvaluationError",
     "IconSlotError",
     "PrefilterError",
-    "IconMatchError",
+    "IconDetectorError",
     "PrefilterError",
     "CargoError",
     "DomainError",

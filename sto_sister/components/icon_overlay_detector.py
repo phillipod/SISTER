@@ -38,7 +38,7 @@ class IconOverlayDetector:
         threshold=0.8,
     ):
         """
-        Run icon matching using the selected engine.
+        Run icon detector using the selected engine.
         """
         matches = []
 

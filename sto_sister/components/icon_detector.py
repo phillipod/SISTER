@@ -65,7 +65,7 @@ class IconDetector:
         threshold=0.7,
     ):
         """
-        Run icon matching using the selected engine.
+        Run icon detector using the selected engine.
         """
         matches = {}
 
@@ -221,7 +221,7 @@ class IconDetector:
                         matches[item["icon_group"]][item["slot"]].append(item)
 
         except SISTERError as e:
-            raise IconMatchingError(e) from e
+            raise IconDetectorError(e) from e
 
         match_count = 0
         methods = {}
