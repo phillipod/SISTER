@@ -8,32 +8,32 @@ from typing import Dict, Tuple
 
 import logging
 
-from .exceptions import (
-    RegionDetectionError,
-    RegionDetectionComputeRegionError,
-    RegionDetectionExpressionParseError,
-    RegionDetectionExpressionEvaluationError,
+from ..exceptions import (
+    IconGroupLocatorError,
+    IconGroupLocatorComputeIconGroupError,
+    IconGroupLocatorExpressionParseError,
+    IconGroupLocatorExpressionEvaluationError,
 )
 
 logger = logging.getLogger(__name__)
 
 """
-Region Detection Rule DSL Documentation
+Icon Group Locator Rule DSL Documentation
 
-This DSL allows declarative definition of how bounding boxes (regions) are computed
+This DSL allows declarative definition of how icon group locations are computed
 for icon slots in build screenshots.
 
-The top level of ROI_DETECTION_RULES is a dictionary where each key must match the 
-computed build type returned by the BuildClassifier. For example, if the BuildClassifier 
+The top level of ICON_GROUP_LOCATION_RULES is a dictionary where each key must match the 
+computed build type returned by the BuildClassifier. For example, if the LayoutClassifier 
 detects "PC Ship Build", rules must be defined under that exact key.
 
 Top-Level Keys:
 - variables:     Named constants or expressions used in other expressions.
-- regions_loops: List of loop blocks that compute region boxes for multiple labels.
-- regions:       List of explicit region definitions. These run after region_loops so they can 
-                 reference looped region boxes.
+- icon_group_loops: List of loop blocks that compute icon groups for multiple labels.
+- icon_groups:       List of explicit icon group definitions. These run after icon_group_loops so they can 
+                 reference looped icon group boxes.
 
-Each region definition must define:
+Each icon group definition must define:
 - x1: Left X coordinate
 - x2: Right X coordinate
 - y1: Top Y coordinate
@@ -50,7 +50,7 @@ Expression Types:
 - Named variables:     any string defined in `variables`
 - Label references:    "label:Deflector.mid_y" - for referencing label boxes identified by 
                         the LabelLocator
-- Region references:   "region:Impulse.right"
+- Icon group references:   "icon_group:Impulse.right"
 - Loop references:     "label:.mid_y" — resolves to current label inside a loop
 
 Supported Operations (used as dictionaries):
@@ -65,7 +65,7 @@ Supported Operations (used as dictionaries):
 - "minimum_of":  Returns the minimum of each expression
 - "maximum_of":  Returns the maximum of each expression
 
-Region Loop Example:
+Icon Group Loop Example:
     {
         "labels": ["Label1", "Label2"],
         "loop": {
@@ -78,10 +78,10 @@ Region Loop Example:
 
 """
 
-ROI_DETECTION_RULES = {
-    # ROI regions for PC Ship Builds based on relative label geometry and right-side contours.
+ICON_GROUP_LOCATION_RULES = {
+    # Icon groups for PC Ship Builds based on relative label geometry and right-side contours.
     #
-    # ROIs are calculated by extending horizontally from the right edge of known labels to the nearest
+    # Icon groups are calculated by extending horizontally from the right edge of known labels to the nearest
     # right-side contours, and vertically between the midpoints of labels directly above and below.
     "PC Ship Build": {
         "variables": {
@@ -111,8 +111,8 @@ ROI_DETECTION_RULES = {
                 ]
             },
         },
-        # Standard regions
-        "regions_loops": [
+        # Standard icon groups
+        "icon_group_loops": [
             {
                 "labels": [
                     "Fore Weapon",
@@ -140,7 +140,7 @@ ROI_DETECTION_RULES = {
             }
         ],
     },
-    # ROI regions for PC Ground Builds based on relative label geometry.
+    # Icon groups for PC Ground Builds based on relative label geometry.
     #
     # Icon rows are typically aligned beneath the label. Padding is derived from horizontal spacing
     # between the "Body" and "EV Suit" labels. Line height is estimated from vertical spacing
@@ -162,8 +162,8 @@ ROI_DETECTION_RULES = {
             "body_bottom": {"add": ["body_top", "line_height"]},
             "icon_width": {"subtract": ["body_right", "body_left"]},
         },
-        # Standard regions - these run before special case regions
-        "regions_loops": [
+        # Standard icon groups - these run before special case icon groups
+        "icon_group_loops": [
             {
                 "labels": ["Body", "EV Suit", "Shield", "Kit"],
                 "loop": {
@@ -174,12 +174,12 @@ ROI_DETECTION_RULES = {
                 },
             }
         ],
-        # Special case regions - these run after standard regions
-        "regions": [
+        # Special case icon groups - these run after standard icon groups
+        "icon_groups": [
             {
                 "Kit Modules": {
                     "x1": {"subtract": ["label:Kit Modules.left", "padding"]},
-                    "x2": "region:Kit.right",  # Use the right edge of the Kit region as we have no other good anchor
+                    "x2": "icon_group:Kit.right",  # Use the right edge of the Kit icon group as we have no other good anchor
                     "y1": "label:Kit Modules.bottom",
                     "height": "line_height",
                 },
@@ -204,14 +204,14 @@ ROI_DETECTION_RULES = {
             },
         ],
     },
-    # ROI regions for Console Ship Builds based on relative label geometry.
+    # Icon groups for Console Ship Builds based on relative label geometry.
     #
     # This layout has three columns:
     #     - Column 1 (Left): Stacked vertically: Fore Weapon, Aft Weapon, Experimental Weapon (optional), Devices
     #     - Column 2 (Center): Horizontal row: Shields, Deflector, Impulse, Warp/Singularity, Hangar (optional)
     #     - Column 3 (Right): Stacked vertically: Engineering Console, Tactical Console, Science Console, Universal Console (optional)
     #
-    # Icon regions are placed *below* each label.
+    # Icon groups are placed *below* each label.
     "Console Ship Build": {
         "variables": {
             "padding": 20,
@@ -253,8 +253,8 @@ ROI_DETECTION_RULES = {
             },
             "warp_right": {"first_of": ["label:Warp.right", "label:Singularity.right"]},
         },
-        # Standard regions - these run before special case regions
-        "regions_loops": [
+        # Standard icon groups - these run before special case icon groups
+        "icon_group_loops": [
             {
                 "labels": [
                     "Fore Weapon",
@@ -287,14 +287,14 @@ ROI_DETECTION_RULES = {
                 "labels": ["Warp", "Singularity"],
                 "loop": {
                     "x1": "impulse_warp_mid",
-                    "x2": "warp_right",  # Use the right edge of the col2 region as we have no other good anchor"]"first_of": ["region:Hangar.left", "col2_right"]}, # Use the right edge of the col2 region as we have no other good anchor"}"col2_right",
+                    "x2": "warp_right",  # Use the right edge of the col2 icon group as we have no other good anchor"]"first_of": ["icon_group:Hangar.left", "col2_right"]}, # Use the right edge of the col2 icon group as we have no other good anchor"}"col2_right",
                     "y1": {"subtract": ["label:.bottom", "vertical_padding"]},
                     "height": "line_height",
                 },
             },
         ],
-        # Special case regions - these run after standard regions
-        "regions": [
+        # Special case icon groups - these run after standard icon groups
+        "icon_groups": [
             {
                 "Shield": {
                     "x1": "col2_left",
@@ -351,7 +351,7 @@ ROI_DETECTION_RULES = {
             },
             "kit_right": "label:Kit Frame.right",
         },
-        "regions": [
+        "icon_groups": [
             {
                 "Weapon": {
                     "x1": {"subtract": ["label:Weapon.left", "padding"]},
@@ -413,9 +413,9 @@ ROI_DETECTION_RULES = {
 }
 
 
-class RegionDetector:
+class IconGroupLocator:
     """
-    Pipeline aware region detector. Detects Regions of Interest (ROIs) in Star Trek Online screenshots based on detected label positions
+    Pipeline aware icon group locator. Detects groups of Regions of Interest (ROIs) in Star Trek Online screenshots based on detected label positions
     and classified build types. Primarily focuses on narrowing search areas for icon detection.
 
     Attributes:
@@ -424,14 +424,14 @@ class RegionDetector:
 
     def __init__(self, debug: bool = False):
         """
-        Initialize the RegionDetector.
+        Initialize the IconGroupLocator.
 
         Args:
             debug (bool): Whether to enable debug output.
         """
         self.debug = debug
 
-    def detect_regions(
+    def locate_icon_groups(
         self,
         image: np.ndarray,
         labels: Dict[str, Tuple[int, int, int, int]],
@@ -447,7 +447,7 @@ class RegionDetector:
             debug_output_path (str, optional): If set, draws debug output to this file.
 
         Returns:
-            dict: Mapping of label name to {'Label': <bbox>, 'Region': <roi bbox>}.
+            dict: Mapping of label name to {'Label': <bbox>, 'IconGroup': <roi bbox>}.
         """
         gray = self._preprocess_grayscale(image)
         dilated = self._apply_dilation(gray)
@@ -463,47 +463,47 @@ class RegionDetector:
         #     cv2.imwrite(f"{base}_contours.png", debug_contours)
 
         build_type = build_info.get("build_type", "Unknown")
-        region_boxes = {}
+        icon_group_boxes = {}
 
         # if build_type == "PC Ship Build":
-        #     #region_boxes = self._detect_pc_ship_rois(label_positions, contours)
-        #     region_boxes = self.compute_regions(build_type, label_positions, contours)
+        #     #icon_group_boxes = self._detect_pc_ship_rois(label_positions, contours)
+        #     icon_group_boxes = self.compute_icon_groups(build_type, label_positions, contours)
         # elif build_type == "PC Ground Build":
-        #     #region_boxes = self._detect_pc_ground_rois(label_positions)
-        #     region_boxes = self.compute_regions(build_type, label_positions)
+        #     #icon_group_boxes = self._detect_pc_ground_rois(label_positions)
+        #     icon_group_boxes = self.compute_icon_groups(build_type, label_positions)
         # elif build_type == "Console Ship Build":
-        #     #region_boxes = self._detect_console_ship_rois(label_positions)
-        #     region_boxes = self.compute_regions(build_type, label_positions)
+        #     #icon_group_boxes = self._detect_console_ship_rois(label_positions)
+        #     icon_group_boxes = self.compute_icon_groups(build_type, label_positions)
         # else:
         #     logger.warning(f"Unsupported build type: {build_type}")
         #     return {}
 
-        if build_type in ROI_DETECTION_RULES:
-            region_boxes = self.compute_regions(build_type, labels, contours)
+        if build_type in ICON_GROUP_LOCATION_RULES:
+            icon_group_boxes = self.compute_icon_groups(build_type, labels, contours)
         else:
             logger.warning(f"Unsupported build type: {build_type}")
-            raise RegionDetectionError(f"Unsupported build type: {build_type}")
+            raise IconGroupLocatorError(f"Unsupported build type: {build_type}")
             return {}
 
         merged = {}
-        for label, region in region_boxes.items():
+        for label, icon_group in icon_group_boxes.items():
             label_box = labels[label]
             merged[label] = {
                 "Label": {key: [int(v[0]), int(v[1])] for key, v in label_box.items()},
-                "Region": {
+                "IconGroup": {
                     "top_left": [
-                        int(region["top_left"][0]),
-                        int(region["top_left"][1]),
+                        int(icon_group["top_left"][0]),
+                        int(icon_group["top_left"][1]),
                     ],
                     "bottom_right": [
-                        int(region["bottom_right"][0]),
-                        int(region["bottom_right"][1]),
+                        int(icon_group["bottom_right"][0]),
+                        int(icon_group["bottom_right"][1]),
                     ],
                 },
             }
 
         # if self.debug and debug_output_path:
-        #    self._draw_debug_regions(image, merged, debug_output_path)
+        #    self._draw_debug_icon_groups(image, merged, debug_output_path)
 
         return merged
 
@@ -550,12 +550,12 @@ class RegionDetector:
         return contours
 
     def evaluate_expression(
-        self, expr, labels, context, contours=None, current_label=None, regions=None
+        self, expr, labels, context, contours=None, current_label=None, icon_groups=None
     ):
         """
-        Evaluate an expression in the context of detected labels and regions.
+        Evaluate an expression in the context of detected labels and icon groups.
 
-        The expression can be a string (resolved as a label or region property), a number (used as-is),
+        The expression can be a string (resolved as a label or icon group property), a number (used as-is),
         or a dictionary (with supported operations).
 
         Args:
@@ -564,7 +564,7 @@ class RegionDetector:
             context (dict): Additional context variables.
             contours (list, optional): List of contours (OpenCV format).
             current_label (str, optional): Current label being processed.
-            regions (dict, optional): Mapping of region names to bounding boxes.
+            icon_groups (dict, optional): Mapping of icon group names to bounding boxes.
 
         Returns:
             Any: Result of the evaluation.
@@ -593,7 +593,7 @@ class RegionDetector:
                 except ValueError:
                     pass
 
-                # Explicit source (label: or region:)
+                # Explicit source (label: or icon_group:)
                 if ":" in expr:
                     source, key = expr.split(":", 1)
                     if key.startswith(".") and current_label:
@@ -604,21 +604,21 @@ class RegionDetector:
                         # print(f"label: {label}, box: {box}")
                         if not box:
                             raise ValueError(f"Unknown label reference: {label}")
-                    elif source == "region":
-                        box = context.get("regions", {}).get(label)
+                    elif source == "icon_group":
+                        box = context.get("icon_groups", {}).get(label)
                         if not box:
-                            raise ValueError(f"Unknown region reference: {label}")
+                            raise ValueError(f"Unknown icon_group reference: {label}")
                     else:
                         raise ValueError(f"Unknown source prefix: {source}")
                 else:
-                    # Implicit, default to labels then regions
+                    # Implicit, default to labels then icon_groups
                     if expr.startswith(".") and current_label:
                         expr = f"{current_label}{expr}"
                     label, prop = expr.rsplit(".", 1)
                     box = labels.get(label)
                     # print(f"label: {label}, box: {box}")
-                    if not box and regions:
-                        box = regions.get(label)
+                    if not box and icon_groups:
+                        box = icon_groups.get(label)
                     if not box:
                         raise ValueError(f"Unknown reference: {expr}")
 
@@ -644,7 +644,7 @@ class RegionDetector:
                 if "add" in expr:
                     values = [
                         self.evaluate_expression(
-                            v, labels, context, contours, current_label, regions
+                            v, labels, context, contours, current_label, icon_groups
                         )
                         for v in expr["add"]
                     ]
@@ -655,7 +655,7 @@ class RegionDetector:
                 if "subtract" in expr:
                     values = [
                         self.evaluate_expression(
-                            v, labels, context, contours, current_label, regions
+                            v, labels, context, contours, current_label, icon_groups
                         )
                         for v in expr["subtract"]
                     ]
@@ -666,7 +666,7 @@ class RegionDetector:
                 if "divide" in expr:
                     a, b = [
                         self.evaluate_expression(
-                            v, labels, context, contours, current_label, regions
+                            v, labels, context, contours, current_label, icon_groups
                         )
                         for v in expr["divide"]
                     ]
@@ -681,7 +681,7 @@ class RegionDetector:
                     values = []
                     for v in expr["multiply"]:
                         val = self.evaluate_expression(
-                            v, labels, context, contours, current_label, regions
+                            v, labels, context, contours, current_label, icon_groups
                         )
                         values.append(val)
                         result *= val
@@ -691,7 +691,7 @@ class RegionDetector:
                 if "midpoint" in expr:
                     a, b = [
                         self.evaluate_expression(
-                            v, labels, context, contours, current_label, regions
+                            v, labels, context, contours, current_label, icon_groups
                         )
                         for v in expr["midpoint"]
                     ]
@@ -702,7 +702,7 @@ class RegionDetector:
                 if "distance" in expr:
                     a, b = [
                         self.evaluate_expression(
-                            v, labels, context, contours, current_label, regions
+                            v, labels, context, contours, current_label, icon_groups
                         )
                         for v in expr["distance"]
                     ]
@@ -714,7 +714,12 @@ class RegionDetector:
                     for key in expr["first_of"]:
                         try:
                             result = self.evaluate_expression(
-                                key, labels, context, contours, current_label, regions
+                                key,
+                                labels,
+                                context,
+                                contours,
+                                current_label,
+                                icon_groups,
                             )
                             if self.debug:
                                 logger.debug(f"first_of picked {key} = {result}")
@@ -727,7 +732,7 @@ class RegionDetector:
                 if "contour_right_of" in expr and contours is not None:
                     label, y_ref = expr["contour_right_of"]
                     y_value = self.evaluate_expression(
-                        y_ref, labels, context, contours, current_label, regions
+                        y_ref, labels, context, contours, current_label, icon_groups
                     )
                     label_box = labels[label]
                     base_right = label_box["top_right"][0]
@@ -744,7 +749,7 @@ class RegionDetector:
                 if "maximum_of" in expr:
                     values = [
                         self.evaluate_expression(
-                            v, labels, context, contours, current_label, regions
+                            v, labels, context, contours, current_label, icon_groups
                         )
                         for v in expr["maximum_of"]
                     ]
@@ -755,7 +760,7 @@ class RegionDetector:
                 if "minimum_of" in expr:
                     values = [
                         self.evaluate_expression(
-                            v, labels, context, contours, current_label, regions
+                            v, labels, context, contours, current_label, icon_groups
                         )
                         for v in expr["minimum_of"]
                     ]
@@ -768,42 +773,42 @@ class RegionDetector:
 
             raise TypeError(f"Unsupported type: {type(expr)}")
         except ValueError as e:
-            raise RegionDetectionExpressionParseError(
+            raise IconGroupLocatorExpressionParseError(
                 f"Parsing error in expression '{expr}': {e}"
             ) from e
         except Exception as e:
-            raise RegionDetectionExpressionEvaluationError(
+            raise IconGroupLocatorExpressionEvaluationError(
                 f"Evaluation error in expression '{expr}': {e}"
             ) from e
 
-    def compute_regions(self, build_type, labels, contours=None):
+    def compute_icon_groups(self, build_type, labels, contours=None):
         """
-        Compute region bounding boxes based on the build type rules and label positions.
+        Compute icon groups based on the build type rules and label positions.
 
-        This function evaluates expressions defined in the region detection rule set for
-        a given build type to calculate the bounding boxes of regions. It processes both
-        looped region definitions and explicit region definitions according to the specified
+        This function evaluates expressions defined in the icon group detection rule set for
+        a given build type to locate icon groups. It processes both
+        looped icon group definitions and explicit icon group definitions according to the specified
         rules.
 
         Args:
             build_type (str): The type of build, used to select the appropriate rule set from
-                            ROI_DETECTION_RULES.
+                            ICON_GROUP_LOCATION_RULES.
             labels (dict): A dictionary mapping label names to their bounding box coordinates.
-            contours (list, optional): A list of contours that may be used in some region
+            contours (list, optional): A list of contours that may be used in some icon group
                                     calculations, typically obtained from image preprocessing.
 
         Returns:
-            dict: A dictionary mapping label names to their computed region bounding boxes. Each
+            dict: A dictionary mapping label names to their computed icon group bounding boxes. Each
                 bounding box is represented as a dictionary with 'top_left' and 'bottom_right'
                 coordinates.
         """
-        rule = ROI_DETECTION_RULES.get(build_type)
+        rule = ICON_GROUP_LOCATION_RULES.get(build_type)
         if not rule:
-            logger.warning(f"No region rule found for build type: {build_type}")
+            logger.warning(f"No icon group rules found for build type: {build_type}")
             return {}
 
         context = {}
-        context["regions"] = {}
+        context["icon_groups"] = {}
 
         # print(f"labels: {labels}")
         for var, expr in rule.get("variables", {}).items():
@@ -812,19 +817,19 @@ class RegionDetector:
                 context[var] = self.evaluate_expression(expr, labels, context, contours)
             except Exception as e:
                 # logger.warning(f"Failed to compute variable '{var}': {e}")
-                raise RegionDetectionComputeRegionError(
+                raise IconGroupLocatorComputeIconGroupError(
                     f"Failed to compute variable [{build_type}]::'{var}': {e}"
                 ) from e
 
-        regions = {}
+        icon_groups = {}
 
-        if "regions_loops" in rule:
-            for loop_cfg in rule["regions_loops"]:
+        if "icon_group_loops" in rule:
+            for loop_cfg in rule["icon_group_loops"]:
                 for label in loop_cfg["labels"]:
                     if label not in labels:
                         continue
-                    logger.debug(f"Computing looped region for {label}")
-                    # print(f"Computing looped region for {label}")
+                    logger.debug(f"Computing looped icon group for {label}")
+                    # print(f"Computing looped icon_group for {label}")
                     try:
                         defn = loop_cfg["loop"]
 
@@ -834,7 +839,7 @@ class RegionDetector:
                             context,
                             contours,
                             current_label=label,
-                            regions=context["regions"],
+                            icon_groups=context["icon_groups"],
                         )
                         x2 = self.evaluate_expression(
                             defn["x2"],
@@ -842,7 +847,7 @@ class RegionDetector:
                             context,
                             contours,
                             current_label=label,
-                            regions=context["regions"],
+                            icon_groups=context["icon_groups"],
                         )
                         y1 = self.evaluate_expression(
                             defn["y1"],
@@ -850,7 +855,7 @@ class RegionDetector:
                             context,
                             contours,
                             current_label=label,
-                            regions=context["regions"],
+                            icon_groups=context["icon_groups"],
                         )
 
                         h = self.evaluate_expression(
@@ -859,24 +864,24 @@ class RegionDetector:
                             context,
                             contours,
                             current_label=label,
-                            regions=context["regions"],
+                            icon_groups=context["icon_groups"],
                         )
-                        region_box = {
+                        icon_group_box = {
                             "top_left": [int(x1), int(y1)],
                             "bottom_right": [int(x2), int(y1 + h)],
                         }
-                        context["regions"][label] = region_box
-                        regions[label] = region_box
+                        context["icon_groups"][label] = icon_group_box
+                        icon_groups[label] = icon_group_box
                     except Exception as e:
-                        # logger.warning(f"Failed to compute looped region for {label}: {e}")
-                        raise RegionDetectionComputeRegionError(
-                            f"Failed to compute looped region [{build_type}]::'{label}': {e}"
+                        # logger.warning(f"Failed to compute looped icon group for {label}: {e}")
+                        raise IconGroupLocatorComputeIconGroupError(
+                            f"Failed to compute looped icon group [{build_type}]::'{label}': {e}"
                         ) from e
 
-        if "regions" in rule:
-            for entry in rule["regions"]:
+        if "icon_groups" in rule:
+            for entry in rule["icon_groups"]:
                 if not isinstance(entry, dict) or len(entry) != 1:
-                    logger.warning(f"Malformed region entry: {entry}")
+                    logger.warning(f"Malformed icon group entry: {entry}")
                     continue
                 label, defn = next(iter(entry.items()))
                 if label not in labels:
@@ -888,41 +893,41 @@ class RegionDetector:
                     h = self.evaluate_expression(
                         defn["height"], labels, context, contours
                     )
-                    context["regions"][label] = {
+                    context["icon_groups"][label] = {
                         "top_left": [int(x1), int(y1)],
                         "bottom_right": [int(x2), int(y1 + h)],
                     }
                 except Exception as e:
-                    # logger.warning(f"Failed to compute region for {label}: {e}")
-                    raise RegionDetectionComputeRegionError(
-                        f"Failed to compute region [{build_type}]::'{label}': {e}"
+                    # logger.warning(f"Failed to compute icon group for {label}: {e}")
+                    raise IconGroupLocatorComputeIconGroupError(
+                        f"Failed to compute icon group [{build_type}]::'{label}': {e}"
                     ) from e
 
-        return context["regions"]
+        return context["icon_groups"]
 
-    def _draw_debug_regions(self, image, regions, output_path):
+    def _draw_debug_icon_groups(self, image, icon_groups, output_path):
         """
-        Draw labeled region rectangles on a copy of the original image and save as a debug visualization.
+        Draw labeled icon group rectangles on a copy of the original image and save as a debug visualization.
 
-        Each region is drawn with a randomly colored bounding box and annotated with the label name.
-        Used for visual verification of region detection accuracy.
+        Each icon group is drawn with a randomly colored bounding box and annotated with the label name.
+        Used for visual verification of icon group detection accuracy.
 
         Args:
             image (np.array): Original BGR screenshot.
-            regions (dict): Dictionary of label names to region and label bounding boxes.
+            icon_groups (dict): Dictionary of label names to icon group and label bounding boxes.
             output_path (str): Path to save the annotated debug image.
         """
         debug_image = image.copy()
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-        print(f"Drawing {len(regions)} regions")
+        print(f"Drawing {len(icon_groups)} icon_groups")
         print(f"image.shape: {image.shape}")
-        print(f"Regions: {regions}")
-        for label, entry in regions.items():
+        print(f"IconGroups: {icon_groups}")
+        for label, entry in icon_groups.items():
             print(f"Label: {label}")
             print(f"Entry: {entry}")
-            x1, y1 = entry["Region"]["top_left"]
-            x2, y2 = entry["Region"]["bottom_right"]
+            x1, y1 = entry["IconGroup"]["top_left"]
+            x2, y2 = entry["IconGroup"]["bottom_right"]
             color = [random.randint(0, 255) for _ in range(3)]
             cv2.rectangle(debug_image, (x1, y1), (x2, y2), color, 2)
             cv2.putText(

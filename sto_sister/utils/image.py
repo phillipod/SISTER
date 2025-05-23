@@ -57,7 +57,7 @@ def load_image(image_or_path, resize_fullhd=False):
     return image
 
 
-def load_quality_overlays(overlay_folder):
+def load_overlays(overlay_folder):
     overlays = {}
     filenames = [
         "common.png",

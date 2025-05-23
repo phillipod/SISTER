@@ -9,7 +9,7 @@ class SISTERError(Exception):
 
 class PipelineError(SISTERError):
     """Raised when any stage of the pipeline fails.
-    Carries the stage name, the original exception, and the PipelineContext.
+    Carries the stage name, the original exception, and the PipelineState.
     """
 
     def __init__(self, stage: str, original: Exception, ctx: Any):
@@ -38,26 +38,26 @@ class ClassificationError(StageError):
     pass
 
 
-class RegionDetectionError(StageError):
-    """Raised when the region detector stage fails."""
+class IconGroupLocatorError(StageError):
+    """Raised when the icon group locator stage fails."""
 
     pass
 
 
-class RegionDetectionComputeRegionError(RegionDetectionError):
-    """Raised when the region detector stage fails with a compute_region error."""
+class IconGroupLocatorComputeIconGroupError(IconGroupLocatorError):
+    """Raised when the icon group locator stage fails with a compute_icon_groups error."""
 
     pass
 
 
-class RegionDetectionExpressionParseError(RegionDetectionComputeRegionError):
-    """Raised when the region detector stage fails with an expression parse error."""
+class IconGroupLocatorExpressionParseError(IconGroupLocatorComputeIconGroupError):
+    """Raised when the icon group locator stage fails with an expression parse error."""
 
     pass
 
 
-class RegionDetectionExpressionEvaluationError(RegionDetectionComputeRegionError):
-    """Raised when the region detector stage fails with an expression evaluation error."""
+class IconGroupLocatorExpressionEvaluationError(IconGroupLocatorComputeIconGroupError):
+    """Raised when the icon group locator stage fails with an expression evaluation error."""
 
     pass
 
@@ -68,8 +68,8 @@ class IconSlotError(StageError):
     pass
 
 
-class IconMatchError(StageError):
-    """Raised when the icon matching stage fails."""
+class IconDetectorError(StageError):
+    """Raised when the icon detector stage fails."""
 
     pass
 
@@ -123,7 +123,7 @@ class PHashError(DomainError):
 
 
 class SSIMError(DomainError):
-    """Raised for failures in SSIM-based matching or quality checks."""
+    """Raised for failures in SSIM-based matching or overlay checks."""
 
     pass
 
@@ -147,13 +147,13 @@ __all__ = [
     "CargoError",
     "LocatorError",
     "ClassificationError",
-    "RegionDetectionError",
-    "RegionDetectionComputeRegionError",
-    "RegionDetectionExpressionParseError",
-    "RegionDetectionExpressionEvaluationError",
+    "IconGroupLocatorError",
+    "IconGroupLocatorComputeIconGroupError",
+    "IconGroupLocatorExpressionParseError",
+    "IconGroupLocatorExpressionEvaluationError",
     "IconSlotError",
     "PrefilterError",
-    "IconMatchError",
+    "IconDetectorError",
     "PrefilterError",
     "CargoError",
     "DomainError",

@@ -9,9 +9,9 @@ from typing import List, Tuple, Dict, Any
 logger = logging.getLogger(__name__)
 
 
-class IconSlotDetector:
+class IconSlotLocator:
     """
-    Pipeline aware icon slot detector. Detects icon slot candidates globally, then tags them into known regions based on region_data.
+    Pipeline aware icon slot locator. Locates icon slot candidates globally, then tags them into known icon groups based on icon_group data.
 
     Attributes:
         debug (bool): If True, enables debug output and writes annotated images.
@@ -19,7 +19,7 @@ class IconSlotDetector:
 
     def __init__(self, hash_index=None, debug=False, debug_output_path=None):
         """
-        Initialize the IconSlotDetector.
+        Initialize the IconSlotLocator.
 
         Args:
             debug (bool): If True, enables debug output and writes annotated images.
@@ -35,9 +35,9 @@ class IconSlotDetector:
             base, _ = os.path.splitext(self.debug_output_path)
             os.makedirs(os.path.dirname(base), exist_ok=True)
 
-    # def detect_inventory(self, screenshot_color, debug_output_path=None):
-    def detect_inventory(
-        self, image: np.ndarray, region_bbox: Tuple[int, int, int, int]
+    # def locate_inventory(self, screenshot_color, debug_output_path=None):
+    def locate_inventory(
+        self, image: np.ndarray, icon_group_bbox: Tuple[int, int, int, int]
     ) -> List[Tuple[int, int, int, int]]:
         """
         Detect icon slot candidates globally.
@@ -54,37 +54,37 @@ class IconSlotDetector:
 
         candidates = self._find_slot_candidates(binary, image)
 
-        region_candidates = {"Inventory": []}
+        icon_group_candidates = {"Inventory": []}
 
         for x, y, w, h in candidates:
-            region_candidates["Inventory"].append((x, y, w, h))
+            icon_group_candidates["Inventory"].append((x, y, w, h))
 
         # Convert all box values to native Python int to avoid JSON serialization issues
-        region_candidates = {
+        icon_group_candidates = {
             label: [tuple(int(v) for v in box) for box in boxes]
-            for label, boxes in region_candidates.items()
+            for label, boxes in icon_group_candidates.items()
         }
 
-        for label in region_candidates:
-            region_candidates[label] = self._sort_boxes_grid_order(
-                region_candidates[label]
+        for label in icon_group_candidates:
+            icon_group_candidates[label] = self._sort_boxes_grid_order(
+                icon_group_candidates[label]
             )
 
-        return region_candidates
+        return icon_group_candidates
 
-    def detect_slots(
-        self, image: np.ndarray, region_bbox: Dict[str, Any]
+    def locate_slots(
+        self, image: np.ndarray, icon_group_bbox: Dict[str, Any]
     ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
         """
-        Detect icon slot candidates globally and assign them to labeled regions, including ROI data.
+        Detect icon slot candidates globally and assign them to labeled icon groups, including ROI data.
 
         Args:
             image (np.ndarray): Full BGR screenshot.
-            region_bbox (Dict[str, Any]): Mapping of region labels to region metadata.
+            icon_group_bbox (Dict[str, Any]): Mapping of icon group labels to icon group metadata.
 
         Returns:
-            Dict[str, Dict[str, List[Dict[str, Any]]]]: Mapping of region label to dict with key "Slots",
-            containing a list of dicts with keys "Slot" (index within region), "Box" (x, y, w, h), and "ROI" (cropped image).
+            Dict[str, Dict[str, List[Dict[str, Any]]]]: Mapping of icon group label to dict with key "Slots",
+            containing a list of dicts with keys "Slot" (index within icon group), "Box" (x, y, w, h), and "ROI" (cropped image).
         """
         # Convert to grayscale and threshold
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -93,32 +93,32 @@ class IconSlotDetector:
         # Find slot candidates and their corresponding ROIs
         candidates, candidate_rois = self._find_slot_candidates(binary, image)
 
-        # Initialize region slots
-        region_candidates: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
-            label: [] for label in region_bbox
+        # Initialize icon group slots
+        icon_group_candidates: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
+            label: [] for label in icon_group_bbox
         }
 
-        # Assign each candidate to its region
+        # Assign each candidate to its icon group
         for idx, (x, y, w, h) in enumerate(candidates):
             cx, cy = x + w // 2, y + h // 2
-            for label, entry in region_bbox.items():
-                x1, y1 = entry["Region"]["top_left"]
-                x2, y2 = entry["Region"]["bottom_right"]
+            for label, entry in icon_group_bbox.items():
+                x1, y1 = entry["IconGroup"]["top_left"]
+                x2, y2 = entry["IconGroup"]["bottom_right"]
                 if x1 <= cx <= x2 and y1 <= cy <= y2:
                     slot_info = {
-                        # Temporarily store global index; will renumber per region later
+                        # Temporarily store global index; will renumber per icon group later
                         "GlobalIdx": idx,
                         "Box": (int(x), int(y), int(w), int(h)),
                         "ROI": candidate_rois[(x, y, w, h)],
                         "Hash": self.hash_index.get_hash(candidate_rois[(x, y, w, h)]),
                     }
-                    region_candidates[label].append(slot_info)
+                    icon_group_candidates[label].append(slot_info)
                     break
 
-        # print(f"region_candidates: {region_candidates}")
+        # print(f"icon_group_candidates: {icon_group_candidates}")
 
-        # Sort slots and renumber per region
-        for label, slots in region_candidates.items():
+        # Sort slots and renumber per icon group
+        for label, slots in icon_group_candidates.items():
             if not slots:
                 continue
             boxes = [slot["Box"] for slot in slots]
@@ -143,11 +143,11 @@ class IconSlotDetector:
                     )
                 else:
                     logger.debug(f"Slot {local_idx} not found for {label}")
-            region_candidates[label] = sorted_slots
+            icon_group_candidates[label] = sorted_slots
 
-        # print(f"region_candidates: {region_candidates}")
+        # print(f"icon_group_candidates: {icon_group_candidates}")
 
-        return region_candidates
+        return icon_group_candidates
 
     def _find_slot_candidates(
         self,

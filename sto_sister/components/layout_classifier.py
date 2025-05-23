@@ -141,7 +141,7 @@ SCORING_RULES = {
 }
 
 
-class Classifier:
+class LayoutClassifier:
     """
     Pipeline-aware classifier: Determines the likely build type of a Star Trek Online character screenshot using spatial and textual label analysis.
 

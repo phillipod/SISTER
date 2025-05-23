@@ -5,16 +5,14 @@ import traceback
 import time
 
 from pathlib import Path
-
 from pprint import pprint
 
-
-from src.sister import build_default_pipeline, PipelineContext
-from src.exceptions import SISTERError, PipelineError, StageError
-from src.hashindex import HashIndex
 from log_config import setup_logging
 
-from src.utils.image import load_image
+from sto_sister.pipeline import build_default_pipeline, PipelineState
+from sto_sister.exceptions import SISTERError, PipelineError, StageError
+from sto_sister.utils.hashindex import HashIndex
+from sto_sister.utils.image import load_image
 
 import traceback
 
@@ -22,11 +20,11 @@ setup_logging()
 
 def on_progress(stage, pct, ctx): 
     return ctx
-    if stage == "label_locator":
+    if stage == "locate_labels":
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.labels}%")
-    elif stage == "region_detector":
-        print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.regions}%")
-    elif stage == 'classifier':
+    elif stage == 'locate_icon_groups':
+        print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.icon_groups}%")
+    elif stage == 'classify_layout':
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.classification}%")
 
 
@@ -34,27 +32,26 @@ def on_stage_start(stage, ctx):
     print(f"[Callback] [on_stage_start] [{stage}]")
 
 def on_stage_complete(stage, ctx, output):
-    if stage == 'label_locator':
+    if stage == 'locate_labels':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.labels)} labels")
-        return;
-    elif stage == 'region_detection':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.regions)} regions")
-        return;
-        print(f"[Callback] [on_stage_complete] [{stage}] Regions: {ctx.regions}")
-    elif stage == 'classifier':
+        return
+    elif stage == 'locate_icon_groups':
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.icon_groups)} icon groups")
+        return
+    elif stage == 'classify_layout':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.classification)} matches")   
-        return;
-    elif stage == 'iconslot_detection':
+        return
+    elif stage == 'locate_icon_slots':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.slots)}") # slots: {ctx.slots}")
         #return
-    elif stage == 'icon_quality_detection':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)}")
+    elif stage == 'detect_icon_overlays':
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.detected_overlays)}")
         return
-    elif stage == 'icon_matching':
+    elif stage == 'detect_icons':
         print(f"[Callback] [on_stage_complete] [{stage}] ") #Found {len(ctx.matches)} matches") # 
         return
-    elif stage == 'icon_prefilter':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_icons)} matches")
+    elif stage == 'prefilter_icons':
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.prefiltered_icons)} matches")
         return
     elif stage == 'output_transformation':
         print(f"[Callback] [on_stage_complete] [{stage}]")
@@ -76,7 +73,7 @@ def on_pipeline_complete(ctx, output, all_results):
 
     print(f"[Callback] [on_pipeline_complete] Pretty output: ")
     pprint(output['matches'])
-    #pprint(output['predicted_qualities'])
+    #pprint(output['detected_overlays'])
 
 def on_error(err): 
     print(f"[Callback] [on_error] {err}")
@@ -116,6 +113,9 @@ if __name__ == "__main__":
     config = {
         "debug": True,
         
+        "prefilter": {
+            "method": "phash"
+        },
         "engine": "phash",
         "hash_index_dir": args.icons,
         "hash_index_file": "hash_index.json",
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # 3. build & run
     try:
         pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
-        result: PipelineContext = pipeline.run(img)
+        result: PipelineState = pipeline.run(img)
     except SISTERError as e:
         print(e)
         import sys
@@ -139,4 +139,4 @@ if __name__ == "__main__":
 
     # 4. dump
     #for slot, match in result.icon_matches.items():
-    #    print(f"{slot.region_label}[{slot.index}] → {match}")
+    #    print(f"{slot.icon_group_label}[{slot.index}] → {match}")
