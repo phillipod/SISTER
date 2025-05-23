@@ -56,7 +56,7 @@ class SISTER:
                 config.get("prefilter", {"debug": True}), self.app_config
             ),
             IconOverlayDetectorStage(
-                config.get("quality", {}), self.app_config
+                config.get("overlay", {}), self.app_config
             ),
             IconMatchingStage(config.get("matching", {}), self.app_config),
             OutputTransformationStage(config.get("transform", {}), self.app_config),

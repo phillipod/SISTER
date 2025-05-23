@@ -107,7 +107,7 @@ class IconMatcher:
                     detected_overlay = detected_overlays[idx]
 
                     logger.info(
-                        f"Matching {len(icons_for_slot)} icons into icon group '{icon_group_label}' at slot {idx} with overlay {detected_overlay[0]["quality"]} at scale {detected_overlay[0]['scale']}"
+                        f"Matching {len(icons_for_slot)} icons into icon group '{icon_group_label}' at slot {idx} with overlay {detected_overlay[0]["overlay"]} at scale {detected_overlay[0]['scale']}"
                     )
 
                     for idx_icon, (name, icon_color) in enumerate(
@@ -271,7 +271,7 @@ class IconMatcher:
                 continue
 
             # print(f"Predicted overlay: {detected_overlay}")
-            overlay = detected_overlay["quality"]
+            overlay = detected_overlay["overlay"]
             overlay_scale = detected_overlay["scale"]
             overlay_method =detected_overlay["method"]
 
@@ -373,7 +373,7 @@ class IconMatcher:
                         "score": score,
                         "scale": scale,
                         "overlay_scale": overlay_scale,
-                        "quality": overlay_used,
+                        "overlay": overlay_used,
                         "method": f"{method}-{method_suffix}",
                     }
                 )

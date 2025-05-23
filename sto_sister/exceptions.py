@@ -123,7 +123,7 @@ class PHashError(DomainError):
 
 
 class SSIMError(DomainError):
-    """Raised for failures in SSIM-based matching or quality checks."""
+    """Raised for failures in SSIM-based matching or overlay checks."""
 
     pass
 

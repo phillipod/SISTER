@@ -47,7 +47,7 @@ def on_stage_complete(stage, ctx, output):
         print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots") #
         return
     elif stage == 'icon_overlay_detector':
-        print(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("quality") != "common")} icon overlays")
+        print(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("overlay") != "common")} icon overlays")
         return
     elif stage == 'icon_matching':
         methods = {}
@@ -214,9 +214,9 @@ def save_match_summary(output_dir, screenshot_path, matches):
                 # helper to pull out a overlay, even from detected_overlay
                 def get_overlay_name(m):
                     if "detected_overlay" in m and isinstance(m["detected_overlay"], (list, tuple)):
-                        return m["detected_overlay"][0]["quality"]
-                    elif "quality" in m:
-                        return m["quality"]
+                        return m["detected_overlay"][0]["overlay"]
+                    elif "overlay" in m:
+                        return m["overlay"]
                     return "unknown"
 
                 best = sorted_matches[0]

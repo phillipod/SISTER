@@ -31,7 +31,7 @@ class IconOverlayDetector:
         self.load_overlays = overlay_loader
         self.hash_index = hash_index
 
-    def quality_predictions(
+    def detect(
         self,
         icon_slots,
         overlays,
@@ -78,7 +78,7 @@ class IconOverlayDetector:
             for future in as_completed(futures):
                 icon_group_label, idx = futures[future]
                 try:
-                    # quality, scale, method = future.result()
+                    # overlay, scale, method = future.result()
                     detected_overlays_by_icon_group.setdefault(icon_group_label, {})[
                         idx
                     ] = future.result()
@@ -201,7 +201,7 @@ class IconOverlayDetector:
             if overlay_name == "common":
                 continue
 
-            # logger.debug(f"Trying quality overlay {overlay_name}")
+            # logger.debug(f"Trying overlay {overlay_name}")
             if must_inspect(inspection_list, icon_group_label, slot):
                 print(
                     f"{icon_group_label}#{slot}: {overlay_name}: Begin: overlay=[{overlay.shape}] region=[{region_crop.shape}]"
@@ -477,7 +477,7 @@ class IconOverlayDetector:
 
                             overlay_detections.append(
                                 {
-                                    "quality": best_overlay,
+                                    "overlay": best_overlay,
                                     "scale": best_scale,
                                     "method": best_method,
                                     "ssim_score": best_score,
@@ -496,7 +496,7 @@ class IconOverlayDetector:
         if len(overlay_detections) == 0:
             return [
                 {
-                    "quality": "common",
+                    "overlay": "common",
                     "scale": 0.6,
                     "method": "fallback",
                     "step_x": None,

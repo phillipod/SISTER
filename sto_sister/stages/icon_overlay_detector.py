@@ -24,7 +24,7 @@ class IconOverlayDetectorStage(PipelineStage):
 
         overlays = load_overlays(ctx.config.get("overlay_dir", ""))
 
-        ctx.detected_overlays = self.strategy.quality_predictions(
+        ctx.detected_overlays = self.strategy.detect(
             ctx.slots,
             overlays,
             threshold=self.opts.get("threshold", 0.8),

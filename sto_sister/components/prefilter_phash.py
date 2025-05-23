@@ -208,7 +208,7 @@ class PHashEngine:
                             "icon_group": icon_group_label,
                             "slot": idx,
                             "method": "hash-phash",
-                            "quality": info["overlay"],
+                            "overlay": info["overlay"],
                             "roi_hash": target_hashes[icon_group_label][idx],
                             # "overlay_scale": 1.0,
                             # "overlay_score":0.0,

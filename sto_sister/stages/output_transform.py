@@ -45,7 +45,7 @@ class OutputTransformationStage(PipelineStage):
                         slot_name
                     ] = predicted.copy()
 
-                    # copy over the predicted quality if we have it
+                    # copy over the predicted overlay if we have it
                     if ctx.detected_overlays[icon_group_name]:
                         for idx, item in enumerate(matches[icon_group_name][slot_name]):
                             matches[icon_group_name][slot_name][idx][
