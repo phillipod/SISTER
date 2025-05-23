@@ -298,7 +298,7 @@ class LabelLocator:
 
         return filtered
 
-    def locate(self, image: np.ndarray) -> Dict[str, Tuple[int, int, int, int]]:
+    def locate_labels(self, image: np.ndarray) -> Dict[str, Tuple[int, int, int, int]]:
         """
         Locate allowed labels within an image array.
 
