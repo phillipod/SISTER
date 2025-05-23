@@ -12,7 +12,7 @@ from log_config import setup_logging
 from sto_sister.pipeline import build_default_pipeline, PipelineState
 from sto_sister.exceptions import SISTERError, PipelineError, StageError
 
-from sto_sister.cargo import CargoDownloader
+from sto_sister.utils.cargo import CargoDownloader
 from sto_sister.utils.hashindex import HashIndex
 from sto_sister.utils.image import load_image, load_overlays
 

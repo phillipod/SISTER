@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import requests
 
-from .exceptions import CargoError, CargoCacheIOError, CargoDownloadError
+from ..exceptions import CargoError, CargoCacheIOError, CargoDownloadError
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
