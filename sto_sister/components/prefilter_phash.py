@@ -51,8 +51,8 @@ class PHashEngine:
 
         return threshold
 
-    def icon_predictions(self, icon_slots, icon_set, select_items=None):
-        predictions = {}
+    def prefilter(self, icon_slots, icon_set, select_items=None):
+        prefiltered = {}
 
         filtered_icons = {}
         similar_icons = {}
@@ -85,7 +85,7 @@ class PHashEngine:
                 roi_hash = slot["Hash"]
 
                 logger.debug(
-                    f"Predicting icons for icon group '{icon_group_label}' at slot {idx}"
+                    f"Prefiltering icons for icon group '{icon_group_label}' at slot {idx}"
                 )
 
                 found_icons[icon_group_label][box] = {}
@@ -157,7 +157,7 @@ class PHashEngine:
                     )
                     continue
 
-            predictions[icon_group_label] = {}
+            prefiltered[icon_group_label] = {}
 
             for slot in icon_slots[icon_group_label]:
                 idx = slot["Slot"]
@@ -175,7 +175,7 @@ class PHashEngine:
                         )
                         continue
 
-                predictions[icon_group_label][idx] = []
+                prefiltered[icon_group_label][idx] = []
 
                 candidates = found_icons[icon_group_label][box]
 
@@ -191,14 +191,14 @@ class PHashEngine:
                 )
                 threshold_val = np.ceil(max(dm_threshold, stddev_threshold)).astype(int)
 
-                # candidate_predictions = []
+                # candidate_prefiltered = []
                 filtered_slot_icons = {}
 
                 for filename, info in candidates.items():
                     if info["dist"] > threshold_val:
                         continue
 
-                    predictions[icon_group_label][idx].append(
+                    prefiltered[icon_group_label][idx].append(
                         {
                             "name": info["name"],
                             # "top_left": (x, y),
@@ -233,13 +233,13 @@ class PHashEngine:
                     ) from e
 
                 logger.debug(
-                    f"Predicted {len(predictions[icon_group_label][idx])} icons for icon group '{icon_group_label}' at slot {idx}."
+                    f"Prefiltered {len(prefiltered[icon_group_label][idx])} icons for icon group '{icon_group_label}' at slot {idx}."
                 )
-                # predictions.extend(candidate_predictions)
+                # prefiltered.extend(candidate_prefiltered)
 
         logger.verbose(
-            f"Total icon predictions: {sum(len(slots) for icon_group in predictions.values() for slots in icon_group.values())}"
+            f"Total icons prefiltered: {sum(len(slots) for icon_group in prefiltered.values() for slots in icon_group.values())}"
         )
-        logger.verbose("Completed all candidate predictions.")
+        logger.verbose("Completed prefiltering all candidates.")
 
-        return predictions, found_icons, filtered_icons
+        return prefiltered, found_icons, filtered_icons

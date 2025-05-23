@@ -17,20 +17,20 @@ class OutputTransformationStage(PipelineStage):
         # start with whatever matches we already have
         ctx.output = {
             "matches": ctx.matches,
-            "predicted_icons": ctx.predicted_icons,
+            "prefiltered_icons": ctx.prefiltered_icons,
             "detected_overlays": ctx.detected_overlays,
         }
 
-        # we're going to merge any predicted icons into ctx.matches if they don't already exist
-        # this catches cases where we have predicted icons but no matches, so we at least provide some output that is hopefully useful
+        # we're going to merge any prefiltered icons into ctx.matches if they don't already exist
+        # this catches cases where we have prefiltered icons but no matches, so we at least provide some output that is hopefully useful
         matches = ctx.matches
-        for icon_group_name in ctx.predicted_icons:
+        for icon_group_name in ctx.prefiltered_icons:
             #icon_group_name = icon_group
-            for slot in ctx.predicted_icons[icon_group_name]:
+            for slot in ctx.prefiltered_icons[icon_group_name]:
                 slot_name = slot
 
-                # find any predicted icons for this icon group/slot
-                predicted = ctx.predicted_icons.get(icon_group_name, {}).get(
+                # find any prefiltered icons for this icon group/slot
+                prefiltered = ctx.prefiltered_icons.get(icon_group_name, {}).get(
                     slot_name, []
                 )
 
@@ -38,14 +38,14 @@ class OutputTransformationStage(PipelineStage):
                 # print(f"icon_group_name: {icon_group_name}, slot_name: {slot_name} existing: {matches.get(icon_group_name, {}).get(slot_name, [])}")
                 existing = matches.get(icon_group_name, {}).get(slot_name, [])
 
-                # if there's a prediction and no existing match, copy it over
-                if predicted and len(existing) == 0:
+                # if prefiltering did fine candidates but ssim found no matches, copy over the prefiltered list so the user can see them as potentional matches
+                if prefiltered and len(existing) == 0:
                     # ensure the dicts exist
                     matches.setdefault(icon_group_name, {})[
                         slot_name
-                    ] = predicted.copy()
+                    ] = prefiltered.copy()
 
-                    # copy over the predicted overlay if we have it
+                    # copy over the detected overlay if we have it
                     if ctx.detected_overlays[icon_group_name]:
                         for idx, item in enumerate(matches[icon_group_name][slot_name]):
                             matches[icon_group_name][slot_name][idx][

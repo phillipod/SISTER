@@ -21,7 +21,7 @@ class PipelineState:
     slots: Dict[str, List[Slot]] = field(default_factory=dict)
     classification: Dict[Slot, Any] = field(default_factory=dict)
     detected_overlays: Any = None
-    predicted_icons: Any = None
+    prefiltered_icons: Any = None
     found_icons: Any = None
     filtered_icons: Any = None
 

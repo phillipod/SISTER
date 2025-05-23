@@ -84,7 +84,7 @@ class IconOverlayDetector:
                     ] = future.result()
                 except Exception as e:
                     logger.warning(
-                        f"Overlay prediction failed for icon group '{icon_group_label}', slot {idx}: {e}"
+                        f"Overlay detection failed for icon group '{icon_group_label}', slot {idx}: {e}"
                     )
                     traceback.print_exc()
 

@@ -87,7 +87,7 @@ class IconDetector:
                 )
                 if len(detected_overlays.keys()) != len(icon_slots[icon_group_label]):
                     logger.warning(
-                        f"Mismatch between candidate icon groups and predicted qualities for '{icon_group_label}'"
+                        f"Mismatch between candidate icon groups and detected overlays for '{icon_group_label}'"
                     )
 
                 for slot in icon_slots[icon_group_label]:
@@ -270,7 +270,7 @@ class IconDetector:
             if detected_overlay is None:
                 continue
 
-            # print(f"Predicted overlay: {detected_overlay}")
+            # print(f"Detected overlay: {detected_overlay}")
             overlay = detected_overlay["overlay"]
             overlay_scale = detected_overlay["scale"]
             overlay_method =detected_overlay["method"]
@@ -329,11 +329,11 @@ class IconDetector:
 
                 # if icon_h == overlay_h and icon_w == overlay_w and overlay_scale:
                 scales = [overlay_scale]
-                method = f"ssim-predicted-overlay-scale"
+                method = f"ssim-detected-overlay-scale"
                 # else:
                 #     scales = np.linspace(0.6, 0.7, 11)
                 #     method = (
-                #         "ssim-predicted-overlays-all-scales-icon-size-mismatch-fallback"
+                #         "ssim-detected-overlays-all-scales-icon-size-mismatch-fallback"
                 #     )
 
                 if not fallback_mode:
@@ -346,7 +346,7 @@ class IconDetector:
                         threshold=threshold,
                     )
                 else:
-                    method = "ssim-predicted-overlay-all-scales-fallback"
+                    method = "ssim-detected-overlay-all-scales-fallback"
                     best_match = multi_scale_match(
                         name, roi, blended_icon, threshold=threshold
                     )

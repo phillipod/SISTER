@@ -31,7 +31,7 @@ def multi_scale_match(
         if th > region_color.shape[0] or tw > region_color.shape[1]:
             continue
 
-        found_by_predicted_stepping = False
+        found_by_detected_stepping = False
 
         if steps:
             x = steps[0]
@@ -56,10 +56,10 @@ def multi_scale_match(
                 best_loc = (x, y)
                 best_match = (tw, th)
                 best_scale = scale
-                found_by_predicted_stepping = True
-                # print("found by predicted stepping")
+                found_by_detected_stepping = True
+                # print("found by detected stepping")
 
-        if not found_by_predicted_stepping:
+        if not found_by_detected_stepping:
             step_limit = 3
             step_count_y = 0
             for y in range(0, region_color.shape[0] - th, 1):
@@ -96,7 +96,7 @@ def multi_scale_match(
             best_match,
             best_val,
             best_scale,
-            "no-stepping" if found_by_predicted_stepping else "stepping",
+            "no-stepping" if found_by_detected_stepping else "stepping",
         )
     else:
         return None

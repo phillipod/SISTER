@@ -21,7 +21,7 @@ class PrefilterIconsStage(PipelineStage):
         hash_index = self.app_config.get("hash_index")
         method = self.opts["method"].lower()
 
-        print(f"[Prefilter] Using method: {method}")
+        #print(f"[Prefilter] Using method: {method}")
 
         try:
             self.strategy = STRATEGY_CLASSES[method](hash_index=hash_index)
@@ -39,10 +39,10 @@ class PrefilterIconsStage(PipelineStage):
         icon_set = icon_sets[ctx.classification["icon_set"]]
 
         (
-            ctx.predicted_icons,
+            ctx.prefiltered_icons,
             ctx.found_icons,
             ctx.filtered_icons,
-        ) = self.strategy.icon_predictions(ctx.slots, icon_set)
+        ) = self.strategy.prefilter(ctx.slots, icon_set)
 
         report(self.name, 1.0)
-        return StageOutput(ctx, ctx.predicted_icons)
+        return StageOutput(ctx, ctx.prefiltered_icons)

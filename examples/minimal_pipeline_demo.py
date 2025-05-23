@@ -51,7 +51,7 @@ def on_stage_complete(stage, ctx, output):
         print(f"[Callback] [on_stage_complete] [{stage}] ") #Found {len(ctx.matches)} matches") # 
         return
     elif stage == 'prefilter_icons':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_icons)} matches")
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.prefiltered_icons)} matches")
         return
     elif stage == 'output_transformation':
         print(f"[Callback] [on_stage_complete] [{stage}]")
