@@ -4,8 +4,8 @@ from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..components.label_locator import LabelLocator
 
 
-class LabelLocatorStage(PipelineStage):
-    name = "label_locator"
+class LocateLabelsStage(PipelineStage):
+    name = "locate_labels"
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         super().__init__(opts, app_config)

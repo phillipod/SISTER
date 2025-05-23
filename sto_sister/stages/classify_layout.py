@@ -4,8 +4,8 @@ from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..components.layout_classifier import LayoutClassifier
 
 
-class LayoutClassifierStage(PipelineStage):
-    name = "layout_classifier"
+class ClassifyLayoutStage(PipelineStage):
+    name = "classify_layout"
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         super().__init__(opts, app_config)

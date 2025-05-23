@@ -20,11 +20,11 @@ setup_logging()
 
 def on_progress(stage, pct, ctx): 
     return ctx
-    if stage == "label_locator":
+    if stage == "locate_labels":
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.labels}%")
     elif stage == 'icon_group_locator':
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.icon_groups}%")
-    elif stage == 'layout_classifier':
+    elif stage == 'classify_layout':
         print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.classification}%")
 
 
@@ -32,13 +32,13 @@ def on_stage_start(stage, ctx):
     print(f"[Callback] [on_stage_start] [{stage}]")
 
 def on_stage_complete(stage, ctx, output):
-    if stage == 'label_locator':
+    if stage == 'locate_labels':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.labels)} labels")
         return
     elif stage == 'icon_group_locator':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.icon_groups)} icon groups")
         return
-    elif stage == 'layout_classifier':
+    elif stage == 'classify_layout':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.classification)} matches")   
         return
     elif stage == 'icon_slot_locator':

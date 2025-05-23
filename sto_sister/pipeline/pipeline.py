@@ -15,8 +15,8 @@ from ..exceptions import *
 from ..utils.hashindex import HashIndex
 
 from ..stages import (
-    LabelLocatorStage,
-    LayoutClassifierStage,
+    LocateLabelsStage,
+    ClassifyLayoutStage,
     IconGroupLocatorStage,
     IconSlotLocatorStage,
     IconPrefilterStage,
@@ -48,8 +48,8 @@ class SISTER:
         self.app_init()
 
         self.stages: List[PipelineStage] = [
-            LabelLocatorStage(config.get("label_locator", {"debug": True}), self.app_config),
-            LayoutClassifierStage(config.get("layout_classifier", {}), self.app_config),
+            LocateLabelsStage(config.get("locate_labels", {"debug": True}), self.app_config),
+            ClassifyLayoutStage(config.get("classify_layout", {}), self.app_config),
             IconGroupLocatorStage(config.get("icon_group", {}), self.app_config),
             IconSlotLocatorStage(config.get("icon_slot", {}), self.app_config),
             IconPrefilterStage(
