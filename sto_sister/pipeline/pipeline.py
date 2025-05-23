@@ -7,6 +7,7 @@ import time
 import numpy as np
 
 from pathlib import Path
+import logging
 
 # --- Import modules ---
 from .core import *
@@ -25,6 +26,7 @@ from ..stages import (
     OutputTransformationStage,
 )
 
+logger = logging.getLogger(__name__)
 
 # --- The Pipeline Orchestrator ---
 class SISTER:
@@ -73,7 +75,7 @@ class SISTER:
         self.on_pipeline_complete = on_pipeline_complete
 
     def app_init(self) -> None:
-        print(f"Initializing SISTER with config: {self.config}")
+        logger.info(f"Initializing SISTER with config: {self.config}")
         self.app_config["hash_index"] = HashIndex(
             self.config.get("hash_index_dir"),
             self.config.get("engine", "phash"),
