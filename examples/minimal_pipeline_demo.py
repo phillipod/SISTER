@@ -44,7 +44,7 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'icon_slot_locator':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.slots)}") # slots: {ctx.slots}")
         #return
-    elif stage == 'icon_quality_detection':
+    elif stage == 'icon_overlay_detector':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.predicted_qualities)}")
         return
     elif stage == 'icon_matching':

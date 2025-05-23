@@ -20,7 +20,7 @@ from ..stages import (
     IconGroupLocatorStage,
     IconSlotLocatorStage,
     IconPrefilterStage,
-    IconMatchingQualityDetectionStage,
+    IconOverlayDetectorStage,
     IconMatchingStage,
     OutputTransformationStage,
 )
@@ -55,7 +55,7 @@ class SISTER:
             IconPrefilterStage(
                 config.get("prefilter", {"debug": True}), self.app_config
             ),
-            IconMatchingQualityDetectionStage(
+            IconOverlayDetectorStage(
                 config.get("quality", {}), self.app_config
             ),
             IconMatchingStage(config.get("matching", {}), self.app_config),

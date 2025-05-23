@@ -38,7 +38,7 @@ class IconMatcher:
                         icons[filename] = icon
         return icons
 
-    def load_quality_overlays(self, overlay_folder):
+    def load_overlays(self, overlay_folder):
         overlays = {}
         for name in [
             "common.png",

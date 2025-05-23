@@ -14,7 +14,7 @@ from sto_sister.exceptions import SISTERError, PipelineError, StageError
 
 from sto_sister.cargo import CargoDownloader
 from sto_sister.utils.hashindex import HashIndex
-from sto_sister.utils.image import load_image, load_quality_overlays
+from sto_sister.utils.image import load_image, load_overlays
 
 import traceback
 
@@ -46,7 +46,7 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'icon_slot_locator':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots") #
         return
-    elif stage == 'icon_quality_detection':
+    elif stage == 'icon_overlay_detector':
         print(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("quality") != "common")} icon overlays")
         return
     elif stage == 'icon_matching':
@@ -274,7 +274,7 @@ if __name__ == "__main__":
             
             icon_root = Path(args.icons)
             hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
-            overlays = load_quality_overlays(args.overlays)  # Must return dict of quality -> RGBA overlay np.array
+            overlays = load_overlays(args.overlays)  # Must return dict of quality -> RGBA overlay np.array
             hash_index.build_with_overlays(overlays)
 
             print(f"[DONE] Built PHash index with {len(hash_index.hashes)} entries.")

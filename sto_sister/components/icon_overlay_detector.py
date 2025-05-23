@@ -19,7 +19,7 @@ from ..metrics.mean_hue import classify_overlay_by_patch
 logger = logging.getLogger(__name__)
 
 
-class OverlayDetector:
+class IconOverlayDetector:
     def __init__(
         self, debug=False, icon_loader=None, overlay_loader=None, hash_index=None
     ):
@@ -28,7 +28,7 @@ class OverlayDetector:
         """
         self.debug = debug
         self.load_icons = icon_loader
-        self.load_quality_overlays = overlay_loader
+        self.load_overlays = overlay_loader
         self.hash_index = hash_index
 
     def quality_predictions(
