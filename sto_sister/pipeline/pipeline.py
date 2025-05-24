@@ -84,7 +84,7 @@ class SISTER:
         )
 
         self.app_config["log_level"] = self.config.get("log_level", "INFO")
-        
+
         icon_root = Path(self.config.get("icon_dir"))
 
         self.app_config["icon_sets"] = {
@@ -150,6 +150,18 @@ class SISTER:
                 "Devices": [icon_root / "ground/device"],
                 "Weapon": [icon_root / "ground/weapon"],
             },
+
+            "traits": {
+                "Personal Space Traits": [ icon_root / "space/traits/personal" ],
+                "Space Reputation": [ icon_root / "space/traits/reputation" ],
+                "Active Space Reputation": [ icon_root / "space/traits/active_reputation" ],
+
+                "Personal Ground Traits": [ icon_root / "ground/traits/personal" ],
+                "Ground Reputation": [ icon_root / "ground/traits/reputation" ],
+                "Active Ground Reputation": [ icon_root / "ground/traits/active_reputation" ],
+
+                "Starship Traits": [ icon_root / "space/traits/starship" ],
+            }
         }
 
     def start_metric(self, name: str) -> None:

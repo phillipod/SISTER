@@ -21,7 +21,7 @@ class LocateIconGroupsStage(PipelineStage):
         #     ctx.screenshot, ctx.labels, ctx.classification
         # )
         # Batch icon groups across screenshots
-        print("ctx.classification", ctx.classification)
+        # print("ctx.classification", ctx.classification)
         ctx.icon_groups_list = [
             self.detector.locate_icon_groups(img, labels, cls)
             for img, labels, cls in zip(ctx.screenshots, ctx.labels_list, ctx.classifications)
@@ -33,7 +33,7 @@ class LocateIconGroupsStage(PipelineStage):
 
         ctx.icon_groups = merged
 
-        print("ctx.icon_groups", ctx.icon_groups)
+        # print("ctx.icon_groups", ctx.icon_groups)
 
         report(self.name, 1.0)
         return StageOutput(ctx, ctx.icon_groups)

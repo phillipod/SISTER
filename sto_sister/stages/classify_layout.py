@@ -39,7 +39,7 @@ class ClassifyLayoutStage(PipelineStage):
         ctx.classifications = []
         for result in raw_classifications:
             # result: Dict[build_type, {'score': float, 'is_required': bool}]
-            print (f"result: {result}")
+            # print (f"result: {result}")
 
             winning_classifications = []
             # 2) Pick the highest‐scoring build_type
@@ -99,24 +99,36 @@ class ClassifyLayoutStage(PipelineStage):
         # 5) Stash your main build
         ctx.classification = ctx.classifications[ctx.main_index][0]
 
-        print (f"ctx.classifications: {ctx.classifications}")
+        # print (f"ctx.classifications: {ctx.classifications}")
         # Attach icon_set for each classification
         bt = ctx.classification["build_type"]
+
+        if bt == "PC Ship Build":
+            ctx.classification["icon_set"] = "ship"
+            ctx.classification["platform"] = "pc"
+        elif bt == "Console Ship Build":
+            ctx.classification["icon_set"] = "ship"
+            ctx.classification["platform"] = "console"
+        elif bt == "PC Ground Build":
+            ctx.classification["icon_set"] = "pc_ground"
+            ctx.classification["platform"] = "pc"
+        elif bt == "Console Ground Build":
+            ctx.classification["icon_set"] = "console_ground"
+            ctx.classification["platform"] = "console"
+        
         for run_winners in ctx.classifications:
             for c in run_winners:
-                if bt in ("PC Ship Build"):
-                    c["icon_set"] = "ship"
-                    c["platform"] = "pc"
-                elif bt in ("Console Ship Build"):
-                    c["icon_set"] = "ship"
-                    c["platform"] = "console"
-                elif bt in ("PC Ground Build"):
-                    c["icon_set"] = "pc_ground"
-                    c["platform"] = "pc"
-                elif bt in ("Console Ground Build"):
-                    c["icon_set"] = "console_ground"
-                    c["platform"] = "console"
+                # print (f"c: {c}")
+                if "icon_set" in c and "platform" in c:
+                    continue
 
+                c["platform"] = ctx.classification["platform"]
+
+                if c["build_type"] in ("Personal Space Traits", "Personal Ground Traits", "Space Reputation", "Ground Reputation", "Active Space Reputation", "Active Ground Reputation", "Starship Traits"):
+                    c["icon_set"] = "traits"
+
+
+        # print(f"ctx.classifications: {ctx.classifications}")
         # if (
         #     ctx.classification["build_type"] == "PC Ship Build"
         #     or ctx.classification["build_type"] == "Console Ship Build"

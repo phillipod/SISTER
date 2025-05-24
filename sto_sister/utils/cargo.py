@@ -270,14 +270,38 @@ class CargoDownloader:
 
         data = self.load(cargo_type)
 
-        if filters:
-            matching_items = [
-                item
-                for item in data
-                if all(item.get(k) == v for k, v in filters.items())
-            ]
-        else:
-            matching_items = data
+        def item_matches(item):
+            for key, raw_val in (filters or {}).items():
+                val = item.get(key)
+
+                # explicit None filter: only include items where val is None
+                if raw_val is None:
+                    if val is not None:
+                        return False
+                    continue
+
+                # normalize the filter values into a list
+                if isinstance(raw_val, str):
+                    parts = [p.strip() for p in raw_val.split(',') if p.strip()]
+                elif isinstance(raw_val, (list, tuple)):
+                    parts = list(raw_val)
+                else:
+                    parts = [raw_val]
+
+                # split into inclusions and exclusions
+                includes = [p for p in parts if not (isinstance(p, str) and p.startswith('!'))]
+                excludes = [p[1:] for p in parts if isinstance(p, str) and p.startswith('!')]
+
+                # if we have any includes, val must be one of them
+                if includes and val not in includes:
+                    return False
+                # if we have any excludes, val must _not_ be any of them
+                if excludes and val in excludes:
+                    return False
+
+            return True
+
+        matching_items = [item for item in data if item_matches(item)]
 
         logger.info(
             f"Downloading {len(matching_items)} {cargo_type} icons into {dest_dir}..."

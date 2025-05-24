@@ -135,7 +135,7 @@ class IconDetector:
                         )
                         args_list.append(args)
 
-            with ThreadPoolExecutor() as executor:
+            with ProcessPoolExecutor() as executor:
                 for result in executor.map(
                     self.match_single_icon, args_list, chunksize=100
                 ):
@@ -273,7 +273,7 @@ class IconDetector:
             # print(f"Detected overlay: {detected_overlay}")
             overlay = detected_overlay["overlay"]
             overlay_scale = detected_overlay["scale"]
-            overlay_method =detected_overlay["method"]
+            overlay_method = detected_overlay["method"]
 
             overlay_steps =None
             if (
@@ -305,21 +305,37 @@ class IconDetector:
 
             best_match = None
             method = "ssim-all-overlays-all-scales-fallback"
-            overlay_used =overlay
+            overlay_used = overlay
 
             if overlay == "common":
                 best_score = -np.inf
-                for overlay_name, overlay_img in overlays.items():
-                    blended_icon = apply_overlay(icon_color, overlay_img)
-                    match = multi_scale_match(
-                        name, roi, blended_icon, threshold=threshold
+
+                if icon_group_label in ("Personal Space Traits", "Personal Ground Traits", "Starship Traits", "Space Reputation", "Ground Reputation", "Active Space Reputation", "Active Ground Reputation"):
+                    scales = np.linspace(0.6, 0.7, 11)
+                    method = (
+                        "ssim-detected-overlays-all-scales"
                     )
 
-                    if match and match[2] > best_score:
-                        best_score = match[2]
-                        best_match = match
-                        overlay_used = overlay_name
-                        method_suffix = match[4]
+                    best_match = multi_scale_match(
+                        name,
+                        roi,
+                        icon_color,
+                        scales=scales,
+                        threshold=threshold,
+                    )
+
+                else:
+                    for overlay_name, overlay_img in overlays.items():
+                        blended_icon = apply_overlay(icon_color, overlay_img)
+                        match = multi_scale_match(
+                            name, roi, blended_icon, threshold=threshold
+                        )
+
+                        if match and match[2] > best_score:
+                            best_score = match[2]
+                            best_match = match
+                            overlay_used = overlay_name
+                            method_suffix = match[4]
 
                 # print(f"overlay==common: best_match: {best_match} best_score: {best_score} overlay_used:{overlay_used}")
             else:

@@ -411,11 +411,43 @@ ICON_GROUP_LOCATION_RULES = {
         ],
     },
 
-    "Personal Space Traits": {
+    "Starship Traits": {
         "platform": {
             "pc": {
                 "variables": {
                     "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Starship Traits.bottom", "label:Starship Traits.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Starship Traits": {
+                            "x1": {"subtract": ["label:Starship Traits.left", {"multiply": ["padding", 2.5]}]}, 
+                            "x2": {"add": ["label:Starship Traits.right", {"multiply": ["padding", 2.5]}]}, 
+                            "y1": "label:Starship Traits.bottom",
+                            "height": { "multiply": ["line_height", 2.75] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+
+            },
+        }
+    },
+
+    "Personal Space Traits": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 30,
                     "vertical_padding": 5,
                     "line_height": {
                         "multiply": [
@@ -438,10 +470,300 @@ ICON_GROUP_LOCATION_RULES = {
                 ],
             },
             "console": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Personal Space Traits.bottom", "label:Personal Space Traits.top"]},
+                                "vertical_padding",
+                            ] }, 2.125 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Personal Space Traits": {
+                            "x1": {"subtract": ["label:Personal Space Traits.left", {"multiply": ["padding", 0]}]}, 
+                            "x2": {"add": ["label:Personal Space Traits.right", {"multiply": ["padding", 4.5]}]}, 
+                            "y1": "label:Personal Space Traits.bottom",
+                            "height": { "multiply": ["line_height", 3] },
+                        }
+                    },                    
+                ],
+            },
+        }
+    },
+
+    "Space Reputation": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Space Reputation.bottom", "label:Space Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Space Reputation": {
+                            "x1": {"subtract": ["label:Space Reputation.left", {"multiply": ["padding", 2.25]}]}, 
+                            "x2": {"add": ["label:Space Reputation.right", {"multiply": ["padding", 2.25]}]}, 
+                            "y1": "label:Space Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1.25] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Space Reputation.bottom", "label:Space Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.125 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Space Reputation": {
+                            "x1": {"subtract": ["label:Space Reputation.left", {"multiply": ["padding", 0]}]}, 
+                            "x2": {"add": ["label:Space Reputation.right", {"multiply": ["padding", 7]}]}, 
+                            "y1": "label:Space Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1] },
+                        }
+                    },                    
+                ],
 
             },
         }
-    }
+    },
+
+    "Active Space Reputation": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": { 
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Active Space Reputation.bottom", "label:Active Space Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Active Space Reputation": {
+                            "x1": {"subtract": ["label:Active Space Reputation.left", {"multiply": ["padding", 1]}]}, 
+                            "x2": {"add": ["label:Active Space Reputation.right", {"multiply": ["padding", 1]}]}, 
+                            "y1": "label:Active Space Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1.25] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Active Space Reputation.bottom", "label:Active Space Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.125 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Active Space Reputation": {
+                            "x1": {"subtract": ["label:Active Space Reputation.left", {"multiply": ["padding", 0]}]}, 
+                            "x2": {"add": ["label:Active Space Reputation.right", {"multiply": ["padding", 4]}]}, 
+                            "y1": "label:Active Space Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1] },
+                        }
+                    },                    
+                ],
+            },
+        }
+    },
+
+    "Personal Ground Traits": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 30,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Personal Ground Traits.bottom", "label:Personal Ground Traits.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Personal Ground Traits": {
+                            "x1": {"subtract": ["label:Personal Ground Traits.left", "padding"]},
+                            "x2": {"add": ["label:Personal Ground Traits.right", "padding"]},
+                            "y1": "label:Personal Ground Traits.bottom",
+                            "height": { "multiply": ["line_height", 3] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Personal Ground Traits.bottom", "label:Personal Ground Traits.top"]},
+                                "vertical_padding",
+                            ] }, 2.125 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Personal Ground Traits": {
+                            "x1": {"subtract": ["label:Personal Ground Traits.left", {"multiply": ["padding", 0]}]}, 
+                            "x2": {"add": ["label:Personal Ground Traits.right", {"multiply": ["padding", 4]}]}, 
+                            "y1": "label:Personal Ground Traits.bottom",
+                            "height": { "multiply": ["line_height", 3] },
+                        }
+                    },                    
+                ],
+            },
+        }
+    },
+
+    "Ground Reputation": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Ground Reputation.bottom", "label:Ground Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Ground Reputation": {
+                            "x1": {"subtract": ["label:Ground Reputation.left", {"multiply": ["padding", 2.25]}]}, 
+                            "x2": {"add": ["label:Ground Reputation.right", {"multiply": ["padding", 2.25]}]}, 
+                            "y1": "label:Ground Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1.25] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Ground Reputation.bottom", "label:Ground Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.125 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Ground Reputation": {
+                            "x1": {"subtract": ["label:Ground Reputation.left", {"multiply": ["padding", 0]}]}, 
+                            "x2": {"add": ["label:Ground Reputation.right", {"multiply": ["padding", 6]}]}, 
+                            "y1": "label:Ground Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1] },
+                        }
+                    },                    
+                ],
+
+            },
+        }
+    },
+
+    "Active Ground Reputation": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": { 
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Active Ground Reputation.bottom", "label:Active Ground Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Active Ground Reputation": {
+                            "x1": {"subtract": ["label:Active Ground Reputation.left", {"multiply": ["padding", 1]}]}, 
+                            "x2": {"add": ["label:Active Ground Reputation.right", {"multiply": ["padding", 1]}]}, 
+                            "y1": "label:Active Ground Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1.25] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Active Ground Reputation.bottom", "label:Active Ground Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.125 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Active Ground Reputation": {
+                            "x1": {"subtract": ["label:Active Ground Reputation.left", {"multiply": ["padding", 0]}]}, 
+                            "x2": {"add": ["label:Active Ground Reputation.right", {"multiply": ["padding", 3]}]}, 
+                            "y1": "label:Active Ground Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1] },
+                        }
+                    },                    
+                ],
+            },
+        }
+    },
+
+
 }
 
 
@@ -493,7 +815,7 @@ class IconGroupLocator:
             bt = info.get("build_type", "Unknown")
             platform = info.get("platform", "Unknown")
 
-            print(f"locating icon groups for build: {bt}")
+            # print(f"locating icon groups for build: {bt}")
 
             if bt not in ICON_GROUP_LOCATION_RULES:
                 logger.warning(f"Unsupported build type: {bt}")
@@ -513,7 +835,7 @@ class IconGroupLocator:
                     },
                 }
 
-        self._draw_debug_icon_groups(image, merged, f"output/icon_groups{bt}.png")
+        #self._draw_debug_icon_groups(image, merged, f"output/icon_groups{bt}.png")
 
         return merged
 
@@ -857,8 +1179,8 @@ class IconGroupLocator:
 
         # if the rule has a platform field, it is a dict that contains the rule we actually want to run, based on platform
         if "platform" in rule and platform in rule["platform"]:
-            print(f"Using platform-specific rule for {platform}")
-            print(f"Rule: {rule['platform']}")
+            # print(f"Using platform-specific rule for {platform}")
+            # print(f"Rule: {rule['platform']}")
             rule = rule["platform"][platform]
 
         # compute all variables
@@ -971,9 +1293,9 @@ class IconGroupLocator:
         debug_image = image.copy()
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-        print(f"Drawing {len(icon_groups)} icon_groups")
-        print(f"image.shape: {image.shape}")
-        print(f"IconGroups: {icon_groups}")
+        # print(f"Drawing {len(icon_groups)} icon_groups")
+        # print(f"image.shape: {image.shape}")
+        # print(f"IconGroups: {icon_groups}")
         for label, entry in icon_groups.items():
             print(f"Label: {label}")
             print(f"Entry: {entry}")
