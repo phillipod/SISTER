@@ -35,7 +35,7 @@ def on_stage_start(stage, ctx):
 
 def on_stage_complete(stage, ctx, output):
     if stage == 'locate_labels':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.labels)} labels")
+        print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(label) for label in ctx.labels_list)} labels")
         return
     elif stage == 'locate_icon_groups':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.icon_groups)} icon groups")
@@ -161,7 +161,7 @@ def download_icons(icons_dir):
 
     return download_mappings
 
-def save_match_summary(output_dir, screenshot_path, matches):
+def save_match_summary(output_dir, output_prefix, matches):
     """
     Save the match results to a text file.
 
@@ -179,8 +179,7 @@ def save_match_summary(output_dir, screenshot_path, matches):
     Returns:
         None
     """
-    base_name = Path(screenshot_path).stem
-    output_file = Path(output_dir) / f"{base_name}_matches.txt"
+    output_file = Path(output_dir) / f"{output_prefix}_matches.txt"
 
     with open(output_file, "w") as f:
         for icon_group, slots in sorted(matches.items()):
@@ -250,14 +249,15 @@ if __name__ == "__main__":
     start_time = time.time()
 
     p = argparse.ArgumentParser()
-    p.add_argument("--screenshot", help="Path to screenshot")
+    p.add_argument("--screenshot", "-s", nargs="+", help="Path to screenshot")
     p.add_argument("--icons", default="images", help="Directory containing downloaded icons. Defaults to 'images' in current directory.")
     p.add_argument("--overlays", default="overlays", help="Directory containing icon overlay images. Defaults to 'overlays' in current directory.")
     p.add_argument("--log-level", default="INFO", help="Log level: DEBUG, VERBOSE, INFO, WARNING, ERROR")
     p.add_argument("--no-resize", action="store_true", help="Disable image downscaling to 1920x1080. Downscales only if screenshot is greater than 1920x1080.")
     p.add_argument("--download", action="store_true", help="Download icon data from STO Wiki. Exit after.")
     p.add_argument("--build-phash-cache", action="store_true", help="Build a perceptual hash (phash) cache for all icons.")
-    p.add_argument("--output", default="output", help="Directory to store output summaries. Defaults to 'output' in current directory.")
+    p.add_argument("--output_dir", default="output", help="Directory to store output summaries. Defaults to 'output' in current directory.")
+    p.add_argument("--output", "-o", help="Output file prefix to save match summary to. Must be specified if more than one screenshot is provided.")
 
     args = p.parse_args()
 
@@ -281,15 +281,22 @@ if __name__ == "__main__":
 
         exit(0)
 
-    if args.screenshot is None:
+    if len(args.screenshot) == 1 and args.output is None:
+        args.output = Path(args.screenshot[0]).stem
+
+
+    if args.screenshot is None or args.output is None:
         p.print_help()
         exit(1)
 
 
     # 1. load image
-    img = load_image(args.screenshot, resize_fullhd=not args.no_resize)
+    images = [
+        load_image(path, resize_fullhd=not args.no_resize)
+        for path in args.screenshot
+    ]
     
-    if img is None:
+    if images is None:
         raise RuntimeError("Could not read image")
 
 
@@ -316,8 +323,8 @@ if __name__ == "__main__":
     # 3. build & run
     try:
         pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
-        result: PipelineState = pipeline.run(img)
-        save_match_summary(args.output, args.screenshot, result[1]["detect_icons"])
+        result: PipelineState = pipeline.run(images)
+        save_match_summary(args.output_dir, args.output, result[1]["detect_icons"])
     except SISTERError as e:
         print(e)
         import sys

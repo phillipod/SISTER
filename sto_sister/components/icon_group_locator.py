@@ -449,58 +449,65 @@ class IconGroupLocator:
         Returns:
             dict: Mapping of label name to {'Label': <bbox>, 'IconGroup': <roi bbox>}.
         """
+        # ensure we have a list of build dicts
+        builds = build_info if isinstance(build_info, list) else [build_info]
+
         gray = self._preprocess_grayscale(image)
         dilated = self._apply_dilation(gray)
         contours = self._find_contours(dilated)
 
-        # if self.debug and debug_output_path:
-        #     base, _ = os.path.splitext(debug_output_path)
-        #     os.makedirs(os.path.dirname(base), exist_ok=True)
-        #     cv2.imwrite(f"{base}_gray.png", gray)
-        #     cv2.imwrite(f"{base}_dilated.png", dilated)
-        #     debug_contours = cv2.cvtColor(dilated.copy(), cv2.COLOR_GRAY2BGR)
-        #     cv2.drawContours(debug_contours, contours, -1, (0, 255, 0), 1)
-        #     cv2.imwrite(f"{base}_contours.png", debug_contours)
+        merged: Dict[str, Dict[str, Any]] = {}
+        for info in builds:
+            bt = info.get("build_type", "Unknown")
+            print(f"locating icon groups for build: {bt}")
 
-        build_type = build_info.get("build_type", "Unknown")
-        icon_group_boxes = {}
+            if bt not in ICON_GROUP_LOCATION_RULES:
+                logger.warning(f"Unsupported build type: {bt}")
+                continue
 
-        # if build_type == "PC Ship Build":
-        #     #icon_group_boxes = self._detect_pc_ship_rois(label_positions, contours)
-        #     icon_group_boxes = self.compute_icon_groups(build_type, label_positions, contours)
-        # elif build_type == "PC Ground Build":
-        #     #icon_group_boxes = self._detect_pc_ground_rois(label_positions)
-        #     icon_group_boxes = self.compute_icon_groups(build_type, label_positions)
-        # elif build_type == "Console Ship Build":
-        #     #icon_group_boxes = self._detect_console_ship_rois(label_positions)
-        #     icon_group_boxes = self.compute_icon_groups(build_type, label_positions)
-        # else:
-        #     logger.warning(f"Unsupported build type: {build_type}")
-        #     return {}
+            # get raw icon‐group boxes for this build
+            icon_boxes = self.compute_icon_groups(bt, labels, contours)
 
-        if build_type in ICON_GROUP_LOCATION_RULES:
-            icon_group_boxes = self.compute_icon_groups(build_type, labels, contours)
-        else:
-            logger.warning(f"Unsupported build type: {build_type}")
-            raise IconGroupLocatorError(f"Unsupported build type: {build_type}")
-            return {}
+            # convert each into your merged format
+            for label, icon_group in icon_boxes.items():
+                label_box = labels[label]
+                merged[label] = {
+                    "Label": {key: [int(v[0]), int(v[1])] for key, v in label_box.items()},
+                    "IconGroup": {
+                        "top_left":     [int(icon_group["top_left"][0]),     int(icon_group["top_left"][1])],
+                        "bottom_right": [int(icon_group["bottom_right"][0]), int(icon_group["bottom_right"][1])]
+                    },
+                }
 
-        merged = {}
-        for label, icon_group in icon_group_boxes.items():
-            label_box = labels[label]
-            merged[label] = {
-                "Label": {key: [int(v[0]), int(v[1])] for key, v in label_box.items()},
-                "IconGroup": {
-                    "top_left": [
-                        int(icon_group["top_left"][0]),
-                        int(icon_group["top_left"][1]),
-                    ],
-                    "bottom_right": [
-                        int(icon_group["bottom_right"][0]),
-                        int(icon_group["bottom_right"][1]),
-                    ],
-                },
-            }
+        return merged
+
+#         print(f"build_info: {build_info}")
+#         build_type = build_info.get("build_type", "Unknown")
+#         icon_group_boxes = {}
+
+#         if build_type in ICON_GROUP_LOCATION_RULES:
+#             icon_group_boxes = self.compute_icon_groups(build_type, labels, contours)
+#         else:
+#             logger.warning(f"Unsupported build type: {build_type}")
+# #            raise IconGroupLocatorError(f"Unsupported build type: {build_type}")
+#             return {}
+
+#         merged = {}
+#         for label, icon_group in icon_group_boxes.items():
+#             label_box = labels[label]
+#             merged[label] = {
+#                 "Label": {key: [int(v[0]), int(v[1])] for key, v in label_box.items()},
+#                 "IconGroup": {
+#                     "top_left": [
+#                         int(icon_group["top_left"][0]),
+#                         int(icon_group["top_left"][1]),
+#                     ],
+#                     "bottom_right": [
+#                         int(icon_group["bottom_right"][0]),
+#                         int(icon_group["bottom_right"][1]),
+#                     ],
+#                 },
+#             }
 
         # if self.debug and debug_output_path:
         #    self._draw_debug_icon_groups(image, merged, debug_output_path)

@@ -17,9 +17,21 @@ class LocateIconGroupsStage(PipelineStage):
     ) -> StageOutput:
         report(self.name, 0.0)
 
-        ctx.icon_groups = self.detector.locate_icon_groups(
-            ctx.screenshot, ctx.labels, ctx.classification
-        )
+        # ctx.icon_groups = self.detector.locate_icon_groups(
+        #     ctx.screenshot, ctx.labels, ctx.classification
+        # )
+        # Batch icon groups across screenshots
+        print("ctx.classification", ctx.classification)
+        ctx.icon_groups_list = [
+            self.detector.locate_icon_groups(img, labels, cls)
+            for img, labels, cls in zip(ctx.screenshots, ctx.labels_list, ctx.classifications)
+        ]
+        # Merge all icon groups
+        merged = {}
+        for g in ctx.icon_groups_list:
+            merged.update(g)
+
+        ctx.icon_groups = merged
 
         report(self.name, 1.0)
         return StageOutput(ctx, ctx.icon_groups)

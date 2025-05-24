@@ -164,11 +164,11 @@ class SISTER:
             for name, metric in self.metrics.items()
         ]
 
-    def run(self, screenshot: np.ndarray) -> PipelineState:
+    def run(self, screenshots: List[np.ndarray]) -> PipelineState:
         self.start_metric("pipeline")
 
         ctx = PipelineState(
-            screenshot=screenshot, config=self.config, app_config=self.app_config
+            screenshots=screenshots, config=self.config, app_config=self.app_config
         )
         results: Dict[str, Any] = {}
 

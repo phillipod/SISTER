@@ -19,7 +19,19 @@ class LocateIconSlotsStage(PipelineStage):
     ) -> StageOutput:
         report(self.name, 0.0)
 
-        ctx.slots = self.slot_locator.locate_slots(ctx.screenshot, ctx.icon_groups)
+        # ctx.slots = self.slot_locator.locate_slots(ctx.screenshot, ctx.icon_groups)
+        ctx.slots_list = [
+            self.slot_locator.locate_slots(img, ig)
+            for img, ig in zip(ctx.screenshots, ctx.icon_groups_list)
+        ]
+
+        # Merge all slots per group
+        merged = {}
+        for slots in ctx.slots_list:
+            for label, data in slots.items():
+                merged.setdefault(label, []).extend(data)
+
+        ctx.slots = merged
 
         report(self.name, 1.0)
         return StageOutput(ctx, ctx.slots)
