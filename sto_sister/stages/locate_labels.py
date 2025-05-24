@@ -15,6 +15,11 @@ class LocateLabelsStage(PipelineStage):
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
         report(self.name, 0.0)
-        ctx.labels = self.label_locator.locate_labels(ctx.screenshot)
+
+        ctx.labels_list = [
+            self.label_locator.locate_labels(image)
+            for image in ctx.screenshots
+        ]
+        
         report(self.name, 1.0)
-        return StageOutput(ctx, ctx.labels)
+        return StageOutput(ctx, ctx.labels_list)

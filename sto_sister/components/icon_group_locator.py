@@ -410,6 +410,360 @@ ICON_GROUP_LOCATION_RULES = {
             },
         ],
     },
+
+    "Starship Traits": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Starship Traits.bottom", "label:Starship Traits.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Starship Traits": {
+                            "x1": {"subtract": ["label:Starship Traits.left", {"multiply": ["padding", 2.5]}]}, 
+                            "x2": {"add": ["label:Starship Traits.right", {"multiply": ["padding", 2.5]}]}, 
+                            "y1": "label:Starship Traits.bottom",
+                            "height": { "multiply": ["line_height", 2.75] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+
+            },
+        }
+    },
+
+    "Personal Space Traits": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 30,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Personal Space Traits.bottom", "label:Personal Space Traits.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Personal Space Traits": {
+                            "x1": {"subtract": ["label:Personal Space Traits.left", "padding"]},
+                            "x2": {"add": ["label:Personal Space Traits.right", "padding"]},
+                            "y1": "label:Personal Space Traits.bottom",
+                            "height": { "multiply": ["line_height", 3] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Personal Space Traits.bottom", "label:Personal Space Traits.top"]},
+                                "vertical_padding",
+                            ] }, 2.125 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Personal Space Traits": {
+                            "x1": {"subtract": ["label:Personal Space Traits.left", {"multiply": ["padding", 0]}]}, 
+                            "x2": {"add": ["label:Personal Space Traits.right", {"multiply": ["padding", 4.5]}]}, 
+                            "y1": "label:Personal Space Traits.bottom",
+                            "height": { "multiply": ["line_height", 3] },
+                        }
+                    },                    
+                ],
+            },
+        }
+    },
+
+    "Space Reputation": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Space Reputation.bottom", "label:Space Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Space Reputation": {
+                            "x1": {"subtract": ["label:Space Reputation.left", {"multiply": ["padding", 2.25]}]}, 
+                            "x2": {"add": ["label:Space Reputation.right", {"multiply": ["padding", 2.25]}]}, 
+                            "y1": "label:Space Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1.25] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Space Reputation.bottom", "label:Space Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.125 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Space Reputation": {
+                            "x1": {"subtract": ["label:Space Reputation.left", {"multiply": ["padding", 0]}]}, 
+                            "x2": {"add": ["label:Space Reputation.right", {"multiply": ["padding", 7]}]}, 
+                            "y1": "label:Space Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1] },
+                        }
+                    },                    
+                ],
+
+            },
+        }
+    },
+
+    "Active Space Reputation": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": { 
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Active Space Reputation.bottom", "label:Active Space Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Active Space Reputation": {
+                            "x1": {"subtract": ["label:Active Space Reputation.left", {"multiply": ["padding", 1]}]}, 
+                            "x2": {"add": ["label:Active Space Reputation.right", {"multiply": ["padding", 1]}]}, 
+                            "y1": "label:Active Space Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1.25] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Active Space Reputation.bottom", "label:Active Space Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.125 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Active Space Reputation": {
+                            "x1": {"subtract": ["label:Active Space Reputation.left", {"multiply": ["padding", 0]}]}, 
+                            "x2": {"add": ["label:Active Space Reputation.right", {"multiply": ["padding", 4]}]}, 
+                            "y1": "label:Active Space Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1] },
+                        }
+                    },                    
+                ],
+            },
+        }
+    },
+
+    "Personal Ground Traits": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 30,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Personal Ground Traits.bottom", "label:Personal Ground Traits.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Personal Ground Traits": {
+                            "x1": {"subtract": ["label:Personal Ground Traits.left", "padding"]},
+                            "x2": {"add": ["label:Personal Ground Traits.right", "padding"]},
+                            "y1": "label:Personal Ground Traits.bottom",
+                            "height": { "multiply": ["line_height", 3] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Personal Ground Traits.bottom", "label:Personal Ground Traits.top"]},
+                                "vertical_padding",
+                            ] }, 2.125 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Personal Ground Traits": {
+                            "x1": {"subtract": ["label:Personal Ground Traits.left", {"multiply": ["padding", 0]}]}, 
+                            "x2": {"add": ["label:Personal Ground Traits.right", {"multiply": ["padding", 4]}]}, 
+                            "y1": "label:Personal Ground Traits.bottom",
+                            "height": { "multiply": ["line_height", 3] },
+                        }
+                    },                    
+                ],
+            },
+        }
+    },
+
+    "Ground Reputation": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Ground Reputation.bottom", "label:Ground Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Ground Reputation": {
+                            "x1": {"subtract": ["label:Ground Reputation.left", {"multiply": ["padding", 2.25]}]}, 
+                            "x2": {"add": ["label:Ground Reputation.right", {"multiply": ["padding", 2.25]}]}, 
+                            "y1": "label:Ground Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1.25] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Ground Reputation.bottom", "label:Ground Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.125 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Ground Reputation": {
+                            "x1": {"subtract": ["label:Ground Reputation.left", {"multiply": ["padding", 0]}]}, 
+                            "x2": {"add": ["label:Ground Reputation.right", {"multiply": ["padding", 6]}]}, 
+                            "y1": "label:Ground Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1] },
+                        }
+                    },                    
+                ],
+
+            },
+        }
+    },
+
+    "Active Ground Reputation": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": { 
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Active Ground Reputation.bottom", "label:Active Ground Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Active Ground Reputation": {
+                            "x1": {"subtract": ["label:Active Ground Reputation.left", {"multiply": ["padding", 1]}]}, 
+                            "x2": {"add": ["label:Active Ground Reputation.right", {"multiply": ["padding", 1]}]}, 
+                            "y1": "label:Active Ground Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1.25] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Active Ground Reputation.bottom", "label:Active Ground Reputation.top"]},
+                                "vertical_padding",
+                            ] }, 2.125 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Active Ground Reputation": {
+                            "x1": {"subtract": ["label:Active Ground Reputation.left", {"multiply": ["padding", 0]}]}, 
+                            "x2": {"add": ["label:Active Ground Reputation.right", {"multiply": ["padding", 3]}]}, 
+                            "y1": "label:Active Ground Reputation.bottom",
+                            "height": { "multiply": ["line_height", 1] },
+                        }
+                    },                    
+                ],
+            },
+        }
+    },
+
+
 }
 
 
@@ -449,58 +803,69 @@ class IconGroupLocator:
         Returns:
             dict: Mapping of label name to {'Label': <bbox>, 'IconGroup': <roi bbox>}.
         """
+        # ensure we have a list of build dicts
+        builds = build_info if isinstance(build_info, list) else [build_info]
+
         gray = self._preprocess_grayscale(image)
         dilated = self._apply_dilation(gray)
         contours = self._find_contours(dilated)
 
-        # if self.debug and debug_output_path:
-        #     base, _ = os.path.splitext(debug_output_path)
-        #     os.makedirs(os.path.dirname(base), exist_ok=True)
-        #     cv2.imwrite(f"{base}_gray.png", gray)
-        #     cv2.imwrite(f"{base}_dilated.png", dilated)
-        #     debug_contours = cv2.cvtColor(dilated.copy(), cv2.COLOR_GRAY2BGR)
-        #     cv2.drawContours(debug_contours, contours, -1, (0, 255, 0), 1)
-        #     cv2.imwrite(f"{base}_contours.png", debug_contours)
+        merged: Dict[str, Dict[str, Any]] = {}
+        for info in builds:
+            bt = info.get("build_type", "Unknown")
+            platform = info.get("platform", "Unknown")
 
-        build_type = build_info.get("build_type", "Unknown")
-        icon_group_boxes = {}
+            # print(f"locating icon groups for build: {bt}")
 
-        # if build_type == "PC Ship Build":
-        #     #icon_group_boxes = self._detect_pc_ship_rois(label_positions, contours)
-        #     icon_group_boxes = self.compute_icon_groups(build_type, label_positions, contours)
-        # elif build_type == "PC Ground Build":
-        #     #icon_group_boxes = self._detect_pc_ground_rois(label_positions)
-        #     icon_group_boxes = self.compute_icon_groups(build_type, label_positions)
-        # elif build_type == "Console Ship Build":
-        #     #icon_group_boxes = self._detect_console_ship_rois(label_positions)
-        #     icon_group_boxes = self.compute_icon_groups(build_type, label_positions)
-        # else:
-        #     logger.warning(f"Unsupported build type: {build_type}")
-        #     return {}
+            if bt not in ICON_GROUP_LOCATION_RULES:
+                logger.warning(f"Unsupported build type: {bt}")
+                continue
 
-        if build_type in ICON_GROUP_LOCATION_RULES:
-            icon_group_boxes = self.compute_icon_groups(build_type, labels, contours)
-        else:
-            logger.warning(f"Unsupported build type: {build_type}")
-            raise IconGroupLocatorError(f"Unsupported build type: {build_type}")
-            return {}
+            # get raw icon‐group boxes for this build
+            icon_boxes = self.compute_icon_groups(platform, bt, labels, contours)
 
-        merged = {}
-        for label, icon_group in icon_group_boxes.items():
-            label_box = labels[label]
-            merged[label] = {
-                "Label": {key: [int(v[0]), int(v[1])] for key, v in label_box.items()},
-                "IconGroup": {
-                    "top_left": [
-                        int(icon_group["top_left"][0]),
-                        int(icon_group["top_left"][1]),
-                    ],
-                    "bottom_right": [
-                        int(icon_group["bottom_right"][0]),
-                        int(icon_group["bottom_right"][1]),
-                    ],
-                },
-            }
+            # convert each into your merged format
+            for label, icon_group in icon_boxes.items():
+                label_box = labels[label]
+                merged[label] = {
+                    "Label": {key: [int(v[0]), int(v[1])] for key, v in label_box.items()},
+                    "IconGroup": {
+                        "top_left":     [int(icon_group["top_left"][0]),     int(icon_group["top_left"][1])],
+                        "bottom_right": [int(icon_group["bottom_right"][0]), int(icon_group["bottom_right"][1])]
+                    },
+                }
+
+        #self._draw_debug_icon_groups(image, merged, f"output/icon_groups{bt}.png")
+
+        return merged
+
+#         print(f"build_info: {build_info}")
+#         build_type = build_info.get("build_type", "Unknown")
+#         icon_group_boxes = {}
+
+#         if build_type in ICON_GROUP_LOCATION_RULES:
+#             icon_group_boxes = self.compute_icon_groups(build_type, labels, contours)
+#         else:
+#             logger.warning(f"Unsupported build type: {build_type}")
+# #            raise IconGroupLocatorError(f"Unsupported build type: {build_type}")
+#             return {}
+
+#         merged = {}
+#         for label, icon_group in icon_group_boxes.items():
+#             label_box = labels[label]
+#             merged[label] = {
+#                 "Label": {key: [int(v[0]), int(v[1])] for key, v in label_box.items()},
+#                 "IconGroup": {
+#                     "top_left": [
+#                         int(icon_group["top_left"][0]),
+#                         int(icon_group["top_left"][1]),
+#                     ],
+#                     "bottom_right": [
+#                         int(icon_group["bottom_right"][0]),
+#                         int(icon_group["bottom_right"][1]),
+#                     ],
+#                 },
+#             }
 
         # if self.debug and debug_output_path:
         #    self._draw_debug_icon_groups(image, merged, debug_output_path)
@@ -781,7 +1146,7 @@ class IconGroupLocator:
                 f"Evaluation error in expression '{expr}': {e}"
             ) from e
 
-    def compute_icon_groups(self, build_type, labels, contours=None):
+    def compute_icon_groups(self, platform, build_type, labels, contours=None):
         """
         Compute icon groups based on the build type rules and label positions.
 
@@ -811,6 +1176,14 @@ class IconGroupLocator:
         context["icon_groups"] = {}
 
         # print(f"labels: {labels}")
+
+        # if the rule has a platform field, it is a dict that contains the rule we actually want to run, based on platform
+        if "platform" in rule and platform in rule["platform"]:
+            # print(f"Using platform-specific rule for {platform}")
+            # print(f"Rule: {rule['platform']}")
+            rule = rule["platform"][platform]
+
+        # compute all variables
         for var, expr in rule.get("variables", {}).items():
             # print(f"Computing variable '{var}'")
             try:
@@ -920,9 +1293,9 @@ class IconGroupLocator:
         debug_image = image.copy()
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-        print(f"Drawing {len(icon_groups)} icon_groups")
-        print(f"image.shape: {image.shape}")
-        print(f"IconGroups: {icon_groups}")
+        # print(f"Drawing {len(icon_groups)} icon_groups")
+        # print(f"image.shape: {image.shape}")
+        # print(f"IconGroups: {icon_groups}")
         for label, entry in icon_groups.items():
             print(f"Label: {label}")
             print(f"Entry: {entry}")

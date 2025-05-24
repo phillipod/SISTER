@@ -83,6 +83,8 @@ class SISTER:
             output_file=self.config.get("hash_index_file", "hash_index.json"),
         )
 
+        self.app_config["log_level"] = self.config.get("log_level", "INFO")
+
         icon_root = Path(self.config.get("icon_dir"))
 
         self.app_config["icon_sets"] = {
@@ -148,6 +150,18 @@ class SISTER:
                 "Devices": [icon_root / "ground/device"],
                 "Weapon": [icon_root / "ground/weapon"],
             },
+
+            "traits": {
+                "Personal Space Traits": [ icon_root / "space/traits/personal" ],
+                "Space Reputation": [ icon_root / "space/traits/reputation" ],
+                "Active Space Reputation": [ icon_root / "space/traits/active_reputation" ],
+
+                "Personal Ground Traits": [ icon_root / "ground/traits/personal" ],
+                "Ground Reputation": [ icon_root / "ground/traits/reputation" ],
+                "Active Ground Reputation": [ icon_root / "ground/traits/active_reputation" ],
+
+                "Starship Traits": [ icon_root / "space/traits/starship" ],
+            }
         }
 
     def start_metric(self, name: str) -> None:
@@ -164,11 +178,11 @@ class SISTER:
             for name, metric in self.metrics.items()
         ]
 
-    def run(self, screenshot: np.ndarray) -> PipelineState:
+    def run(self, screenshots: List[np.ndarray]) -> PipelineState:
         self.start_metric("pipeline")
 
         ctx = PipelineState(
-            screenshot=screenshot, config=self.config, app_config=self.app_config
+            screenshots=screenshots, config=self.config, app_config=self.app_config
         )
         results: Dict[str, Any] = {}
 

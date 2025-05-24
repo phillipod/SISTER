@@ -138,6 +138,41 @@ SCORING_RULES = {
             },
         ],
     },
+
+    "Personal Ground Traits": {
+        "presence": {"labels": ["Personal Ground Traits"], "score": 10},
+        "trait_box": True,
+    },
+
+    "Personal Space Traits": {
+        "presence": {"labels": ["Personal Space Traits"], "score": 10},
+        "trait_box": True,
+    },
+
+    "Starship Traits": {
+        "presence": {"labels": ["Starship Traits"], "score": 10},
+        "trait_box": True,
+    },
+
+    "Space Reputation": {
+        "presence": {"labels": ["Space Reputation"], "score": 10},
+        "trait_box": True,
+    },
+
+    "Ground Reputation": {
+        "presence": {"labels": ["Ground Reputation"], "score": 10},
+        "trait_box": True,
+    },
+
+    "Active Space Reputation": {
+        "presence": {"labels": ["Active Space Reputation"], "score": 10},
+        "trait_box": True,
+    },
+
+    "Active Ground Reputation": {
+        "presence": {"labels": ["Active Ground Reputation"], "score": 10},
+        "trait_box": True,
+    },
 }
 
 
@@ -188,21 +223,34 @@ class LayoutClassifier:
             dict: A dictionary with the most likely build type and its score.
         """
 
-        scores = {
-            build_type: self._score_with_rules(label_positions, rules, build_type)
-            for build_type, rules in SCORING_RULES.items()
-        }
+        # scores = {
+        #     build_type: self._score_with_rules(label_positions, rules, build_type)
+        #     for build_type, rules in SCORING_RULES.items()
+        # }
 
-        best_match = max(scores.items(), key=lambda x: x[1])
+        # #best_match = max(scores.items(), key=lambda x: x[1])
+
+        # logger.info("Scoring breakdown:")
+        # for build_type, score in scores.items():
+        #     logger.info(f"  {build_type}: {score}")
+
+        # return scores
+
+        results: Dict[str, Dict[str, Any]] = {}
+        for build_type, rules in SCORING_RULES.items():
+            score, is_required = self._score_with_rules(label_positions, rules, build_type)
+            if score > 0:
+                results[build_type] = {"score": score, "is_required": is_required}
 
         logger.info("Scoring breakdown:")
-        for build_type, score in scores.items():
-            logger.info(f"  {build_type}: {score}")
+        for build_type, info in results.items():
+            logger.info(f"  {build_type}: score={info['score']}, is_required={info['is_required']}")
 
-        if best_match[1] == 0:
-            return {"build_type": "Unknown", "score": 0}
+        return results
+#        if best_match[1] == 0:
+#            return {"build_type": "Unknown", "score": 0}
 
-        return {"build_type": best_match[0], "score": best_match[1]}
+#        return {"build_type": best_match[0], "score": best_match[1]}
 
     def _score_with_rules(
         self,
@@ -229,7 +277,7 @@ class LayoutClassifier:
                     logger.info(
                         f"Disqualified '{build_type}': missing required label '{req_label}'"
                     )
-                    return 0
+                    return 0, False
 
         # Enforce excluded labels
         if "excluded" in rule_set:
@@ -238,9 +286,10 @@ class LayoutClassifier:
                     logger.info(
                         f"Disqualified '{build_type}': found excluded label '{excl_label}'"
                     )
-                    return 0
+                    return 0, False
 
         score = 0
+        is_required = False
 
         if "presence" in rule_set:
             presence = rule_set["presence"]
@@ -251,6 +300,9 @@ class LayoutClassifier:
             )
             score += presence_score
             logger.debug(f"Presence score: {presence_score}")
+
+        if 'trait_box' in rule_set and rule_set['trait_box'] is True:
+            is_required = True
 
         for bonus in rule_set.get("bonuses", []):
             if bonus["label"] in labels:
@@ -282,7 +334,7 @@ class LayoutClassifier:
                     score += cond["score"]
                     logger.debug(f"Horizontal alignment matched: +{cond['score']}")
 
-        return score
+        return score, is_required
 
     def _check_vertical_stack(
         self,
