@@ -256,6 +256,7 @@ if __name__ == "__main__":
     p.add_argument("--build-phash-cache", action="store_true", help="Build a perceptual hash (phash) cache for all icons.")
     p.add_argument("--output_dir", default="output", help="Directory to store output summaries. Defaults to 'output' in current directory.")
     p.add_argument("--output", "-o", help="Output file prefix to save match summary to. Must be specified if more than one screenshot is provided.")
+    p.add_argument("--gpu", action="store_true", help="Enable GPU usage for OCR.")
 
     args = p.parse_args()
 
@@ -306,7 +307,9 @@ if __name__ == "__main__":
     config = {
         "debug": True,
         "log_level": args.log_level,
-
+        "locate_labels": {
+            "gpu": args.gpu
+        },
         "prefilter_icons": {
             "method": "phash"
         },
