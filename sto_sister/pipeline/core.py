@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple, Optional, Union
 
+from log_config import setup_logging
+
 import numpy as np
 
 
@@ -59,6 +61,7 @@ class PipelineStage:
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         self.opts = opts
         self.app_config = app_config
+        setup_logging(self.app_config.get("log_level"))
 
     def run(
         self, ctx: PipelineState, report: Callable[[str, float], None]

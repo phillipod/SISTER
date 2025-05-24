@@ -83,6 +83,8 @@ class SISTER:
             output_file=self.config.get("hash_index_file", "hash_index.json"),
         )
 
+        self.app_config["log_level"] = self.config.get("log_level", "INFO")
+        
         icon_root = Path(self.config.get("icon_dir"))
 
         self.app_config["icon_sets"] = {

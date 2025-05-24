@@ -18,8 +18,6 @@ from sto_sister.utils.image import load_image, load_overlays
 
 import traceback
 
-setup_logging()
-
 def on_progress(stage, pct, ctx): 
     return ctx
     if stage == "locate_labels":
@@ -307,7 +305,8 @@ if __name__ == "__main__":
     # 2. assemble config dict
     config = {
         "debug": True,
-        
+        "log_level": args.log_level,
+
         "prefilter_icons": {
             "method": "phash"
         },

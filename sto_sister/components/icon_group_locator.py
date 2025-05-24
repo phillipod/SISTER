@@ -410,6 +410,38 @@ ICON_GROUP_LOCATION_RULES = {
             },
         ],
     },
+
+    "Personal Space Traits": {
+        "platform": {
+            "pc": {
+                "variables": {
+                    "padding": 20,
+                    "vertical_padding": 5,
+                    "line_height": {
+                        "multiply": [
+                            { "add": [
+                                {"subtract": ["label:Personal Space Traits.bottom", "label:Personal Space Traits.top"]},
+                                "vertical_padding",
+                            ] }, 2.25 
+                        ]
+                    },
+                },
+               "icon_groups": [
+                    {
+                        "Personal Space Traits": {
+                            "x1": {"subtract": ["label:Personal Space Traits.left", "padding"]},
+                            "x2": {"add": ["label:Personal Space Traits.right", "padding"]},
+                            "y1": "label:Personal Space Traits.bottom",
+                            "height": { "multiply": ["line_height", 3] },
+                        }
+                    },                    
+                ],
+            },
+            "console": {
+
+            },
+        }
+    }
 }
 
 
@@ -459,6 +491,8 @@ class IconGroupLocator:
         merged: Dict[str, Dict[str, Any]] = {}
         for info in builds:
             bt = info.get("build_type", "Unknown")
+            platform = info.get("platform", "Unknown")
+
             print(f"locating icon groups for build: {bt}")
 
             if bt not in ICON_GROUP_LOCATION_RULES:
@@ -466,7 +500,7 @@ class IconGroupLocator:
                 continue
 
             # get raw icon‐group boxes for this build
-            icon_boxes = self.compute_icon_groups(bt, labels, contours)
+            icon_boxes = self.compute_icon_groups(platform, bt, labels, contours)
 
             # convert each into your merged format
             for label, icon_group in icon_boxes.items():
@@ -478,6 +512,8 @@ class IconGroupLocator:
                         "bottom_right": [int(icon_group["bottom_right"][0]), int(icon_group["bottom_right"][1])]
                     },
                 }
+
+        self._draw_debug_icon_groups(image, merged, f"output/icon_groups{bt}.png")
 
         return merged
 
@@ -788,7 +824,7 @@ class IconGroupLocator:
                 f"Evaluation error in expression '{expr}': {e}"
             ) from e
 
-    def compute_icon_groups(self, build_type, labels, contours=None):
+    def compute_icon_groups(self, platform, build_type, labels, contours=None):
         """
         Compute icon groups based on the build type rules and label positions.
 
@@ -818,6 +854,14 @@ class IconGroupLocator:
         context["icon_groups"] = {}
 
         # print(f"labels: {labels}")
+
+        # if the rule has a platform field, it is a dict that contains the rule we actually want to run, based on platform
+        if "platform" in rule and platform in rule["platform"]:
+            print(f"Using platform-specific rule for {platform}")
+            print(f"Rule: {rule['platform']}")
+            rule = rule["platform"][platform]
+
+        # compute all variables
         for var, expr in rule.get("variables", {}).items():
             # print(f"Computing variable '{var}'")
             try:

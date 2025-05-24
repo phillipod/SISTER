@@ -33,5 +33,7 @@ class LocateIconGroupsStage(PipelineStage):
 
         ctx.icon_groups = merged
 
+        print("ctx.icon_groups", ctx.icon_groups)
+
         report(self.name, 1.0)
         return StageOutput(ctx, ctx.icon_groups)
