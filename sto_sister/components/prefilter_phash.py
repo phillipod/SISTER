@@ -114,11 +114,11 @@ class PHashEngine:
                             f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
                         ) from e
 
-                    if icon_group_label == "Active Ground Reputation":
-                        print(f"Active Ground Reputation")
-                        print(f"roi_hash: {roi_hash}")
-                        print(f"results: {results}")
-                        show_image([roi])
+                    # if icon_group_label == "Active Ground Reputation":
+                    #     print(f"Active Ground Reputation")
+                    #     print(f"roi_hash: {roi_hash}")
+                    #     print(f"results: {results}")
+                    #     show_image([roi])
 
                     for rel_path, dist in results:
                         if "::" in rel_path:
