@@ -33,5 +33,5 @@ class LocateIconSlotsStage(PipelineStage):
 
         ctx.slots = merged
 
-        report(self.name, "Completed", 100.0)
+        report(self.name, f"Completed - Found {sum(len(icon_group) for icon_group in ctx.slots.values())} icon slots", 100.0)
         return StageOutput(ctx, ctx.slots)

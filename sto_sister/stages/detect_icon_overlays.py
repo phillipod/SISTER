@@ -42,5 +42,5 @@ class DetectIconOverlaysStage(PipelineStage):
             overlays,
             threshold=self.opts.get("threshold", 0.8),
         )
-        report(self.name, "Completed", 100.0)
+        report(self.name, f"Completed - Matched {sum(1 for icon_group_dict in ctx.detected_overlays.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("overlay") != "common")} icon overlays", 100.0)
         return StageOutput(ctx, ctx.detected_overlays)

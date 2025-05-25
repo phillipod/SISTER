@@ -35,5 +35,5 @@ class LocateIconGroupsStage(PipelineStage):
 
         # print("ctx.icon_groups", ctx.icon_groups)
 
-        report(self.name, "Completed", 100.0)
+        report(self.name, f"Completed - Found {len(ctx.icon_groups)} icon groups", 100.0)
         return StageOutput(ctx, ctx.icon_groups)

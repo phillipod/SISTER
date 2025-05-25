@@ -1,3 +1,13 @@
+import warnings
+
+# suppress only the “pin_memory” UserWarning from torch.utils.data
+warnings.filterwarnings(
+    "ignore",
+    message=".*pin_memory.*no accelerator is found.*",
+    category=UserWarning,
+    module="torch.utils.data.dataloader"
+)
+
 import cv2
 import easyocr
 import os
@@ -298,7 +308,7 @@ class LabelLocator:
 
         return filtered
 
-    def locate_labels(self, image: np.ndarray) -> Dict[str, Tuple[int, int, int, int]]:
+    def locate_labels(self, image: np.ndarray, on_progress=None) -> Dict[str, Tuple[int, int, int, int]]:
         """
         Locate allowed labels within an image array.
 
@@ -308,6 +318,8 @@ class LabelLocator:
         Returns:
             dict: {label_str: (x1, y1, x2, y2)}
         """
+        self.on_progress = on_progress
+
         # Preprocess
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         gray_upscaled = cv2.resize(

@@ -46,7 +46,7 @@ class DetectIconsStage(PipelineStage):
             ctx.found_icons,
             threshold=self.opts.get("threshold", 0.7),
         )
-        report(self.name, "Completed", 100.0)
+        report(self.name, f"Completed - Matched {sum(1 for icon_group_dict in ctx.matches.values() for slot_items in icon_group_dict.values() for item in slot_items)} icons", 100.0)
         return StageOutput(ctx, ctx.matches)
 
     def _make_detector_progress(self):

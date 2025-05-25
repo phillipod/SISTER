@@ -99,5 +99,5 @@ class ClassifyLayoutStage(PipelineStage):
                 if c["build_type"] in ("Personal Space Traits", "Personal Ground Traits", "Space Reputation", "Ground Reputation", "Active Space Reputation", "Active Ground Reputation", "Starship Traits"):
                     c["icon_set"] = "traits"
 
-        report(self.name, "Completed", 100.0)
+        report(self.name, f"Completed - {bt}", 100.0)
         return StageOutput(ctx, ctx.classifications)

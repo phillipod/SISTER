@@ -62,19 +62,19 @@ def on_stage_complete(stage, ctx, output):
         bar.close()
 
     if stage == 'locate_labels':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(label) for label in ctx.labels_list)} labels")
+        #print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(label) for label in ctx.labels_list)} labels")
         return
     elif stage == 'locate_icon_groups':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.icon_groups)} icon groups")
+        #print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.icon_groups)} icon groups")
         return
     elif stage == 'classify_layout':
-        print(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
+        #print(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
         return
     elif stage == 'locate_icon_slots':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots") #
+        #print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots") #
         return
     elif stage == 'detect_icon_overlays':
-        print(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("overlay") != "common")} icon overlays")
+        #print(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("overlay") != "common")} icon overlays")
         return
     elif stage == 'detect_icons':
         methods = {}
@@ -93,10 +93,10 @@ def on_stage_complete(stage, ctx, output):
         
         return
     elif stage == 'prefilter_icons':
-        print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(slots) for icon_group in output.values() for slots in icon_group.values())} potential matches")
+        #print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(slots) for icon_group in output.values() for slots in icon_group.values())} potential matches")
         return
     elif stage == 'output_transformation':
-        print(f"[Callback] [on_stage_complete] [{stage}]")
+        #print(f"[Callback] [on_stage_complete] [{stage}]")
         return
     else:
         print(f"[Callback] [on_stage_complete] [{stage}] complete") 

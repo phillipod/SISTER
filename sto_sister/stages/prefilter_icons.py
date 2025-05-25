@@ -66,5 +66,5 @@ class PrefilterIconsStage(PipelineStage):
         ctx.found_icons       = merged_found
         ctx.filtered_icons    = merged_filt
 
-        report(self.name, "Completed", 100.0)
+        report(self.name, f"Completed - Found {sum(len(slots) for icon_group in ctx.prefiltered_icons.values() for slots in icon_group.values())} potential matches", 100.0)
         return StageOutput(ctx, ctx.prefiltered_icons)
