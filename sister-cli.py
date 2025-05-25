@@ -3,7 +3,8 @@ import argparse
 import cv2
 import traceback
 import time
-
+from tqdm import tqdm
+from collections import defaultdict
 from pathlib import Path
 from pprint import pprint
 
@@ -18,20 +19,48 @@ from sto_sister.utils.image import load_image, load_overlays
 
 import traceback
 
-def on_progress(stage, pct, ctx): 
+_progress_bars = {}
+_prev_percents = defaultdict(int)
+
+def on_progress(stage, substage, pct, ctx):
+    # on any 0.0, reset (in case of retries/errors)
+    if pct == 0.0:
+        old = _progress_bars.pop(stage, None)
+        if old:
+            old.close()
+        bar = tqdm(total=100, desc=stage, leave=True)
+        _progress_bars[stage] = bar
+        _prev_percents[stage] = 0
+
+    bar = _progress_bars.get(stage)
+    if not bar:
+        return ctx
+
+    # normalize 0–1 or 0–100 → integer 0–100
+    new_pct = int(pct * 100) if pct <= 1 else int(pct)
+    delta   = new_pct - _prev_percents[stage]
+    if delta > 0:
+        bar.update(delta)
+        _prev_percents[stage] = new_pct
+
+    if substage:
+        bar.set_description(f"{stage}[{substage}]")
+    bar.refresh()
     return ctx
-    if stage == "locate_labels":
-        print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.labels}%")
-    elif stage == "locate_icon_groups":
-        print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.icon_groups}%")
-    elif stage == 'classify_layout':
-        print(f"[Callback] [on_progress] [{stage}] {pct} {ctx.classification}%")
 
 
 def on_stage_start(stage, ctx): 
-    print(f"[Callback] [on_stage_start] [{stage}]")
+    return #print(f"[Callback] [on_stage_start] [{stage}]")
 
 def on_stage_complete(stage, ctx, output):
+    bar = _progress_bars.pop(stage, None)
+    if bar:
+        # if we never actually hit 100 inside on_progress, finish it now
+        prev = _prev_percents[stage]
+        if prev < bar.total:
+            bar.update(bar.total - prev)
+        bar.close()
+
     if stage == 'locate_labels':
         print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(label) for label in ctx.labels_list)} labels")
         return
@@ -250,7 +279,7 @@ if __name__ == "__main__":
     p.add_argument("--screenshot", "-s", nargs="+", help="Path to screenshot")
     p.add_argument("--icons", default="images", help="Directory containing downloaded icons. Defaults to 'images' in current directory.")
     p.add_argument("--overlays", default="overlays", help="Directory containing icon overlay images. Defaults to 'overlays' in current directory.")
-    p.add_argument("--log-level", default="INFO", help="Log level: DEBUG, VERBOSE, INFO, WARNING, ERROR")
+    p.add_argument("--log-level", default="WARNING", help="Log level: DEBUG, VERBOSE, INFO, WARNING, ERROR")
     p.add_argument("--no-resize", action="store_true", help="Disable image downscaling to 1920x1080. Downscales only if screenshot is greater than 1920x1080.")
     p.add_argument("--download", action="store_true", help="Download icon data from STO Wiki. Exit after.")
     p.add_argument("--build-phash-cache", action="store_true", help="Build a perceptual hash (phash) cache for all icons.")

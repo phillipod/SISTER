@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class IconOverlayDetector:
     def __init__(
-        self, debug=False, icon_loader=None, overlay_loader=None, hash_index=None
+        self, debug=False, icon_loader=None, overlay_loader=None, hash_index=None, on_progress=None
     ):
         """
         Initialize the IconOverlayDetector.
@@ -30,6 +30,7 @@ class IconOverlayDetector:
         self.load_icons = icon_loader
         self.load_overlays = overlay_loader
         self.hash_index = hash_index
+        self.on_progress = on_progress
 
     def detect(
         self,
@@ -40,9 +41,11 @@ class IconOverlayDetector:
         """
         Run icon detector using the selected engine.
         """
+        self.on_progress("Detecting overlays", 10.0)
+
         matches = []
 
-        overlay_tasks = []
+        args_list = []
         icon_group_slot_index = []
 
         for icon_group_label in icon_slots:
@@ -58,35 +61,79 @@ class IconOverlayDetector:
                     f"Running overlay detection for icon group '{icon_group_label}', slot {idx}"
                 )
 
-                overlay_tasks.append((roi, overlays))
+                args_list.append((roi, overlays))
                 icon_group_slot_index.append((icon_group_label, idx))
 
-        detected_overlays_by_icon_group = {}
-        with ProcessPoolExecutor() as executor:
-            futures = {
-                executor.submit(
-                    self.identify_overlay, roi, overlays, icon_group_label, idx
-                ): (
-                    icon_group_label,
-                    idx,
-                )
-                for (roi, overlays), (icon_group_label, idx) in zip(
-                    overlay_tasks, icon_group_slot_index
-                )
-            }
 
-            for future in as_completed(futures):
-                icon_group_label, idx = futures[future]
+        start_pct = 10.0
+        end_pct   = 65.0
+
+        self.on_progress("Detecting overlays", start_pct)
+
+        args_total     = len(args_list)
+        args_completed = 0
+
+        detected_overlays_by_icon_group = {}
+        
+        # unzip your args into four parallel lists
+        rois,      overlays_list = zip(*args_list)
+        labels,    idxs          = zip(*icon_group_slot_index)
+
+        with ProcessPoolExecutor() as executor:
+            # executor.map will yield results in the same order as the inputs
+            results_iter = executor.map(
+                self.identify_overlay,   # the worker function
+                rois,                    # 1st arg sequence
+                overlays_list,           # 2nd arg sequence
+                labels,                  # 3rd arg sequence
+                idxs,                    # 4th arg sequence
+                chunksize=10,            # process 100 tasks per worker batch
+            )
+
+            # now zip labels, idxs and results back together
+            for label, idx, result in zip(labels, idxs, results_iter):
                 try:
-                    # overlay, scale, method = future.result()
-                    detected_overlays_by_icon_group.setdefault(icon_group_label, {})[
-                        idx
-                    ] = future.result()
+                    detected_overlays_by_icon_group.setdefault(label, {})[idx] = result
                 except Exception as e:
                     logger.warning(
-                        f"Overlay detection failed for icon group '{icon_group_label}', slot {idx}: {e}"
+                        f"Overlay detection failed for icon group '{label}', slot {idx}: {e}"
                     )
                     traceback.print_exc()
+                args_completed += 1
+                
+                if args_completed % 10 == 0 or args_completed == args_total:
+                    frac       = args_completed / args_total
+                    scaled_pct = start_pct + frac * (end_pct - start_pct)
+
+                    sub = f"{args_completed}/{args_total}"
+                    self.on_progress(f"Detecting overlays -> {sub}", scaled_pct)
+
+        # detected_overlays_by_icon_group = {}
+        # with ProcessPoolExecutor() as executor:
+        #     futures = {
+        #         executor.submit(
+        #             self.identify_overlay, roi, overlays, icon_group_label, idx
+        #         ): (
+        #             icon_group_label,
+        #             idx,
+        #         )
+        #         for (roi, overlays), (icon_group_label, idx) in zip(
+        #             args_list, icon_group_slot_index
+        #         )
+        #     }
+
+        #     for future in as_completed(futures):
+        #         icon_group_label, idx = futures[future]
+        #         try:
+        #             # overlay, scale, method = future.result()
+        #             detected_overlays_by_icon_group.setdefault(icon_group_label, {})[
+        #                 idx
+        #             ] = future.result()
+        #         except Exception as e:
+        #             logger.warning(
+        #                 f"Overlay detection failed for icon group '{icon_group_label}', slot {idx}: {e}"
+        #             )
+        #             traceback.print_exc()
 
         logger.debug("Overlay detection complete.")
 

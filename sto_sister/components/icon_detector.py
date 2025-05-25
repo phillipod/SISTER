@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class IconDetector:
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, on_progress=None):
         """
         IconDetector runner that delegates to a selected engine.
 
@@ -24,6 +24,7 @@ class IconDetector:
             debug (bool): Enable debug mode.
         """
         self.debug = debug
+        self.on_progress = on_progress
 
     def load_icons(self, icon_folders):
         icons = {}
@@ -71,7 +72,7 @@ class IconDetector:
 
         try:
             args_list = []
-
+            self.on_progress("Detecting icons", 10.0)
             for icon_group_label in icon_slots:
                 matches[icon_group_label] = {}
 
@@ -135,12 +136,28 @@ class IconDetector:
                         )
                         args_list.append(args)
 
+            start_pct = 10.0
+            end_pct   = 65.0
+
+            self.on_progress("Detecting icons", start_pct)
+
+            args_total     = len(args_list)
+            args_completed = 0
             with ProcessPoolExecutor() as executor:
                 for result in executor.map(
-                    self.match_single_icon, args_list, chunksize=100
+                    self.match_single_icon, args_list, chunksize=10
                 ):
                     for item in result:
                         matches[item["icon_group"]][item["slot"]].append(item)
+                    
+                    args_completed += 1
+                    
+                    if args_completed % 10 == 0 or args_completed == args_total:
+                        frac       = args_completed / args_total
+                        scaled_pct = start_pct + frac * (end_pct - start_pct)
+
+                        sub = f"{args_completed}/{args_total}"
+                        self.on_progress(f"Detecting icons -> {sub}", scaled_pct)
 
             # Fallback pass
             fallback_args_list = []
@@ -204,24 +221,34 @@ class IconDetector:
                         )
                         fallback_args_list.append(args)
 
-            future_to_args = {}
+            start_pct = 66.0
+            end_pct   = 95.0
+
+            self.on_progress("Detecting icons(Fallback pass)", start_pct)
+
+            args_total     = len(fallback_args_list)
+            args_completed = 0
+
             with ProcessPoolExecutor() as executor:
-                futures = [
-                    executor.submit(self.match_single_icon, args)
-                    for args in fallback_args_list
-                ]
-                for future, args in zip(futures, fallback_args_list):
-                    future_to_args[future] = args
-
-                for future in as_completed(future_to_args):
-                    args = future_to_args[future]
-                    result = future.result()
-
+                for result in executor.map(
+                    self.match_single_icon, fallback_args_list, chunksize=100
+                ):
                     for item in result:
                         matches[item["icon_group"]][item["slot"]].append(item)
+                    
+                    args_completed += 1
+                    
+                    if args_completed % 10 == 0 or args_completed == args_total:
+                        frac       = args_completed / args_total
+                        scaled_pct = start_pct + frac * (end_pct - start_pct)
+
+                        sub = f"{args_completed}/{args_total}"
+                        self.on_progress(f"Detecting icons(Fallback pass) -> {sub}", scaled_pct)
 
         except SISTERError as e:
             raise IconDetectorError(e) from e
+
+        self.on_progress("Finalising", 99.0)
 
         match_count = 0
         methods = {}

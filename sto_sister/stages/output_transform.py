@@ -12,7 +12,7 @@ class OutputTransformationStage(PipelineStage):
     def process(
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
-        report(self.name, 0.0)
+        report(self.name, "Running", 0.0)
 
         # start with whatever matches we already have
         ctx.output = {
@@ -52,5 +52,5 @@ class OutputTransformationStage(PipelineStage):
                                 "detected_overlay"
                             ] = ctx.detected_overlays[icon_group_name][slot_name]
 
-        report(self.name, 1.0)
+        report(self.name, "Completed", 100.0)
         return StageOutput(ctx, ctx.output)

@@ -12,22 +12,9 @@ class ClassifyLayoutStage(PipelineStage):
         self.classifier = LayoutClassifier(**opts)
 
     def process(
-        self, ctx: PipelineState, report: Callable[[str, float], None]
+        self, ctx: PipelineState, report: Callable[[str, str, float], None]
     ) -> StageOutput:
-        report(self.name, 0.0)
-
-        # Classify each screenshot
-        # ctx.classifications = [
-        #     self.classifier.classify(labels)
-        #     for labels in ctx.labels_list
-        # ]
-
-        # # Pick main build as highest score
-        # main_idx = max(range(len(ctx.classifications)), key=lambda i: ctx.classifications[i]["score"])
-        # ctx.main_index = main_idx
-
-        # ctx.classification = ctx.classifications[main_idx]
-
+        report(self.name, "Running", 0.0)
 
         # 1) Run the classifier over each label‐set
         raw_classifications = [
@@ -81,22 +68,7 @@ class ClassifyLayoutStage(PipelineStage):
             all_winners = [(i, winners[0]) for i, winners in enumerate(ctx.classifications)]
             ctx.main_index = max(all_winners, key=lambda x: x[1]['score'])[0]
 
-        # # 4) Choose main_index as the highest‐scoring non‐required entry
-        # non_required = [
-        #     (i, entry)
-        #     for i, entry in enumerate(ctx.classifications)
-        #     if not entry['is_required']
-        # ]
-        # if non_required:
-        #     ctx.main_index = max(non_required, key=lambda x: x[1]['score'])[0]
-        # else:
-        #     # fallback if everything is required (shouldn’t happen per your rules)
-        #     ctx.main_index = max(
-        #         range(len(ctx.classifications)),
-        #         key=lambda i: ctx.classifications[i]['score']
-        #     )
-
-        # 5) Stash your main build
+        # 5) Stash main build
         ctx.classification = ctx.classifications[ctx.main_index][0]
 
         # print (f"ctx.classifications: {ctx.classifications}")
@@ -127,19 +99,5 @@ class ClassifyLayoutStage(PipelineStage):
                 if c["build_type"] in ("Personal Space Traits", "Personal Ground Traits", "Space Reputation", "Ground Reputation", "Active Space Reputation", "Active Ground Reputation", "Starship Traits"):
                     c["icon_set"] = "traits"
 
-
-        # print(f"ctx.classifications: {ctx.classifications}")
-        # if (
-        #     ctx.classification["build_type"] == "PC Ship Build"
-        #     or ctx.classification["build_type"] == "Console Ship Build"
-        # ):
-        #     ctx.classification["icon_set"] = "ship"
-
-        # elif ctx.classification["build_type"] == "PC Ground Build":
-        #     ctx.classification["icon_set"] = "pc_ground"
-
-        # elif ctx.classification["build_type"] == "Console Ground Build":
-        #     ctx.classification["icon_set"] = "console_ground"
-
-        report(self.name, 1.0)
+        report(self.name, "Completed", 100.0)
         return StageOutput(ctx, ctx.classifications)

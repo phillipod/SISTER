@@ -14,12 +14,12 @@ class LocateLabelsStage(PipelineStage):
     def process(
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
-        report(self.name, 0.0)
+        report(self.name, "Running", 0.0)
 
         ctx.labels_list = [
             self.label_locator.locate_labels(image)
             for image in ctx.screenshots
         ]
         
-        report(self.name, 1.0)
+        report(self.name, "Completed", 100.0)
         return StageOutput(ctx, ctx.labels_list)

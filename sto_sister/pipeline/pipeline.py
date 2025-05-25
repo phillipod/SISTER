@@ -15,6 +15,7 @@ from ..exceptions import *
 
 from ..utils.hashindex import HashIndex
 
+from .progress_reporter import PipelineProgressCallback
 from ..stages import (
     LocateLabelsStage,
     ClassifyLayoutStage,
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 class SISTER:
     def __init__(
         self,
-        on_progress: Callable[[str, float, PipelineState], None],
+        on_progress: Callable[[str, str, float, PipelineState], None],
         on_interactive: Callable[[str, PipelineState], PipelineState],
         on_error: Callable[[PipelineError], None],
         config: Dict[str, Any],
@@ -190,23 +191,29 @@ class SISTER:
             # notify start
             with self._handle_errors(stage.name, ctx):
                 self.start_metric(stage.name)
-                self.on_progress(stage.name, 0.0, ctx)
+                #self.on_progress(stage.name, "Stage startup", 0.0, ctx)
 
                 if self.on_stage_start:
                     self.on_stage_start(stage.name, ctx)
 
             # run stage
             with self._handle_errors(stage.name, ctx):
-                stage_result = stage.process(
-                    ctx, lambda pct, name=stage.name: self.on_progress(name, pct, ctx)
+                prog_cb = PipelineProgressCallback(
+                    self.on_progress,
+                    stage.name,
+                    ctx
                 )
+                stage_result = stage.process(ctx, prog_cb)
+                # stage_result = stage.process(
+                #     ctx, lambda pct, substage=None, name=stage.name: self.on_progress(name, substage, pct, ctx)
+                # )
                 # update context and results
                 ctx = stage_result.context
                 results[stage.name] = stage_result.output
 
             # notify completion
             with self._handle_errors(stage.name, ctx):
-                self.on_progress(stage.name, 1.0, ctx)
+                #self.on_progress(stage.name, "Stage completion", 1.0, ctx)
                 self.end_metric(stage.name)
 
             # on_stage_complete hook

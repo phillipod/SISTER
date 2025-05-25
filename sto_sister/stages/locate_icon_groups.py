@@ -15,7 +15,7 @@ class LocateIconGroupsStage(PipelineStage):
     def process(
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
-        report(self.name, 0.0)
+        report(self.name, "Running", 0.0)
 
         # ctx.icon_groups = self.detector.locate_icon_groups(
         #     ctx.screenshot, ctx.labels, ctx.classification
@@ -35,5 +35,5 @@ class LocateIconGroupsStage(PipelineStage):
 
         # print("ctx.icon_groups", ctx.icon_groups)
 
-        report(self.name, 1.0)
+        report(self.name, "Completed", 100.0)
         return StageOutput(ctx, ctx.icon_groups)
