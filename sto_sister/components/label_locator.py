@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class LabelLocator:
     """
     Pipeline-aware label locator: detects allowed labels in a pre-loaded image array.
-    Returns a simple mapping from label→bbox tuples.
+    Returns a simple mapping from label->bbox tuples.
     """
 
     def __init__(self, gpu: bool = False, scale_x: float = 1.25, debug: bool = False):

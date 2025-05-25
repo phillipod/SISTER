@@ -39,7 +39,7 @@ def on_progress(stage, substage, pct, ctx):
     if not bar:
         return ctx
 
-    # normalize 0–1 or 0–100 → integer 0–100
+    # normalize 0–1 or 0–100 -> integer 0–100
     new_pct = int(pct * 100) if pct <= 1 else int(pct)
     delta   = new_pct - _prev_percents[stage]
     if delta > 0:
@@ -383,4 +383,4 @@ if __name__ == "__main__":
 
     # 4. dump
     #for slot, match in result.icon_matches.items():
-    #    print(f"{slot.icon_group_label}[{slot.index}] → {match}")
+    #    print(f"{slot.icon_group_label}[{slot.index}] -> {match}")

@@ -85,7 +85,7 @@ def find_off_strips(strip_bgr, ignore_top_frac=0.3, min_off_cols=3):
     at least min_off_cols columns are black (0) in that row,
     ignoring any runs that start or end above ignore_top_frac*H.
     """
-    # 1) BGR → gray → 0/1 map
+    # 1) BGR -> gray -> 0/1 map
     gray = cv2.cvtColor(strip_bgr, cv2.COLOR_BGR2GRAY)
     # _, bmap = cv2.threshold(gray, 0, 1, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     bmap = cv2.adaptiveThreshold(

@@ -139,4 +139,4 @@ if __name__ == "__main__":
 
     # 4. dump
     #for slot, match in result.icon_matches.items():
-    #    print(f"{slot.icon_group_label}[{slot.index}] → {match}")
+    #    print(f"{slot.icon_group_label}[{slot.index}] -> {match}")

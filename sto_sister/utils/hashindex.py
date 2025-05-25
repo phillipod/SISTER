@@ -46,7 +46,7 @@ def compute_phash(image, size=(32, 32), grayscale=False):
             arr = arr.astype(np.uint8)
         # If it’s already a 2D (grayscale) or 3D array, we treat it as image pixels.
         if arr.ndim == 2:
-            # single-channel grayscale → convert to BGR so later steps are uniform
+            # single-channel grayscale -> convert to BGR so later steps are uniform
             img = cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
         elif arr.ndim == 3 and arr.shape[2] in (1, 3, 4):
             # 1‐channel, 3‐channel, or 4‐channel array
@@ -58,7 +58,7 @@ def compute_phash(image, size=(32, 32), grayscale=False):
         else:
             raise ValueError(f"Unsupported array shape for image: {arr.shape}")
 
-    # 2) Convert BGR→RGB
+    # 2) Convert BGR->RGB
     rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     # 3) Optionally force grayscale
