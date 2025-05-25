@@ -15,7 +15,7 @@ from ..exceptions import *
 
 from ..utils.hashindex import HashIndex
 
-from .progress_reporter import PipelineProgressCallback
+from .progress_reporter import PipelineProgressReporter
 from ..stages import (
     LocateLabelsStage,
     ClassifyLayoutStage,
@@ -198,7 +198,7 @@ class SISTER:
 
             # run stage
             with self._handle_errors(stage.name, ctx):
-                prog_cb = PipelineProgressCallback(
+                prog_cb = PipelineProgressReporter(
                     self.on_progress,
                     stage.name,
                     ctx

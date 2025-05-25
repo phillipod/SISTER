@@ -53,8 +53,9 @@ class PHashEngine:
 
         return threshold
 
-    def prefilter(self, icon_slots, build_info, icon_sets, select_items=None):
+    def prefilter(self, icon_slots, build_info, icon_sets, select_items=None, on_progress=None):
         builds = build_info if isinstance(build_info, list) else [build_info]
+        self.on_progress = on_progress
 
         prefiltered = {}
 
@@ -67,6 +68,23 @@ class PHashEngine:
         #    "Science Console": { 3: True },
         # }
 
+        slots_total     = sum(
+            len(icon_slots[group])
+            for info in builds
+            for group in icon_slots
+            if icon_sets
+            .get(info.get("icon_set", "default"), {})
+            .get(group)            # only count groups with folders
+        )
+
+        start_pct = 5.0
+        end_pct   = 65.0
+
+        self.on_progress("PHash search", start_pct)
+        
+        phash_search_completed = 0
+
+        # count the total leaf slots in the below for loop including the builds and icon groups, accounting for the build and icon set 
 
         for info in builds:
             bt = info.get("build_type", "Unknown")
@@ -113,6 +131,16 @@ class PHashEngine:
                         raise PrefilterError(
                             f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
                         ) from e
+
+
+                    phash_search_completed += 1
+                    
+                    if phash_search_completed % 10 == 0 or phash_search_completed == slots_total:
+                        frac       = phash_search_completed / slots_total
+                        scaled_pct = start_pct + frac * (end_pct - start_pct)
+
+                        sub = f"{phash_search_completed}/{slots_total}"
+                        self.on_progress(f"PHash search -> {sub}", scaled_pct)
 
                     # if icon_group_label == "Active Ground Reputation":
                     #     print(f"Active Ground Reputation")
@@ -170,6 +198,23 @@ class PHashEngine:
                                 f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
                             ) from e
 
+
+
+        candidates_total = sum(
+            len(found_icons[icon_group_label][box])
+            for icon_group_label in icon_slots
+            for box in found_icons[icon_group_label]
+        )
+
+        start_pct = 66.0
+        end_pct   = 95.0
+
+        self.on_progress("PHash threshold", start_pct)
+        
+        phash_threshold_completed = 0
+        
+
+        prefiltered = {}
         for icon_group_label in icon_slots:
             if select_items:
                 if icon_group_label not in select_items.keys():
@@ -256,10 +301,22 @@ class PHashEngine:
                         f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
                     ) from e
 
+                phash_threshold_completed += 1
+                
+                if phash_threshold_completed % 10 == 0 or phash_threshold_completed == candidates_total:
+                    frac       = phash_threshold_completed / candidates_total
+                    scaled_pct = start_pct + frac * (end_pct - start_pct)
+
+                    sub = f"{phash_threshold_completed}/{candidates_total}"
+                    self.on_progress(f"PHash threshold -> {sub}", scaled_pct)
+
+
                 logger.debug(
                     f"Prefiltered {len(prefiltered[icon_group_label][idx])} icons for icon group '{icon_group_label}' at slot {idx}."
                 )
                 # prefiltered.extend(candidate_prefiltered)
+
+        self.on_progress("Complete", 100.0)
 
         logger.verbose(
             f"Total icons prefiltered: {sum(len(slots) for icon_group in prefiltered.values() for slots in icon_group.values())}"

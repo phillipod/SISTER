@@ -12,3 +12,6 @@ pybktree
 
 # Web interaction for CargoDownloader
 requests
+
+# CLI progress bars
+tqdm

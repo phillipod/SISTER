@@ -1,6 +1,8 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
+from ..pipeline.progress_reporter import StageProgressReporter
+
 from ..components.icon_group_locator import IconGroupLocator
 
 
@@ -13,27 +15,56 @@ class LocateIconGroupsStage(PipelineStage):
         self.detector = IconGroupLocator(**opts)
 
     def process(
-        self, ctx: PipelineState, report: Callable[[str, float], None]
+        self, 
+        ctx: PipelineState, 
+        report: Callable[[str, str, float], None]
     ) -> StageOutput:
-        report(self.name, "Running", 0.0)
+        screenshots      = ctx.screenshots
+        labels_list      = ctx.labels_list
+        classifications  = ctx.classifications
+        screenshots_count = len(screenshots)
 
-        # ctx.icon_groups = self.detector.locate_icon_groups(
-        #     ctx.screenshot, ctx.labels, ctx.classification
-        # )
-        # Batch icon groups across screenshots
-        # print("ctx.classification", ctx.classification)
-        ctx.icon_groups_list = [
-            self.detector.locate_icon_groups(img, labels, cls)
-            for img, labels, cls in zip(ctx.screenshots, ctx.labels_list, ctx.classifications)
-        ]
-        # Merge all icon groups
+        # Hold per-image results
+        icon_groups_list = []
+
+        for i, (img, labels, cls) in enumerate(zip(screenshots, labels_list, classifications)):
+            # carve out [i/screenshots_count … (i+1)/screenshots_count] of the 0–100% range
+            start_frac = i / screenshots_count
+            end_frac   = (i + 1) / screenshots_count
+
+            sub = f"Screenshot {i+1}/{screenshots_count}"
+
+            reporter = StageProgressReporter(
+                stage_name   = self.name,
+                sub_prefix   = sub,
+                report_fn    = report,
+                window_start = start_frac,
+                window_end   = end_frac,
+            )
+
+            reporter(sub, 0.0)
+
+            groups = self.detector.locate_icon_groups(
+                img, 
+                labels, 
+                cls, 
+                #on_progress=reporter
+            )
+
+            reporter(sub, 100.0)
+            icon_groups_list.append(groups)
+
+        # merge all icon_group dicts
         merged = {}
-        for g in ctx.icon_groups_list:
+        for g in icon_groups_list:
             merged.update(g)
+        ctx.icon_groups_list = icon_groups_list
+        ctx.icon_groups      = merged
 
-        ctx.icon_groups = merged
-
-        # print("ctx.icon_groups", ctx.icon_groups)
-
-        report(self.name, f"Completed - Found {len(ctx.icon_groups)} icon groups", 100.0)
-        return StageOutput(ctx, ctx.icon_groups)
+        # final stage completion
+        report(
+            self.name,
+            f"Completed – Found {len(merged)} icon groups",
+            100.0
+        )
+        return StageOutput(ctx, merged)

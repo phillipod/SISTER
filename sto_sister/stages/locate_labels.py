@@ -18,28 +18,27 @@ class LocateLabelsStage(PipelineStage):
         report: Callable[[str, str, float], None]
     ) -> StageOutput:
         screenshots = ctx.screenshots
-        total       = len(screenshots)
+        screenshots_count = len(screenshots)
         labels_list = []
 
         for i, image in enumerate(screenshots):
-            # 1) compute this image’s [start…end] fraction in [0…1]
-            start_frac = i / total
-            end_frac   = (i + 1) / total
+            # carve out [i/screenshots_count ... (i+1)/screenshots_count] of the 0–100% range
+            start_frac = i / screenshots_count
+            end_frac   = (i + 1) / screenshots_count
 
-            # 2) build a reporter that maps 0–100→[start_frac…end_frac]
+            sub = f"Screenshot {i+1}/{screenshots_count}"
+
             reporter = StageProgressReporter(
                 stage_name    = self.name,
+                sub_prefix    = sub,
                 report_fn     = report,
                 window_start  = start_frac,
                 window_end    = end_frac,
             )
 
-            # 3) give a little substage name so you see "Screenshot 2/3" in the bar
-            sub = f"Screenshot {i+1}/{total}"
             reporter(sub, 0.0)
 
-            # 4) run your locator (assuming you’ve updated locate_labels
-            #    to accept an on_progress callback)
+            # 4) run locator
             labels = self.label_locator.locate_labels(
                 image,
                 on_progress=reporter
@@ -54,24 +53,3 @@ class LocateLabelsStage(PipelineStage):
         report(self.name, f"Completed - Found {sum(len(label) for label in labels_list)} labels", 100.0)
         ctx.labels_list = labels_list
         return StageOutput(ctx, labels_list)
-
-
-# class LocateLabelsStage(PipelineStage):
-#     name = "locate_labels"
-
-#     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
-#         super().__init__(opts, app_config)
-#         self.label_locator = LabelLocator(**opts)
-
-#     def process(
-#         self, ctx: PipelineState, report: Callable[[str, float], None]
-#     ) -> StageOutput:
-#         report(self.name, "Running", 0.0)
-
-#         ctx.labels_list = [
-#             self.label_locator.locate_labels(image)
-#             for image in ctx.screenshots
-#         ]
-        
-#         report(self.name, "Completed", 100.0)
-#         return StageOutput(ctx, ctx.labels_list)

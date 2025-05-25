@@ -1,8 +1,11 @@
-# run_pipeline.py
+import time
+load_start_time = time.time()
+
 import argparse
 import cv2
 import traceback
-import time
+
+from functools import partial
 from tqdm import tqdm
 from collections import defaultdict
 from pathlib import Path
@@ -23,12 +26,12 @@ _progress_bars = {}
 _prev_percents = defaultdict(int)
 
 def on_progress(stage, substage, pct, ctx):
-    # on any 0.0, reset (in case of retries/errors)
+    # on any 0.0, reset the progress bar
     if pct == 0.0:
         old = _progress_bars.pop(stage, None)
         if old:
             old.close()
-        bar = tqdm(total=100, desc=stage, leave=True)
+        bar = tqdm(total=100, desc=stage, bar_format='{l_bar}{bar}|', leave=False)
         _progress_bars[stage] = bar
         _prev_percents[stage] = 0
 
@@ -62,19 +65,19 @@ def on_stage_complete(stage, ctx, output):
         bar.close()
 
     if stage == 'locate_labels':
-        #print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(label) for label in ctx.labels_list)} labels")
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(label) for label in ctx.labels_list)} labels")
         return
     elif stage == 'locate_icon_groups':
-        #print(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.icon_groups)} icon groups")
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.icon_groups)} icon groups")
         return
     elif stage == 'classify_layout':
-        #print(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
         return
     elif stage == 'locate_icon_slots':
-        #print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots") #
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots") #
         return
     elif stage == 'detect_icon_overlays':
-        #print(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("overlay") != "common")} icon overlays")
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("overlay") != "common")} icon overlays")
         return
     elif stage == 'detect_icons':
         methods = {}
@@ -87,30 +90,34 @@ def on_stage_complete(stage, ctx, output):
                     methods[candidate["method"]] = (
                         methods.get(candidate["method"], 0) + 1
                     )
-        print(f"[Callback] [on_stage_complete] [{stage}] Matched {match_count} icons in total")
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Matched {match_count} icons in total")
         for method, count in methods.items():
-            print(f"[Callback] [on_stage_complete] [{stage}] Matched {count} icons with {method}")
+            tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Matched {count} icons with {method}")
         
         return
     elif stage == 'prefilter_icons':
-        #print(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(slots) for icon_group in output.values() for slots in icon_group.values())} potential matches")
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(slots) for icon_group in output.values() for slots in icon_group.values())} potential matches")
         return
     elif stage == 'output_transformation':
-        #print(f"[Callback] [on_stage_complete] [{stage}]")
+        #tqdm.write(f"[Callback] [on_stage_complete] [{stage}]")
         return
     else:
-        print(f"[Callback] [on_stage_complete] [{stage}] complete") 
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] complete") 
     
     #print(f"[Callback] [on_stage_complete] [{stage}] Output: {output}")
-    print(f"[Callback] [on_stage_complete] [{stage}] Pretty output: ")
+    tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Pretty output: ")
     pprint(output)
 
 
 def on_interactive(stage, ctx): return ctx  # no-op
 
 
-def on_pipeline_complete(ctx, output, all_results): 
-    print(f"[Callback] [on_pipeline_complete] Pipeline is complete.")
+def on_pipeline_complete(ctx, output, all_results, save_dir, save_file): 
+    
+    success, result = save_match_summary(save_dir, save_file, output["matches"])
+
+    tqdm.write(f"[Callback] [on_pipeline_complete] Pipeline is complete. Saved: {success} File: {result}")
+
     #print(f"[Callback] [on_pipeline_complete] Output: {ctx}")
 
     #print(f"[Callback] [on_pipeline_complete] Pretty output: ")
@@ -270,7 +277,7 @@ def save_match_summary(output_dir, output_prefix, matches):
 
             f.write("\n")
 
-    print(f"Saved match summary to {output_file}")
+    return True, output_file #(f"Saved match summary to {output_file}")
 
 if __name__ == "__main__":
     start_time = time.time()
@@ -342,6 +349,11 @@ if __name__ == "__main__":
         "prefilter_icons": {
             "method": "phash"
         },
+        "output_transformation": {
+            "transformations_enabled_list": [
+                "BACKFILL_MATCHES_WITH_PREFILTERED" # If no matches are found for a given slot, this transformation will merge any prefiltered icons into the output
+            ]
+        },
         "engine": "phash",
         "hash_index_dir": args.icons,
         "hash_index_file": "hash_index.json",
@@ -351,18 +363,23 @@ if __name__ == "__main__":
         "overlay_dir": args.overlays,
     }
 
+    # bind args to on_pipeline_complete
+    bound_on_pipeline_complete = partial(on_pipeline_complete, save_dir=args.output_dir, save_file=args.output)
+
     # 3. build & run
     try:
-        pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_pipeline_complete=on_pipeline_complete)
+        pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_pipeline_complete=bound_on_pipeline_complete)
         result: PipelineState = pipeline.run(images)
-        save_match_summary(args.output_dir, args.output, result[1]["detect_icons"])
+        # save_match_summary(args.output_dir, args.output, result[1]["detect_icons"])
     except SISTERError as e:
         print(e)
         import sys
         sys.exit(1)
 
     end_time = time.time()
-    print(f"[pipeline.py] Total time: {end_time - start_time}")
+    print(f"[sister-cli.py] Python dependencies load time: {start_time - load_start_time}")
+    print(f"[sister-cli.py] Main execution time: {end_time - start_time}")
+    print(f"[sister-cli.py] Total execution time: {end_time - load_start_time}")
 
     # 4. dump
     #for slot, match in result.icon_matches.items():

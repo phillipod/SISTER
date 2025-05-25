@@ -2,8 +2,8 @@ from typing import Callable, Any
 
 class StageProgressReporter:
     """
-    Picklable callable for scaling a sub-task's 0–100% progress
-    into an arbitrary [start…end] slice of the overall stage.
+    Picklable callable for scaling a sub-task's 0-100% progress
+    into an arbitrary [start...end] slice of the overall stage.
     """
     def __init__(
         self,
@@ -11,11 +11,13 @@ class StageProgressReporter:
         report_fn: Callable[[str, str, float], None],
         window_start: float = 0.0,
         window_end:   float = 1.0,
+        sub_prefix: str = None,
     ):
         self.stage_name   = stage_name
         self.report_fn    = report_fn
         self.window_start = window_start
         self.window_end   = window_end
+        self.sub_prefix   = sub_prefix
 
     def __call__(self, substage: str, pct: float):
         # normalize detector pct (0–100) -> fraction
@@ -25,9 +27,9 @@ class StageProgressReporter:
         # back to 0–100
         scaled = win_frac * 100.0
         # emit via the pipeline’s report API
-        self.report_fn(self.stage_name, substage, scaled)
+        self.report_fn(self.stage_name, f"{self.sub_prefix}: " + substage if self.sub_prefix else substage, scaled)
 
-class PipelineProgressCallback:
+class PipelineProgressReporter:
     """
     Picklable callable that routes any (substage, pct) or
     (stage_arg, substage, pct) call into on_progress(stage, substage, pct, ctx).
@@ -51,7 +53,7 @@ class PipelineProgressCallback:
             _, substage, pct = args
         else:
             raise TypeError(
-                f"PipelineProgressCallback expected 2 or 3 args, got {len(args)}"
+                f"PipelineProgressReporter expected 2 or 3 args, got {len(args)}"
             )
 
         # forward into central on_progress(stage, substage, pct, ctx)

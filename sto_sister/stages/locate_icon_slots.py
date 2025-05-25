@@ -1,6 +1,8 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
+from ..pipeline.progress_reporter import StageProgressReporter
+
 from ..components.icon_slot_locator import IconSlotLocator
 
 
@@ -15,23 +17,54 @@ class LocateIconSlotsStage(PipelineStage):
         self.slot_locator = IconSlotLocator(**self.opts)
 
     def process(
-        self, ctx: PipelineState, report: Callable[[str, float], None]
+        self,
+        ctx: PipelineState,
+        report: Callable[[str, str, float], None]
     ) -> StageOutput:
-        report(self.name, "Running", 0.0)
+        screenshots      = ctx.screenshots
+        icon_groups_list = ctx.icon_groups_list
+        screenshots_count            = len(screenshots)
+        slots_list       = []
 
-        # ctx.slots = self.slot_locator.locate_slots(ctx.screenshot, ctx.icon_groups)
-        ctx.slots_list = [
-            self.slot_locator.locate_slots(img, ig)
-            for img, ig in zip(ctx.screenshots, ctx.icon_groups_list)
-        ]
+        for i, (img, ig) in enumerate(zip(screenshots, icon_groups_list)):
+            # carve out [i/screenshots_count … (i+1)/screenshots_count] of the 0–100% range
+            start_frac = i / screenshots_count
+            end_frac   = (i + 1) / screenshots_count
 
-        # Merge all slots per group
+            sub = f"Screenshot {i+1}/{screenshots_count}"
+
+            reporter = StageProgressReporter(
+                stage_name   = self.name,
+                sub_prefix   = sub,
+                report_fn    = report,
+                window_start = start_frac,
+                window_end   = end_frac,
+            )
+
+            reporter(sub, 0.0)
+
+            slots = self.slot_locator.locate_slots(
+                img,
+                ig,
+                #on_progress=reporter
+            )
+
+            reporter(sub, 100.0)
+            slots_list.append(slots)
+
+        # merge all slots across screenshots
         merged = {}
-        for slots in ctx.slots_list:
-            for label, data in slots.items():
-                merged.setdefault(label, []).extend(data)
+        for slots in slots_list:
+            for label, items in slots.items():
+                merged.setdefault(label, []).extend(items)
 
-        ctx.slots = merged
+        ctx.slots_list = slots_list
+        ctx.slots      = merged
 
-        report(self.name, f"Completed - Found {sum(len(icon_group) for icon_group in ctx.slots.values())} icon slots", 100.0)
-        return StageOutput(ctx, ctx.slots)
+        # final stage completion
+        report(
+            self.name,
+            f"Completed – Found {sum(len(v) for v in merged.values())} icon slots",
+            100.0
+        )
+        return StageOutput(ctx, merged)

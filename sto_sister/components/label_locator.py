@@ -320,13 +320,17 @@ class LabelLocator:
         """
         self.on_progress = on_progress
 
+        self.on_progress("Processing image", 1.0)
         # Preprocess
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         gray_upscaled = cv2.resize(
             gray, None, fx=self.scale_x, fy=1.0, interpolation=cv2.INTER_LINEAR
         )
+        
+        self.on_progress("Running OCR", 6.0)
         results = self.reader.readtext(gray_upscaled, paragraph=True, height_ths=0.0)
-
+        
+        self.on_progress("Processing OCR results", 80.0)
         recognized = {}
         for bbox, text in results:
             x1, y1 = bbox[0]
@@ -335,12 +339,15 @@ class LabelLocator:
             x3, y3 = int(x3 / self.scale_x), int(y3)
             recognized[(x1, y1, x3, y3)] = text.strip()
 
+        self.on_progress("Filtering OCR results", 87.0)
         filtered = self.filter_recognized_text(recognized, gray_upscaled)
 
         # if self.debug:
         #    if self.output_debug_path:
         #        self.draw_debug_output(image, filtered, self.output_debug_path)
 
+        self.on_progress("Building output", 95.0)
+        # Build formatted return structure
         label_dict = {}
         for (x1, y1, x2, y2), label in filtered.items():
             label_dict[label] = {
@@ -349,6 +356,9 @@ class LabelLocator:
                 "bottom_left": [int(x1), int(y2)],
                 "bottom_right": [int(x2), int(y2)],
             }
+
+        self.on_progress("Completed", 100.0)
+        
         return label_dict
 
     def draw_debug_output(

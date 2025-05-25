@@ -24,10 +24,10 @@ class DetectIconsStage(PipelineStage):
         self, ctx: PipelineState, report: Callable[[str, float], None]
     ) -> StageOutput:
         progress_cb = StageProgressReporter(
-                    self.name,
-                    report,
-                    window_start = self._window_start,
-                    window_end   = self._window_end,
+            self.name,
+            report,
+            window_start = self._window_start,
+            window_end   = self._window_end,
         )
         
         self.detector.on_progress = progress_cb
