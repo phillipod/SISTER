@@ -18,6 +18,7 @@ class DetectIconsStage(PipelineStage):
 
         self.detector = IconDetector(
             debug=opts.get("debug", False),
+            executor_pool=app_config["executor_pool"]
         )
 
     def process(

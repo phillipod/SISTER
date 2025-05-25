@@ -2,6 +2,7 @@ from contextlib import contextmanager
 
 # from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple, Optional
+import weakref
 
 import time
 import numpy as np
@@ -14,6 +15,7 @@ from .core import *
 from ..exceptions import *
 
 from ..utils.hashindex import HashIndex
+from ..utils.persistent_executor import PersistentProcessPoolExecutor
 
 from .progress_reporter import PipelineProgressReporter
 from ..stages import (
@@ -164,6 +166,9 @@ class SISTER:
                 "Starship Traits": [ icon_root / "space/traits/starship" ],
             }
         }
+
+        self.app_config["executor_pool"] = PersistentProcessPoolExecutor()
+        weakref.finalize(self, self.app_config["executor_pool"].shutdown)
 
     def start_metric(self, name: str) -> None:
         self.metrics[name] = {

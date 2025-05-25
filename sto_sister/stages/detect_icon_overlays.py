@@ -19,6 +19,7 @@ class DetectIconOverlaysStage(PipelineStage):
         self.strategy = IconOverlayDetector(
             hash_index=app_config.get("hash_index"),
             debug=opts.get("debug", False),
+            executor_pool=app_config["executor_pool"]
         )
 
     def process(
