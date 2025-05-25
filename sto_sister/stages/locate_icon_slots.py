@@ -27,7 +27,7 @@ class LocateIconSlotsStage(PipelineStage):
         slots_list       = []
 
         for i, (img, ig) in enumerate(zip(screenshots, icon_groups_list)):
-            # carve out [i/screenshots_count … (i+1)/screenshots_count] of the 0–100% range
+            # carve out [i/screenshots_count ... (i+1)/screenshots_count] of the 0–100% range
             start_frac = i / screenshots_count
             end_frac   = (i + 1) / screenshots_count
 

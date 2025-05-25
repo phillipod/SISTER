@@ -54,7 +54,7 @@ class DetectIconsStage(PipelineStage):
         def detector_progress(substage: str, pct: float):
             # pct is 0–100 from IconDetector
             frac = pct / 100.0
-            # linear interpolate into [start…end]
+            # linear interpolate into [start...end]
             window_frac = self._window_start + (self._window_end - self._window_start) * frac
             # back to 0–100 scale
             scaled_pct = window_frac * 100.0

@@ -22,7 +22,7 @@ class StageProgressReporter:
     def __call__(self, substage: str, pct: float):
         # normalize detector pct (0–100) -> fraction
         frac = pct / 100.0
-        # map into [window_start…window_end]
+        # map into [window_start...window_end]
         win_frac = self.window_start + (self.window_end - self.window_start) * frac
         # back to 0–100
         scaled = win_frac * 100.0
