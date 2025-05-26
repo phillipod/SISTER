@@ -377,9 +377,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     end_time = time.time()
-    print(f"[sister-cli.py] Python dependencies load time: {start_time - load_start_time}")
-    print(f"[sister-cli.py] Main execution time: {end_time - start_time}")
-    print(f"[sister-cli.py] Total execution time: {end_time - load_start_time}")
+#    print(f"[sister-cli.py] Python dependencies load time: {start_time - load_start_time}")
+    print(f"[sister-cli.py] Total time: {end_time - start_time}")
+
 
     # 4. dump
     #for slot, match in result.icon_matches.items():
