@@ -399,7 +399,11 @@ class HashIndex:
             rel_path = str(path.relative_to(self.base_dir))
             try:
                 mtime = os.path.getmtime(path)
-                image_bgr = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+
+                data = np.fromfile(str(path), dtype=np.uint8)
+                image_bgr = cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
+
+                # image_bgr = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
                 if image_bgr is None or image_bgr.shape[2] < 3:
                     logger.warning(f"Failed to load or incomplete image: {rel_path}")
                     continue

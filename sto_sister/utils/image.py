@@ -31,7 +31,8 @@ def load_image(image_or_path, resize_fullhd=False):
             raise ImageNotFoundError(f"Image path does not exist: {image_or_path}")
 
         try:
-            image = cv2.imread(image_or_path)
+            nparr = np.fromfile(image_or_path, np.uint8)
+            image = cv2.imdecode(data, cv2.IMREAD_COLOR)
         except Exception as e:
             raise ImageProcessingError(
                 f"Failed to load image from path: {image_or_path}"

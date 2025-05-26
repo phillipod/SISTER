@@ -94,12 +94,9 @@ class PHashEngine:
             icon_set = icon_sets[info["icon_set"]]
 
             for icon_group_label in icon_slots:
-                # print(f"icon_group_label: {icon_group_label}")
+                #print(f"icon_group_label: {icon_group_label}")
                 folders = icon_set.get(icon_group_label, [])
                 if not folders:
-                    logger.warning(
-                        f"No icon directories found for icon group '{icon_group_label}'"
-                    )
                     continue
 
                 categories = folders
@@ -191,7 +188,9 @@ class PHashEngine:
 
                         try:
                             if filename not in filtered_icons[icon_group_label]:
-                                icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
+                                data = np.fromfile(str(full_path), dtype=np.uint8)
+                                icon = cv2.imdecode(data, cv2.IMREAD_COLOR)
+                                #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
                                 if icon is not None:
                                     # Ensure icon is 49x64
                                     if icon.shape[0] != 64 or icon.shape[1] != 49:
@@ -294,7 +293,9 @@ class PHashEngine:
                     for filename in filtered_slot_icons:
                         if filename not in filtered_icons[icon_group_label]:
                             full_path = self.hash_index.base_dir / filename
-                            icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
+                            data = np.fromfile(str(full_path), dtype=np.uint8)
+                            icon = cv2.imdecode(data, cv2.IMREAD_COLOR)
+                            #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
                             if icon is not None:
                                 # Ensure icon is 49x64
                                 if icon.shape[0] != 64 or icon.shape[1] != 49:
