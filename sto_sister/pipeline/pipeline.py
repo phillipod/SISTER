@@ -87,83 +87,84 @@ class SISTER:
         )
 
         self.app_config["log_level"] = self.config.get("log_level", "INFO")
-
+        self.app_config["icon_dir"] = self.config.get("icon_dir")
+        
         icon_root = Path(self.config.get("icon_dir"))
 
         self.app_config["icon_sets"] = {
             "ship": {
                 "Fore Weapon": [
-                    icon_root / "space/weapons/fore",
-                    icon_root / "space/weapons/unrestricted",
+                    "space/weapons/fore",
+                    "space/weapons/unrestricted",
                 ],
                 "Aft Weapon": [
-                    icon_root / "space/weapons/aft",
-                    icon_root / "space/weapons/unrestricted",
+                    "space/weapons/aft",
+                    "space/weapons/unrestricted",
                 ],
-                "Experimental Weapon": [icon_root / "space/weapons/experimental"],
-                "Shield": [icon_root / "space/shield"],
-                "Secondary Deflector": [icon_root / "space/secondary_deflector"],
+                "Experimental Weapon": ["space/weapons/experimental"],
+                "Shield": ["space/shield"],
+                "Secondary Deflector": ["space/secondary_deflector"],
                 "Deflector": [
-                    icon_root / "space/deflector",
-                    icon_root / "space/secondary_deflector",
+                    "space/deflector",
+                    "space/secondary_deflector",
                 ],  # Console doesn't have a specific label for Secondary Deflector, it's located under the Deflector label.
-                "Impulse": [icon_root / "space/impulse"],
-                "Warp": [icon_root / "space/warp"],
-                "Singularity": [icon_root / "space/singularity"],
-                "Hangar": [icon_root / "space/hangar"],
-                "Devices": [icon_root / "space/device"],
+                "Impulse": ["space/impulse"],
+                "Warp": ["space/warp"],
+                "Singularity": ["space/singularity"],
+                "Hangar": ["space/hangar"],
+                "Devices": ["space/device"],
                 "Universal Console": [
-                    icon_root / "space/consoles/universal",
-                    icon_root / "space/consoles/engineering",
-                    icon_root / "space/consoles/tactical",
-                    icon_root / "space/consoles/science",
+                    "space/consoles/universal",
+                    "space/consoles/engineering",
+                    "space/consoles/tactical",
+                    "space/consoles/science",
                 ],
                 "Engineering Console": [
-                    icon_root / "space/consoles/engineering",
-                    icon_root / "space/consoles/universal",
+                    "space/consoles/engineering",
+                    "space/consoles/universal",
                 ],
                 "Tactical Console": [
-                    icon_root / "space/consoles/tactical",
-                    icon_root / "space/consoles/universal",
+                    "space/consoles/tactical",
+                    "space/consoles/universal",
                 ],
                 "Science Console": [
-                    icon_root / "space/consoles/science",
-                    icon_root / "space/consoles/universal",
+                    "space/consoles/science",
+                    "space/consoles/universal",
                 ],
             },
             "pc_ground": {
-                "Body": [icon_root / "ground/armor"],
-                "Shield": [icon_root / "ground/shield"],
-                "EV Suit": [icon_root / "ground/ev_suit"],
-                "Kit Modules": [icon_root / "ground/kit_module"],
-                "Kit": [icon_root / "ground/kit"],
-                "Devices": [icon_root / "ground/device"],
-                "Weapon": [icon_root / "ground/weapon"],
+                "Body": ["ground/armor"],
+                "Shield": ["ground/shield"],
+                "EV Suit": ["ground/ev_suit"],
+                "Kit Modules": ["ground/kit_module"],
+                "Kit": ["ground/kit"],
+                "Devices": ["ground/device"],
+                "Weapon": ["ground/weapon"],
             },
             "console_ground": {
-                "Body": [icon_root / "ground/armor"],
-                "Shield": [icon_root / "ground/shield"],
-                "EV Suit": [icon_root / "ground/ev_suit"],
+                "Body": ["ground/armor"],
+                "Shield": ["ground/shield"],
+                "EV Suit": ["ground/ev_suit"],
                 "Kit": [
-                    icon_root / "ground/kit_module"
+                    "ground/kit_module"
                 ],  # Console swaps "Kit Modules" to "Kit"
                 "Kit Frame": [
-                    icon_root / "ground/kit"
+                    "ground/kit"
                 ],  # And "Kit" becomes "Kit Frame"
-                "Devices": [icon_root / "ground/device"],
-                "Weapon": [icon_root / "ground/weapon"],
+                "Devices": ["ground/device"],
+                "Weapon": ["ground/weapon"],
             },
 
             "traits": {
-                "Personal Space Traits": [ icon_root / "space/traits/personal" ],
-                "Space Reputation": [ icon_root / "space/traits/reputation" ],
-                "Active Space Reputation": [ icon_root / "space/traits/active_reputation" ],
+                "Personal Space Traits": [ "space/traits/personal" ],
+                "Space Reputation": [ "space/traits/reputation" ],
+                "Active Space Reputation": [ "space/traits/active_reputation" ],
 
-                "Personal Ground Traits": [ icon_root / "ground/traits/personal" ],
-                "Ground Reputation": [ icon_root / "ground/traits/reputation" ],
-                "Active Ground Reputation": [ icon_root / "ground/traits/active_reputation" ],
+                "Personal Ground Traits": [ "ground/traits/personal" ],
+                "Ground Reputation": [ "ground/traits/reputation" ],
+                "Active Ground Reputation": [ "ground/traits/active_reputation" ],
 
-                "Starship Traits": [ icon_root / "space/traits/starship" ],
+                "Starship Traits": [ "space/traits/starship" ],
             }
         }
 

@@ -53,7 +53,7 @@ class PHashEngine:
 
         return threshold
 
-    def prefilter(self, icon_slots, build_info, icon_sets, select_items=None, on_progress=None):
+    def prefilter(self, icon_slots, build_info, icon_dir, icon_sets, select_items=None, on_progress=None):
         builds = build_info if isinstance(build_info, list) else [build_info]
         self.on_progress = on_progress
 
@@ -84,14 +84,14 @@ class PHashEngine:
         
         phash_search_completed = 0
 
-        # count the total leaf slots in the below for loop including the builds and icon groups, accounting for the build and icon set 
+
+        icon_root = Path(icon_dir)  
 
         for info in builds:
             bt = info.get("build_type", "Unknown")
             # print(f"prefiltering icons for build: {bt} [{info['icon_set'] if 'icon_set' in info else 'default'}]")
 
             icon_set = icon_sets[info["icon_set"]]
-
 
             for icon_group_label in icon_slots:
                 # print(f"icon_group_label: {icon_group_label}")
@@ -101,8 +101,10 @@ class PHashEngine:
                         f"No icon directories found for icon group '{icon_group_label}'"
                     )
                     continue
-                folders = [Path(f) for f in folders]
 
+                categories = folders
+                folders = [icon_root / f for f in folders]
+                
                 filtered_icons[icon_group_label] = {}
                 similar_icons[icon_group_label] = {}
                 found_icons[icon_group_label] = {}
@@ -124,13 +126,15 @@ class PHashEngine:
 
                     try:
                         results = self.hash_index.find_similar_to_image(
-                            roi_hash, max_distance=18, top_n=None, grayscale=False
+                            roi_hash, max_distance=18, top_n=None, grayscale=False, filters={"image_category": ",".join(categories)}
                         )
                         target_hashes[icon_group_label].append(roi_hash)
+                        #print(f"hash_index.find_similar_to_image: {results}")
                     except Exception as e:
                         raise PrefilterError(
                             f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
                         ) from e
+
 
 
                     phash_search_completed += 1
@@ -147,8 +151,8 @@ class PHashEngine:
                     #     print(f"roi_hash: {roi_hash}")
                     #     print(f"results: {results}")
                     #     show_image([roi])
-
-                    for rel_path, dist in results:
+                    #print(f"results: {results}")
+                    for rel_path, dist, metadata in results:
                         if "::" in rel_path:
                             path_part, overlay = rel_path.split("::", 1)
                         else:

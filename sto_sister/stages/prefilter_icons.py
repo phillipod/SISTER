@@ -56,6 +56,7 @@ class PrefilterIconsStage(PipelineStage):
             pre, found, filt = self.strategy.prefilter(
                 slots,
                 cls,
+                ctx.app_config.get("icon_dir"),
                 ctx.app_config.get("icon_sets", {}),
                 on_progress=reporter
             )
