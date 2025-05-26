@@ -67,10 +67,17 @@ class IconDetector:
         filtered_icons,
         found_icons,
         threshold=0.7,
+        executor_pool=None
     ):
         """
         Run icon detector using the selected engine.
         """
+        if executor_pool is None and self.executor_pool is not None:  
+            executor_pool = self.executor_pool
+
+        if executor_pool is None:
+            raise ValueError("Executor pool is not initialized")
+
         matches = {}
 
         try:
@@ -146,7 +153,7 @@ class IconDetector:
 
             args_total     = len(args_list)
             args_completed = 0
-            for result in self.executor_pool.map(
+            for result in executor_pool.map(
                 match_single_icon, args_list, chunksize=10
             ):
                 for item in result:
@@ -231,7 +238,7 @@ class IconDetector:
             args_total     = len(fallback_args_list)
             args_completed = 0
 
-            for result in self.executor_pool.map(
+            for result in executor_pool.map(
                 match_single_icon, fallback_args_list, chunksize=10
             ):
                 for item in result:

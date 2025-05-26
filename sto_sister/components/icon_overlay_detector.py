@@ -38,10 +38,17 @@ class IconOverlayDetector:
         icon_slots,
         overlays,
         threshold=0.8,
+        executor_pool=None
     ):
         """
         Run icon detector using the selected engine.
         """
+        if executor_pool is None and self.executor_pool is not None:  
+            executor_pool = self.executor_pool
+
+        if executor_pool is None:
+            raise ValueError("Executor pool is not initialized")
+
         self.on_progress("Detecting overlays", 10.0)
 
         matches = []
@@ -80,7 +87,7 @@ class IconOverlayDetector:
         rois,      overlays_list = zip(*args_list)
         labels,    idxs          = zip(*icon_group_slot_index)
 
-        with self.executor_pool as executor:
+        with executor_pool as executor:
             # executor.map will yield results in the same order as the inputs
             results_iter = executor.map(
                 identify_overlay,   # the worker function

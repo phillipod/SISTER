@@ -32,7 +32,7 @@ def load_image(image_or_path, resize_fullhd=False):
 
         try:
             nparr = np.fromfile(image_or_path, np.uint8)
-            image = cv2.imdecode(data, cv2.IMREAD_COLOR)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         except Exception as e:
             raise ImageProcessingError(
                 f"Failed to load image from path: {image_or_path}"

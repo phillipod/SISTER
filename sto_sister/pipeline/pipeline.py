@@ -19,6 +19,8 @@ from ..utils.persistent_executor import PersistentProcessPoolExecutor
 
 from .progress_reporter import PipelineProgressReporter
 from ..stages import (
+    StartExecutorPoolStage,
+    StopExecutorPoolStage,
     LocateLabelsStage,
     ClassifyLayoutStage,
     LocateIconGroupsStage,
@@ -53,6 +55,7 @@ class SISTER:
         self.app_init()
 
         self.stages: List[PipelineStage] = [
+            StartExecutorPoolStage(config.get("executor", {}), self.app_config),
             LocateLabelsStage(config.get("locate_labels", {"debug": True}), self.app_config),
             ClassifyLayoutStage(config.get("classify_layout", {}), self.app_config),
             LocateIconGroupsStage(config.get("icon_group", {}), self.app_config),
@@ -64,6 +67,7 @@ class SISTER:
                 config.get("icon_overlay", {}), self.app_config
             ),
             DetectIconsStage(config.get("detect_icons", {}), self.app_config),
+            StopExecutorPoolStage(config.get("executor", {}), self.app_config),
             OutputTransformationStage(config.get("output_transformation", {}), self.app_config),
         ]
 
@@ -168,8 +172,8 @@ class SISTER:
             }
         }
 
-        self.app_config["executor_pool"] = PersistentProcessPoolExecutor()
-        weakref.finalize(self, self.app_config["executor_pool"].shutdown)
+        #self.app_config["executor_pool"] = PersistentProcessPoolExecutor()
+        #weakref.finalize(self, self.app_config["executor_pool"].shutdown)
 
     def start_metric(self, name: str) -> None:
         self.metrics[name] = {

@@ -18,6 +18,7 @@ class PipelineState:
     screenshots: Union[np.ndarray, List[np.ndarray]]
     config: Dict[str, Any] = field(default_factory=dict)
     app_config: Dict[str, Any] = field(default_factory=dict)
+    executor_pool: Any = None
     labels: Dict[str, Tuple[int, int, int, int]] = field(default_factory=dict)
     icon_groups: Dict[str, Tuple[int, int, int, int]] = field(default_factory=dict)
     slots: Dict[str, List[Slot]] = field(default_factory=dict)

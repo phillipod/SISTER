@@ -64,7 +64,13 @@ def on_stage_complete(stage, ctx, output):
             bar.update(bar.total - prev)
         bar.close()
 
-    if stage == 'locate_labels':
+    if stage == 'start_executor_pool':
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Started executor pool ({ctx.executor_pool_total} workers)")
+        return
+    elif stage == 'stop_executor_pool':
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Stopped executor pool")
+        return
+    elif stage == 'locate_labels':
         tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(label) for label in ctx.labels_list)} labels")
         return
     elif stage == 'locate_icon_groups':

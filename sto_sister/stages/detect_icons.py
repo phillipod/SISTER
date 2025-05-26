@@ -18,7 +18,7 @@ class DetectIconsStage(PipelineStage):
 
         self.detector = IconDetector(
             debug=opts.get("debug", False),
-            executor_pool=app_config["executor_pool"]
+            # executor_pool=app_config["executor_pool"]
         )
 
     def process(
@@ -46,6 +46,7 @@ class DetectIconsStage(PipelineStage):
             ctx.filtered_icons,
             ctx.found_icons,
             threshold=self.opts.get("threshold", 0.7),
+            executor_pool=ctx.executor_pool
         )
         report(self.name, f"Completed - Matched {sum(1 for icon_group_dict in ctx.matches.values() for slot_items in icon_group_dict.values() for item in slot_items)} icons", 100.0)
         return StageOutput(ctx, ctx.matches)
