@@ -359,8 +359,8 @@ class CargoDownloader:
             ).strip()
             cleaned_name = re.sub(r"[\/\\:\*\?\"\<\>\|]", "_", cleaned_name).strip()
 
-            filename = cleaned_name.replace(" ", "_") + ".png"
-            url = FILE_PATH_BASE + cleaned_name.replace(" ", "_") + "_icon.png"
+            filename = cleaned_name.replace(" ", "_") + ("_(" + item["faction_suffix"] + ")" if item["faction_suffix"] else "") + ".png"
+            url = FILE_PATH_BASE + cleaned_name.replace(" ", "_") + ("_(" + item["faction_suffix"] + ")" if item["faction_suffix"] else "") + "_icon.png"
             dest_path = dest_dir / filename
 
             local_counter = 0
@@ -405,6 +405,24 @@ class CargoDownloader:
             if local_counter > 0 and local_counter % 20 == 0:
                 with cache_lock:
                     self._write_image_cache(image_cache_path, cache_entries)
+
+        download_items = []
+        for item in items:
+            if 'environment' in item and item['environment'] == 'space' and item['type'] in ("reputation", "activereputation"):
+                download_items.append(item.copy()) # Base icon (Fed)
+                
+                item['faction_suffix'] = "Dominion"
+                download_items.append(item.copy()) # Dominion icon
+
+                item['faction_suffix'] = "Romulan"
+                download_items.append(item.copy()) # Romulan icon
+
+                item['faction_suffix'] = "Klingon"
+                download_items.append(item.copy()) # Klingon icon
+            else:
+                download_items.append(item)
+
+        items = download_items
 
         with ThreadPoolExecutor() as executor:
             try:
