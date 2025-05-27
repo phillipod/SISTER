@@ -110,10 +110,10 @@ class IconDetector:
                         matches[icon_group_label][idx] = []
 
                     icons_for_slot = found_icons[icon_group_label].get(box, {})
-                    # print(f"icons_for_slot: {icons_for_slot}")
-
+                    
                     if not icons_for_slot:
                         continue
+                    #print(f"icons_for_slot: {icons_for_slot}")
 
                     detected_overlay = detected_overlays[idx]
 
@@ -121,10 +121,10 @@ class IconDetector:
                         f"Matching {len(icons_for_slot)} icons into icon group '{icon_group_label}' at slot {idx} with overlay {detected_overlay[0]["overlay"]} at scale {detected_overlay[0]['scale']}"
                     )
 
+                    
                     for idx_icon, (name, icon_color) in enumerate(
                         icon_group_filtered_icons.items(), 1
                     ):
-                        # print(f"Matching {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with overlay {detected_overlay}")
                         if name not in icons_for_slot:
                             # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with overlay {detected_overlay}")
                             continue
@@ -133,11 +133,15 @@ class IconDetector:
                             # print(f"Skipping {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx_icon_group} with overlay {detected_overlay} as ")
                             continue
 
+                        #print(f"Matching {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx} with overlay {detected_overlay}")
+                        #print(f"icons_for_slot[name][metadata]: {icons_for_slot[name]['metadata']}")
+
                         args = (
                             name,
                             idx,
                             roi,
                             icon_color,
+                            icons_for_slot[name]['metadata']['mask_type'],
                             detected_overlay,
                             threshold,
                             overlays,
@@ -222,6 +226,7 @@ class IconDetector:
                             idx,
                             roi,
                             icon_color,
+                            icons_for_slot[name]['metadata']['mask_type'],
                             detected_overlay,
                             threshold,
                             overlays,
@@ -291,6 +296,7 @@ def match_single_icon(args):
         slot_idx,
         roi,
         icon_color,
+        mask_type,
         detected_overlays,
         threshold,
         overlays,
@@ -355,6 +361,7 @@ def match_single_icon(args):
                     name,
                     roi,
                     icon_color,
+                    mask_type,
                     scales=scales,
                     threshold=threshold,
                 )
@@ -363,7 +370,7 @@ def match_single_icon(args):
                 for overlay_name, overlay_img in overlays.items():
                     blended_icon = apply_overlay(icon_color, overlay_img)
                     match = multi_scale_match(
-                        name, roi, blended_icon, threshold=threshold
+                        name, roi, blended_icon, mask_type, threshold=threshold
                     )
 
                     if match and match[2] > best_score:
@@ -392,6 +399,7 @@ def match_single_icon(args):
                     name,
                     roi,
                     blended_icon,
+                    mask_type,
                     scales=scales,
                     steps=overlay_steps,
                     threshold=threshold,
@@ -399,7 +407,7 @@ def match_single_icon(args):
             else:
                 method = "ssim-detected-overlay-all-scales-fallback"
                 best_match = multi_scale_match(
-                    name, roi, blended_icon, threshold=threshold
+                    name, roi, blended_icon, mask_type, threshold=threshold
                 )
 
             # print(f"overlay!=common: best_match: {best_match} scales: {scales} method: {method}")

@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, List, Tuple, Optional
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..pipeline.progress_reporter import StageProgressReporter
-from ..utils.image import apply_mask, load_overlays, show_image
+from ..utils.image import load_overlays
 from ..components.icon_detector import IconDetector
 
 

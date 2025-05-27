@@ -24,7 +24,6 @@ class StartExecutorPoolStage(PipelineStage):
         report(self.name, "Starting executor pool", 0.0)
         ctx.executor_pool = PersistentProcessPoolExecutor()
 
-
         total = ctx.executor_pool._executor._max_workers
         count = 0
 

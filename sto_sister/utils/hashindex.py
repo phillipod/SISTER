@@ -409,14 +409,6 @@ class HashIndex:
                     continue
 
                 for overlay_name, overlay_image in overlays.items():
-                    blended = apply_overlay(image_bgr[:, :, :3], overlay_image)
-
-                    masked = apply_mask(blended)
-
-                    _, buf = cv2.imencode(".png", masked)
-                    hash_val = self.hasher(
-                        buf.tobytes(), size=self.match_size, grayscale=False
-                    )
                     #key = f"{rel_path}::{overlay_name}"
                     #self.hashes[key] = {"hash": hash_val, "mtime": mtime}
                     
@@ -443,6 +435,22 @@ class HashIndex:
                     metadata["cargo_filters"] = self.image_cache.get(filename, {}).get("filters", {})
                     
                     metadata["item_name"] = self.image_cache.get(filename, {}).get("cleaned_name", "")
+
+                    if metadata["image_category"] in ["space/traits/active_reputation", "space/traits/reputation", "ground/traits/active_reputation", "ground/traits/reputation"]:
+                        metadata["mask_type"] = "reputation_trait_type"
+                    elif metadata["image_category"] in ["space/traits/starship", "space/traits/personal", "ground/traits/personal"]:
+                        metadata["mask_type"] = "none"
+                    else:
+                        metadata["mask_type"] = "item_type"
+
+                    blended = apply_overlay(image_bgr[:, :, :3], overlay_image)
+
+                    masked = apply_mask(blended, metadata["mask_type"])
+
+                    _, buf = cv2.imencode(".png", masked)
+                    hash_val = self.hasher(
+                        buf.tobytes(), size=self.match_size, grayscale=False
+                    )
 
                     entry_data = {
                         "hash":  hash_val,
@@ -476,7 +484,7 @@ class HashIndex:
     def all_hashes(self):
         return {k: v["hash"] for k, v in self.hashes.items()}
 
-    def get_hash(self, roi_bgr, size=None, grayscale=False):
+    def get_hash(self, roi_bgr, mask_type, size=None, grayscale=False):
         """
         Compute the perceptual hash of the ROI.
 
@@ -497,7 +505,7 @@ class HashIndex:
         try:
             rgb = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2RGB)
 
-            masked = apply_mask(rgb)
+            masked = apply_mask(rgb, mask_type)
 
             if grayscale:
                 masked = cv2.cvtColor(masked, cv2.COLOR_BGR2GRAY)

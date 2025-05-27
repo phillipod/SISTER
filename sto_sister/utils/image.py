@@ -307,7 +307,7 @@ def apply_overlay(template_color, overlay):
     return blended.astype(np.uint8)
 
 
-def create_mask(w, h):
+def create_mask(w, h, mask_type):
     """
     Create a mask for a given image size (w x h) which fades out the lower right corner.
 
@@ -323,11 +323,16 @@ def create_mask(w, h):
         np.array: The mask image as a 2D array of float32 values.
     """
     mask = np.ones((h, w), dtype=np.float32)
-    mask[int(h * 0.75) :, int(w * 0.5) :] = 0.0
+
+    if mask_type == "item_type":
+        mask[int(h * 0.75) :, int(w * 0.5) :] = 0.0
+    elif mask_type == "reputation_trait_type":
+        mask[int(h * 0.75) :, :int(w * 0.5)] = 0.0
+
     return mask
 
 
-def apply_mask(image):
+def apply_mask(image, mask_type):
     """
     Apply a fading mask to the given image.
 
@@ -344,8 +349,19 @@ def apply_mask(image):
                   in the lower right corner.
     """
 
+    if mask_type == "none":
+        return image
+
     h, w = image.shape[:2]
-    mask = create_mask(w, h)
+    mask = create_mask(w, h, mask_type)
     for c in range(3):
         image[:, :, c] = (image[:, :, c].astype(np.float32) * mask).astype(np.uint8)
     return image
+
+def map_mask_type(icon_group_label):
+    if icon_group_label in ["Active Space Reputation", "Active Ground Reputation", "Space Reputation", "Ground Reputation"]:
+        return "reputation_trait_type"
+    elif icon_group_label in ["Personal Space Traits", "Personal Ground Traits", "Starship Traits"]:
+        return "none"
+    else:
+        return "item_type"

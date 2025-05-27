@@ -12,7 +12,7 @@ import imagehash
 from PIL import Image
 
 
-from ..utils.image import apply_mask, show_image
+from ..utils.image import show_image
 from ..metrics.barcode import find_off_strips, compare_barcodes
 from ..metrics.mean_hue import classify_overlay_by_patch
 
@@ -235,6 +235,9 @@ def identify_overlay(
         # "Devices": {
         #    "2": True
         # }
+        # "Active Space Reputation": {
+        #     "3": True
+        # }
     }
 
     original_region_crop_shape = region_crop.shape
@@ -306,6 +309,12 @@ def identify_overlay(
             print(
                 f"{icon_group_label}#{slot}: {overlay_name}: Scale: Overlay detected by patch: {barcode_overlay_detected_overlay_by_patch} - {h_deg}°"
             )
+            show_image([
+                region_crop,
+                overlay_rgb,
+                barcode_region,
+                barcode_overlay,
+            ])
 
         orig_mask = overlay_mask(overlay_name, overlay_alpha.shape)
 

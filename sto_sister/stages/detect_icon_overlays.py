@@ -4,7 +4,7 @@ from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..pipeline.progress_reporter import StageProgressReporter
 from ..components.icon_overlay_detector import IconOverlayDetector
 
-from ..utils.image import apply_mask, load_overlays, show_image
+from ..utils.image import load_overlays
 
 
 class DetectIconOverlaysStage(PipelineStage):

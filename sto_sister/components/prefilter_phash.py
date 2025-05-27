@@ -184,6 +184,7 @@ class PHashEngine:
                                 "dist": dist,
                                 "overlay": overlay,
                                 "name": filename,
+                                "metadata": metadata,
                             }
 
                         try:

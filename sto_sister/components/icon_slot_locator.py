@@ -6,6 +6,8 @@ from skimage.measure import shannon_entropy
 
 from typing import List, Tuple, Dict, Any
 
+from ..utils.image import map_mask_type
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,12 +107,13 @@ class IconSlotLocator:
                 x1, y1 = entry["IconGroup"]["top_left"]
                 x2, y2 = entry["IconGroup"]["bottom_right"]
                 if x1 <= cx <= x2 and y1 <= cy <= y2:
+                    mask_type = map_mask_type(label)
                     slot_info = {
                         # Temporarily store global index; will renumber per icon group later
                         "GlobalIdx": idx,
                         "Box": (int(x), int(y), int(w), int(h)),
                         "ROI": candidate_rois[(x, y, w, h)],
-                        "Hash": self.hash_index.get_hash(candidate_rois[(x, y, w, h)]),
+                        "Hash": self.hash_index.get_hash(candidate_rois[(x, y, w, h)], mask_type),
                     }
                     icon_group_candidates[label].append(slot_info)
                     break
