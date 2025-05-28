@@ -361,7 +361,7 @@ def apply_mask(image, mask_type):
 def map_mask_type(icon_group_label):
     if icon_group_label in ["Active Space Reputation", "Active Ground Reputation", "Space Reputation", "Ground Reputation"]:
         return "reputation_trait_type"
-    elif icon_group_label in ["Personal Space Traits", "Personal Ground Traits", "Starship Traits"]:
+    elif icon_group_label in ["Personal Space Traits", "Personal Ground Traits"]:
         return "none"
     else:
         return "item_type"
