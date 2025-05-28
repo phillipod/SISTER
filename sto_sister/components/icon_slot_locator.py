@@ -141,8 +141,8 @@ class IconSlotLocator:
                             "Slot": local_idx,
                             "Box": info["Box"],
                             "ROI": info["ROI"],
-                            "PHash": self.hash_index.get_hash("phash", candidate_rois[info["Box"]], label, local_idx, mask_type),
-                            "DHash": self.hash_index.get_hash("dhash", candidate_rois[info["Box"]], label, local_idx, mask_type),
+                            "phash": self.hash_index.get_hash("phash", candidate_rois[info["Box"]], label, local_idx, mask_type),
+                            "dhash": self.hash_index.get_hash("dhash", candidate_rois[info["Box"]], label, local_idx, mask_type),
                         }
                     )
                 else:

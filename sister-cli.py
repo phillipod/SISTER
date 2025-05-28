@@ -104,6 +104,9 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'prefilter_icons':
         tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(slots) for icon_group in output.values() for slots in icon_group.values())} potential matches")
         return
+    elif stage == 'load_icons':
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Loaded icons")
+        return
     elif stage == 'output_transformation':
         #tqdm.write(f"[Callback] [on_stage_complete] [{stage}]")
         return
