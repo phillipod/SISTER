@@ -60,7 +60,6 @@ class HashEngine:
         prefiltered = {}
 
         filtered_icons = {}
-        similar_icons = {}
         found_icons = {}
         target_phashes = {}
         target_dhashes = {}
@@ -83,7 +82,7 @@ class HashEngine:
 
         self.on_progress("Hash search", start_pct)
         
-        phash_search_completed = 0
+        hash_search_completed = 0
 
 
         icon_root = Path(icon_dir)  
@@ -104,7 +103,6 @@ class HashEngine:
                 folders = [icon_root / f for f in folders]
                 
                 filtered_icons[icon_group_label] = {}
-                similar_icons[icon_group_label] = {}
                 found_icons[icon_group_label] = {}
                 target_phashes[icon_group_label] = []
                 target_dhashes[icon_group_label] = []
@@ -121,7 +119,6 @@ class HashEngine:
                     )
 
                     found_icons[icon_group_label][box] = {}
-                    similar_icons[icon_group_label][box] = {}
                     filtered_icons[icon_group_label][box] = {}
 
                     try:
@@ -140,7 +137,7 @@ class HashEngine:
                         dhash_results = self.hash_index.find_similar_to_image(
                             "dhash", roi_dhash, max_distance=10, top_n=None, grayscale=False, filters={"image_category": ",".join(categories)}
                         )
-                        target_dhashes[icon_group_label].append(roi_phash)
+                        target_dhashes[icon_group_label].append(roi_dhash)
                         #print(f"hash_index.find_similar_to_image: {results}")
                     except Exception as e:
                         raise PrefilterError(
@@ -149,13 +146,13 @@ class HashEngine:
 
 
 
-                    phash_search_completed += 1
+                    hash_search_completed += 1
                     
-                    if phash_search_completed % 10 == 0 or phash_search_completed == slots_total:
-                        frac       = phash_search_completed / slots_total
+                    if hash_search_completed % 10 == 0 or hash_search_completed == slots_total:
+                        frac       = hash_search_completed / slots_total
                         scaled_pct = start_pct + frac * (end_pct - start_pct)
 
-                        sub = f"{phash_search_completed}/{slots_total}"
+                        sub = f"{hash_search_completed}/{slots_total}"
                         self.on_progress(f"Hash search -> {sub}", scaled_pct)
 
                     # if icon_group_label == "Active Ground Reputation":
