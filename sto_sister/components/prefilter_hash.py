@@ -17,7 +17,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class PHashEngine:
+class HashEngine:
     """
     Prefiltering engine using perceptual hash.
     """
@@ -156,7 +156,7 @@ class PHashEngine:
                         scaled_pct = start_pct + frac * (end_pct - start_pct)
 
                         sub = f"{phash_search_completed}/{slots_total}"
-                        self.on_progress(f"PHash search -> {sub}", scaled_pct)
+                        self.on_progress(f"Hash search -> {sub}", scaled_pct)
 
                     # if icon_group_label == "Active Ground Reputation":
                     #     print(f"Active Ground Reputation")
@@ -422,7 +422,7 @@ class PHashEngine:
                     scaled_pct = start_pct + frac * (end_pct - start_pct)
 
                     sub = f"{phash_threshold_completed}/{candidates_total}"
-                    self.on_progress(f"PHash threshold -> {sub}", scaled_pct)
+                    self.on_progress(f"Hash threshold -> {sub}", scaled_pct)
 
 
                 logger.debug(

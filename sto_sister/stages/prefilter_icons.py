@@ -4,11 +4,11 @@ from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..pipeline.progress_reporter import StageProgressReporter
 # from ..prefilter import IconPrefilter
 
-from ..components.prefilter_phash import PHashEngine
+from ..components.prefilter_hash import HashEngine
 
 
 STRATEGY_CLASSES = {
-    "phash": PHashEngine,
+    "phash": HashEngine,
     # "dhash": DHashEngine,
 }
 
