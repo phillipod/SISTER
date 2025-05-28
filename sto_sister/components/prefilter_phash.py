@@ -149,20 +149,20 @@ class PHashEngine:
                     #     print(f"results: {results}")
                     #     show_image([roi])
 
-                    # if icon_group_label == "Starship Traits" and idx == 3:
-                    #     print(f"Starship Traits")
-                    #     print(f"roi_hash: {roi_hash}")
-                        # print(f"results: {results}")
-                    #     show_image([roi])
+                    if icon_group_label == "Starship Traits" and idx >= 5:
+                        print(f"Starship Traits")
+                        print(f"roi_hash: {roi_hash}")
+                        print(f"results: {results}")
+                        show_image([roi])
 
                     #print(f"results: {results}")
                     for rel_path, dist, metadata in results:
-                        # if icon_group_label == "Starship Traits" and idx == 3:
-                        #     print(f"Starship Traits")
-                        #     print(f"rel_path: {rel_path}")
-                        #     print(f"dist: {dist}")
-                        #     print(f"metadata: {metadata}")
-                        #     show_image([roi])
+                        if icon_group_label == "Starship Traits" and idx >= 5:
+                            print(f"Starship Traits")
+                            print(f"rel_path: {rel_path}")
+                            print(f"dist: {dist}")
+                            print(f"metadata: {metadata}")
+                            show_image([roi])
 
                         if "::" in rel_path:
                             path_part, overlay = rel_path.split("::", 1)
