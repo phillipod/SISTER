@@ -107,13 +107,11 @@ class IconSlotLocator:
                 x1, y1 = entry["IconGroup"]["top_left"]
                 x2, y2 = entry["IconGroup"]["bottom_right"]
                 if x1 <= cx <= x2 and y1 <= cy <= y2:
-                    mask_type = map_mask_type(label)
                     slot_info = {
                         # Temporarily store global index; will renumber per icon group later
                         "GlobalIdx": idx,
                         "Box": (int(x), int(y), int(w), int(h)),
                         "ROI": candidate_rois[(x, y, w, h)],
-                        "Hash": self.hash_index.get_hash(candidate_rois[(x, y, w, h)], mask_type),
                     }
                     icon_group_candidates[label].append(slot_info)
                     break
@@ -132,6 +130,8 @@ class IconSlotLocator:
             slot_map = {slot["Box"]: slot for slot in slots}
             sorted_slots: List[Dict[str, Any]] = []
 
+            mask_type = map_mask_type(label)
+
             for local_idx, box in enumerate(sorted_boxes):
                 info = slot_map.get(sorted_boxes[box], None)
 
@@ -141,7 +141,8 @@ class IconSlotLocator:
                             "Slot": local_idx,
                             "Box": info["Box"],
                             "ROI": info["ROI"],
-                            "Hash": info["Hash"],
+                            "PHash": self.hash_index.get_hash("phash", candidate_rois[info["Box"]], label, local_idx, mask_type),
+                            "DHash": self.hash_index.get_hash("dhash", candidate_rois[info["Box"]], label, local_idx, mask_type),
                         }
                     )
                 else:

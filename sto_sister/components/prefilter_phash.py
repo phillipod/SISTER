@@ -62,7 +62,8 @@ class PHashEngine:
         filtered_icons = {}
         similar_icons = {}
         found_icons = {}
-        target_hashes = {}
+        target_phashes = {}
+        target_dhashes = {}
 
         # select_items = {
         #    "Science Console": { 3: True },
@@ -80,7 +81,7 @@ class PHashEngine:
         start_pct = 5.0
         end_pct   = 65.0
 
-        self.on_progress("PHash search", start_pct)
+        self.on_progress("Hash search", start_pct)
         
         phash_search_completed = 0
 
@@ -105,13 +106,15 @@ class PHashEngine:
                 filtered_icons[icon_group_label] = {}
                 similar_icons[icon_group_label] = {}
                 found_icons[icon_group_label] = {}
-                target_hashes[icon_group_label] = []
+                target_phashes[icon_group_label] = []
+                target_dhashes[icon_group_label] = []
 
                 for slot in icon_slots[icon_group_label]:
                     idx = slot["Slot"]
                     box = slot["Box"]
                     roi = slot["ROI"]
-                    roi_hash = slot["Hash"]
+                    roi_phash = slot["PHash"]
+                    roi_dhash = slot["DHash"]
 
                     logger.debug(
                         f"Prefiltering icons for icon group '{icon_group_label}' at slot {idx}"
@@ -122,10 +125,22 @@ class PHashEngine:
                     filtered_icons[icon_group_label][box] = {}
 
                     try:
-                        results = self.hash_index.find_similar_to_image(
-                            roi_hash, max_distance=18, top_n=None, grayscale=False, filters={"image_category": ",".join(categories)}
+                        phash_results = self.hash_index.find_similar_to_image(
+                            "phash", roi_phash, max_distance=18, top_n=None, grayscale=False, filters={"image_category": ",".join(categories)}
                         )
-                        target_hashes[icon_group_label].append(roi_hash)
+                        target_phashes[icon_group_label].append(roi_phash)
+                        #print(f"hash_index.find_similar_to_image: {results}")
+                    except Exception as e:
+                        raise PrefilterError(
+                            f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
+                        ) from e
+
+
+                    try:
+                        dhash_results = self.hash_index.find_similar_to_image(
+                            "dhash", roi_dhash, max_distance=10, top_n=None, grayscale=False, filters={"image_category": ",".join(categories)}
+                        )
+                        target_dhashes[icon_group_label].append(roi_phash)
                         #print(f"hash_index.find_similar_to_image: {results}")
                     except Exception as e:
                         raise PrefilterError(
@@ -149,20 +164,28 @@ class PHashEngine:
                     #     print(f"results: {results}")
                     #     show_image([roi])
 
-                    if icon_group_label == "Starship Traits" and idx >= 5:
-                        print(f"Starship Traits")
-                        print(f"roi_hash: {roi_hash}")
-                        print(f"results: {results}")
-                        show_image([roi])
+                    # if icon_group_label == "Starship Traits" and idx >= 5:
+                    #     print(f"Starship Traits")
+                    #     print(f"roi_hash: {roi_hash}")
+                    #     print(f"results: {results}")
+                    #     show_image([roi])
+
+                    # if icon_group_label == "Personal Space Traits" and idx == 8:
+                    #     print(f"Personal Space Traits")
+                    #     print(f"roi_phash: {roi_phash}")
+                    #     print(f"roi_dhash: {roi_dhash}")
+                    #     print(f"phash_results: {phash_results}")
+                    #     print(f"dhash_results: {dhash_results}")
+                    #     show_image([roi])
 
                     #print(f"results: {results}")
-                    for rel_path, dist, metadata in results:
-                        if icon_group_label == "Starship Traits" and idx >= 5:
-                            print(f"Starship Traits")
-                            print(f"rel_path: {rel_path}")
-                            print(f"dist: {dist}")
-                            print(f"metadata: {metadata}")
-                            show_image([roi])
+                    for rel_path, dist, metadata in phash_results:
+                        # if icon_group_label == "Starship Traits" and idx >= 5:
+                        #     print(f"Starship Traits")
+                        #     print(f"rel_path: {rel_path}")
+                        #     print(f"dist: {dist}")
+                        #     print(f"metadata: {metadata}")
+                        #     show_image([roi])
 
                         if "::" in rel_path:
                             path_part, overlay = rel_path.split("::", 1)
@@ -199,6 +222,7 @@ class PHashEngine:
 
                             box_icons[filename] = {
                                 "dist": dist,
+                                "hash_method": "phash",
                                 "overlay": overlay,
                                 "name": filename,
                                 "metadata": metadata,
@@ -219,6 +243,70 @@ class PHashEngine:
                                 f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
                             ) from e
 
+                    for rel_path, dist, metadata in dhash_results:
+                        # if icon_group_label == "Starship Traits" and idx >= 5:
+                        #     print(f"Starship Traits")
+                        #     print(f"rel_path: {rel_path}")
+                        #     print(f"dist: {dist}")
+                        #     print(f"metadata: {metadata}")
+                        #     show_image([roi])
+
+                        if "::" in rel_path:
+                            path_part, overlay = rel_path.split("::", 1)
+                        else:
+                            path_part, overlay = rel_path, None
+
+                        full_path = self.hash_index.base_dir / path_part
+                        filename = os.path.basename(path_part)
+                        name = os.path.splitext(filename)[0]
+                        normalized_path = os.path.normpath(path_part)
+
+                        # Folder filtering
+                        allowed = False
+                        for folder in folders:
+                            try:
+                                relative_folder = folder.relative_to(
+                                    self.hash_index.base_dir
+                                )
+                                if normalized_path.startswith(
+                                    os.path.normpath(str(relative_folder))
+                                ):
+                                    allowed = True
+                                    break
+                            except ValueError:
+                                continue
+
+                        if not allowed or not full_path.exists():
+                            continue
+
+                        box_icons = found_icons[icon_group_label][box]
+                        if filename not in box_icons or box_icons[filename]["dist"] > dist:
+                            # if filename == "Intruder_Discouragement.png":
+                            #     print(f"{icon_group_label} {box} {filename} {dist}: {metadata}")
+
+                            box_icons[filename] = {
+                                "dist": dist,
+                                "hash_method": "dhash",
+                                "overlay": overlay,
+                                "name": filename,
+                                "metadata": metadata,
+                            }
+
+                        try:
+                            if filename not in filtered_icons[icon_group_label]:
+                                data = np.fromfile(str(full_path), dtype=np.uint8)
+                                icon = cv2.imdecode(data, cv2.IMREAD_COLOR)
+                                #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
+                                if icon is not None:
+                                    # Ensure icon is 49x64
+                                    if icon.shape[0] != 64 or icon.shape[1] != 49:
+                                        icon = cv2.resize(icon, (49, 64))
+                                    filtered_icons[icon_group_label][filename] = icon
+                        except Exception as e:
+                            raise PrefilterError(
+                                f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
+                            ) from e                            
+
 
 
         candidates_total = sum(
@@ -230,7 +318,7 @@ class PHashEngine:
         start_pct = 66.0
         end_pct   = 95.0
 
-        self.on_progress("PHash threshold", start_pct)
+        self.on_progress("Hash threshold", start_pct)
         
         phash_threshold_completed = 0
         
@@ -250,7 +338,8 @@ class PHashEngine:
                 idx = slot["Slot"]
                 box = slot["Box"]
                 roi = slot["ROI"]
-                roi_hash = slot["Hash"]
+                roi_phash = slot["PHash"]
+                roi_dhash = slot["DHash"]
 
                 if select_items and icon_group_label in select_items:
                     if (
@@ -294,9 +383,11 @@ class PHashEngine:
                             "match_threshold": int(threshold_val),
                             "icon_group": icon_group_label,
                             "slot": idx,
-                            "method": "hash-phash",
+                            "method": "hash-" + info["hash_method"],
                             "overlay": info["overlay"],
-                            "roi_hash": target_hashes[icon_group_label][idx],
+                            "roi_phash": target_phashes[icon_group_label][idx],
+                            "roi_dhash": target_dhashes[icon_group_label][idx],
+                            "metadata": info["metadata"]
                             # "overlay_scale": 1.0,
                             # "overlay_score":0.0,
                             # "scale": 1.0,

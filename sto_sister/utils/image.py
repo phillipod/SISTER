@@ -328,6 +328,12 @@ def create_mask(w, h, mask_type):
         mask[int(h * 0.75) :, int(w * 0.5) :] = 0.0
     elif mask_type == "reputation_trait_type":
         mask[int(h * 0.75) :, :int(w * 0.5)] = 0.0
+    elif mask_type == "personal_trait_type":
+        # mask out a 3px border around the image
+        mask[:, :3] = 0.0
+        mask[:, -3:] = 0.0
+        mask[:3, :] = 0.0
+        mask[-3:, :] = 0.0
 
     return mask
 
@@ -362,6 +368,6 @@ def map_mask_type(icon_group_label):
     if icon_group_label in ["Active Space Reputation", "Active Ground Reputation", "Space Reputation", "Ground Reputation"]:
         return "reputation_trait_type"
     elif icon_group_label in ["Personal Space Traits", "Personal Ground Traits"]:
-        return "none"
+       return "personal_trait_type"
     else:
         return "item_type"

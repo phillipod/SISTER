@@ -14,14 +14,13 @@ from pybktree import BKTree
 from imagehash import hex_to_hash
 
 from ..exceptions import HashIndexError, HashIndexNotFoundError
-from ..utils.image import apply_overlay, apply_mask
+from ..utils.image import apply_overlay, apply_mask, show_image
 
 logger = logging.getLogger(__name__)
 
-
-def compute_phash(image, size=(32, 32), grayscale=False):
+def get_pil_image(image, size=(32, 32), grayscale=False):
     """
-    Compute the perceptual hash from an image.
+    Get a PIL image, sized and ready for hashing
 
     Args:
         image (bytes or bytearray or array-like or numpy.ndarray):
@@ -70,15 +69,23 @@ def compute_phash(image, size=(32, 32), grayscale=False):
     # 4) Resize to target size
     resized = cv2.resize(rgb, size, interpolation=cv2.INTER_AREA)
 
-    # 5) Compute perceptual hash
+    # 5) Get PIL image
     pil_img = Image.fromarray(resized)
+    return pil_img
+
+def compute_phash(image, size=(32, 32), grayscale=False):
+    pil_img = get_pil_image(image, size, grayscale)
     return str(imagehash.phash(pil_img))
+
+def compute_dhash(image, size=(32, 32), grayscale=False):
+    pil_img = get_pil_image(image, size, grayscale)
+    return str(imagehash.dhash(pil_img))
 
 
 HASH_TYPES = {
     "phash": compute_phash,
     # "ahash": AHashHasher,  # If you add more
-    # "dhash": DHashHasher,
+    "dhash": compute_dhash,
 }
 
 
@@ -219,19 +226,7 @@ class HashIndex:
         match_size=(32, 32),
         metadata_map: dict = None,
     ):
-        # print(f"[HashIndex] base_dir: {base_dir}, hasher: {hasher}, output_file: {output_file}, recursive: {recursive}, match_size: {match_size}")
         self.base_dir = Path(base_dir)
-        # print(f"[HashIndex] base_dir: {self.base_dir}")
-        # print(f"[HashIndex] output_file: {self.base_dir / output_file}")
-        self.hasher_name = None
-
-        hasher_key = hasher.lower()
-
-        try:
-            self.hasher = HASH_TYPES[hasher_key]
-            self.hasher_name = hasher_key
-        except KeyError as e:
-            raise HashIndexError(f"Unknown hasher '{hasher_key}'") from e
 
         self.output_file = self.base_dir / output_file
         self.image_cache_file = self.base_dir / "image_cache.json"
@@ -254,14 +249,6 @@ class HashIndex:
             with open(self.output_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            cached_hasher = data.get("hasher")
-
-            if cached_hasher != self.hasher_name:
-                logger.info(
-                    f"Hash method changed from '{cached_hasher}' to '{self.hasher_name}'; discarding old index."
-                )
-                return
-
             self.hashes = data.get("hashes", {})
 
             logger.verbose(
@@ -270,9 +257,8 @@ class HashIndex:
 
             for rel_path, entry in self.hashes.items():
                 try:
-                    hash_obj = hex_to_hash(entry["hash"])
-                    # self.bktree.add(hash_obj)
-                    add_to_bktree(self.hasher_name, entry["hash"], rel_path, entry)
+                    add_to_bktree("phash", entry["phash"], rel_path, entry)
+                    add_to_bktree("dhash", entry["dhash"], rel_path, entry)
                     # self.bktree_map[hash_obj] = rel_path
                 except Exception as e:
                     logger.warning(f"Failed to rehydrate BKTree for {rel_path}: {e}")
@@ -286,7 +272,6 @@ class HashIndex:
     def _save_cache(self):
         try:
             out = {
-                "hasher": self.hasher_name,
                 "generated": datetime.utcnow().isoformat(),
                 "hashes": self.hashes,
             }
@@ -349,7 +334,8 @@ class HashIndex:
 
                 with open(path, "rb") as f:
                     data = f.read()
-                    hash_val = self.hasher(data)
+                    phash_val = self.compute_phash(data)
+                    dhash_val = self.compute_dhash(data)
                 # self.hashes[rel_path] = {"hash": hash_val, "mtime": mtime}
                 # determine image category from parent folder name
                 category = Path(rel_path).parent.name
@@ -359,7 +345,8 @@ class HashIndex:
                 metadata["image_category"] = category
 
                 entry_data = {
-                    "hash":  hash_val,
+                    "phash":  phash_val,
+                    "dhash":  dhash_val,
                     "mtime": mtime,
                     "data":  metadata,
                 }
@@ -431,22 +418,32 @@ class HashIndex:
                                     "ground/traits/active_reputation",
                                     "ground/traits/reputation"]:
                         metadata["mask_type"] = "reputation_trait_type"
-                    elif category in ["space/traits/starship",
-                                      "space/traits/personal",
+                    elif category in ["space/traits/personal",
                                       "ground/traits/personal"]:
-                        metadata["mask_type"] = "none"
+                        metadata["mask_type"] = "personal_trait_type"
                     else:
                         metadata["mask_type"] = "item_type"
 
                     blended = apply_overlay(image_bgr[:, :, :3], overlay_image)
-                    masked  = apply_mask(blended, metadata["mask_type"])
+                    masked  = apply_mask(blended.copy(), metadata["mask_type"])
                     _, buf = cv2.imencode(".png", masked)
-                    hash_val = self.hasher(buf.tobytes(),
+                    
+                    phash_val = compute_phash(buf.tobytes(),
                                            size=self.match_size,
                                            grayscale=False)
 
+                    dhash_val = compute_dhash(buf.tobytes(),
+                                           size=self.match_size,
+                                           grayscale=False)
+
+
+                    # if filename == 'Maquis_Tactics.png':
+                    #     print(f"{key}: {phash_val} {dhash_val}")
+                    #     show_image([blended, masked])
+
                     entry_data = {
-                        "hash":     hash_val,
+                        "phash":     phash_val,
+                        "dhash":     dhash_val,
                         "mtime":    mtime,
                         "md5_hash": file_md5,
                         "data":     metadata,
@@ -478,7 +475,7 @@ class HashIndex:
     def all_hashes(self):
         return {k: v["hash"] for k, v in self.hashes.items()}
 
-    def get_hash(self, roi_bgr, mask_type, size=None, grayscale=False):
+    def get_hash(self, hash_type, roi_bgr, icon_group_label, slot_idx, mask_type, size=None, grayscale=False):
         """
         Compute the perceptual hash of the ROI.
 
@@ -488,6 +485,12 @@ class HashIndex:
         Returns:
             str: Hex string of the computed hash.
         """
+        hasher = None
+        if hash_type in HASH_TYPES:
+            hasher = HASH_TYPES[hash_type]
+        else:
+            raise HashIndexError(f"Unknown hash type: {hash_type}")
+
         target_hash = None
 
         if roi_bgr is None or roi_bgr.size == 0:
@@ -497,30 +500,25 @@ class HashIndex:
             size = self.match_size
 
         try:
-            rgb = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2RGB)
-
-            masked = apply_mask(rgb, mask_type)
-
-            if grayscale:
-                masked = cv2.cvtColor(masked, cv2.COLOR_BGR2GRAY)
-
-            resized = cv2.resize(masked, size, interpolation=cv2.INTER_AREA)
-            pil_img = Image.fromarray(resized)
-            target_hash = imagehash.phash(pil_img)
-            pil_img.close()
+            masked = apply_mask(roi_bgr, mask_type)
+            
+            target_hash = hasher(masked, size=size, grayscale=grayscale)
         except Exception as e:
             raise HashIndexFindError("Failed to prepare image for hashing") from e
 
         # print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
         return str(target_hash)
 
-    def find_similar(self, target_hash, max_distance=10, top_n=None, filters=None):
+    def find_similar(self, hash_type, target_hash, max_distance=10, top_n=None, filters=None):
+        if hash_type not in HASH_TYPES:
+            raise HashIndexError(f"Unknown hash type: {hash_type}")
+
         return find_similar_in_namespace(
-            self.hasher_name, target_hash, max_distance, top_n, filters
+            hash_type, target_hash, max_distance, top_n, filters
         )
 
     def find_similar_to_image(
-        self, target_hash, max_distance=20, top_n=None, size=None, grayscale=False, filters=None
+        self, hash_type, target_hash, max_distance=20, top_n=None, size=None, grayscale=False, filters=None
     ):
         """
         Compute the perceptual hash of the ROI and return matching icons within max Hamming distance.
@@ -536,4 +534,4 @@ class HashIndex:
 
         # print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
         #print(f"filter: {filter}") 
-        return self.find_similar(target_hash, max_distance=max_distance, top_n=top_n, filters=filters)
+        return self.find_similar(hash_type, target_hash, max_distance=max_distance, top_n=top_n, filters=filters)
