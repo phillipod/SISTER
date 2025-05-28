@@ -207,32 +207,22 @@ def save_match_summary(output_dir, output_prefix, matches):
 
     The match results are grouped by icon group and slot, and the best match is
     highlighted along with its score and scale. If there are multiple good matches,
-    they are also listed.
-
-    Args:
-        output_dir (Path): Directory to save the output file.
-        screenshot_path (str): Path to the screenshot file.
-        matches (list[dict]): List of match results, each containing the keys
-            "icon_group", "top_left", "name", "method", "score", "scale", and
-            "overlay_scale".
-
-    Returns:
-        None
+    they are also listed (excluding any whose item_name duplicates the best).
     """
     output_file = Path(output_dir) / f"{output_prefix}_matches.txt"
 
-    with open(output_file, "w") as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         for icon_group, slots in sorted(matches.items()):
             f.write(f"=== Icon Group: {icon_group} ===\n")
             for slot_idx, slot_matches in sorted(slots.items()):
                 f.write(f"  -- Slot {slot_idx} --\n")
-                
+
                 if not slot_matches:
-                    f.write("    <no matches>\n")
+                    f.write("    <no matches>\n\n")
                     continue
 
                 # detect hash-based methods (e.g. 'hash', 'hash-phash', etc.)
-                first_method = slot_matches[0].get("method", "")
+                first_method   = slot_matches[0].get("method", "")
                 is_hash_method = first_method.startswith("hash")
 
                 # sort descending for SSIM, ascending for hash
@@ -242,48 +232,81 @@ def save_match_summary(output_dir, output_prefix, matches):
                     reverse=not is_hash_method
                 )
 
-                # helper to pull out a overlay_scale, even from detected_overlay
+                # helpers for overlay info
                 def get_overlay_scale(m):
-                    if "detected_overlay" in m and isinstance(m["detected_overlay"], (list, tuple)):
-                        return m["detected_overlay"][0]["scale"]
-                    elif "overlay_scale" in m:
-                        return m["overlay_scale"]
-                    return 0.0
+                    det = m.get("detected_overlay")
+                    if isinstance(det, (list, tuple)):
+                        return det[0].get("scale", 0.0)
+                    return m.get("overlay_scale", 0.0)
 
-                # helper to pull out a overlay, even from detected_overlay
                 def get_overlay_name(m):
-                    if "detected_overlay" in m and isinstance(m["detected_overlay"], (list, tuple)):
-                        return m["detected_overlay"][0]["overlay"]
-                    elif "overlay" in m:
-                        return m["overlay"]
-                    return "unknown"
+                    det = m.get("detected_overlay")
+                    if isinstance(det, (list, tuple)):
+                        return det[0].get("overlay", "unknown")
+                    return m.get("overlay", "unknown")
 
+                # --- pick best match and record its item_names ---
                 best = sorted_matches[0]
+                best_meta = best.get("metadata", []) or [best]
+
+                # collect all item_name strings from best
+                best_names = {
+                    md.get("item_name", "<unknown>")
+                    for md in best_meta
+                }
+
+                # decide how to display the best
+                if len(best_names) > 1:
+                    display_name = "ANY OF\n\t- " + "\n\t- ".join(best_names) + "\n\t"
+                else:
+                    display_name = next(iter(best_names))
+
                 best_overlay = get_overlay_name(best)
-                best_qs = get_overlay_scale(best)
-                best_scale = best.get("scale", 0.0)
+                best_score   = best.get("score", 0.0)
+                best_scale   = best.get("scale", 0.0)
+                best_qs      = get_overlay_scale(best)
+
                 f.write(
-                    f"    BEST: {best.get('name','<unknown>')} ({best_overlay}) "
+                    f"    BEST: {display_name} ({best_overlay}) "
                     f"using {best.get('method','')} "
-                    f"(score {best.get('score',0):.2f}, scale {best_scale:.2f}, "
+                    f"(score {best_score:.2f}, scale {best_scale:.2f}, "
                     f"overlay scale {best_qs:.2f})\n"
                 )
 
-                # if there are any runners-up, list them
-                if len(sorted_matches) > 1:
-                    f.write("    Others:\n")
-                    for m in sorted_matches[1:]:
-                        overlay = get_overlay_name(best)
-                        qs = get_overlay_scale(m)
-                        sc = m.get("scale", 0.0)
-                        f.write(
-                            f"      - {m.get('name','<unknown>')} ({overlay}) using {m.get('method','')} "
-                            f"(score {m.get('score',0):.2f}, scale {sc:.2f}, overlay scale {qs:.2f})\n"
-                        )
+                # --- build filtered runners-up ---
+                runners = []
+                for m in sorted_matches[1:]:
+                    meta_list = m.get("metadata", []) or [m]
+                    candidate_names = {
+                        md.get("item_name", "<unknown>")
+                        for md in meta_list
+                    }
+                    # skip if any candidate name is in best_names
+                    if candidate_names & best_names:
+                        continue
+                    runners.append((m, candidate_names))
 
+                # only write “Others:” if there’s at least one runner left
+                if runners:
+                    f.write("    Others:\n")
+                    for m, candidate_names in runners:
+                        # format name
+                        if len(candidate_names) > 1:
+                            name_str = "ANY OF\n\t\t- " + "\n\t\t- ".join(candidate_names) + "\n\t\t"
+                        else:
+                            name_str = next(iter(candidate_names))
+
+                        overlay = get_overlay_name(m)
+                        score   = m.get("score", 0.0)
+                        scale   = m.get("scale", 0.0)
+                        qs      = get_overlay_scale(m)
+                        f.write(
+                            f"\t- {name_str} ({overlay}) using {m.get('method','')} "
+                            f"(score {score:.2f}, scale {scale:.2f}, overlay scale {qs:.2f})\n"
+                        )
             f.write("\n")
 
-    return True, output_file #(f"Saved match summary to {output_file}")
+    return True, output_file
 
 if __name__ == "__main__":
     start_time = time.time()

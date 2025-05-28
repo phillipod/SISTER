@@ -2,6 +2,7 @@ import os
 import logging
 import json
 import imagehash
+import hashlib
 
 import cv2
 import numpy as np
@@ -141,12 +142,13 @@ def find_similar_in_namespace(
     max_distance: int = 10,
     top_n: int | None = None,
     filters: dict | None = None,
-) -> list[tuple[str,int,dict]]:
+) -> list[tuple[str, int, list[dict]]]:
     """
     Return up to top_n items whose hash is within max_distance of target_hash,
-    filtered by metadata if `filters` is given.  
+    filtered by metadata if `filters` is given.
 
-    Each result is (rel_path, distance, metadata_dict).
+    Each result is (rel_path, distance, metadata_list), where metadata_list
+    contains all metadata dicts attached to that same hash.
     """
     if namespace not in BK_TREE_MAP:
         return []
@@ -158,50 +160,48 @@ def find_similar_in_namespace(
     # query the BK-tree; every `item` comes back as (hash_obj, entry_dict)
     raw_results = BK_TREE_MAP[namespace].find((target_hash, None), max_distance)
 
-    out = []
+    # aggregate by hash_str -> {relpath, distance, [metadata, ...]}
+    agg: dict[str, dict] = {}
     for distance, (hash_obj, entry_dict) in raw_results:
-        # look up the relpath
         key = str(hash_obj)
         relpath = BK_TREE_RELPATHS[namespace].get(key)
         if relpath is None:
             continue
 
-        # pull out the metadata dict stored under .data
+        # the metadata you stored under "data"
         metadata = entry_dict.get("data", {})
 
-        # apply any user‐supplied filters
+        # if filters provided, drop metadata entries that don't match
         if filters and not item_matches(metadata, filters):
             continue
 
-        out.append((relpath, distance, metadata))
+        agg_key = entry_dict["md5_hash"]
 
-    # sort by distance (find returns in distance order already) and trim
+        if agg_key not in agg:
+            agg[agg_key] = {
+                "relpath": relpath,
+                "distance": distance,
+                "metadatalist": []
+            }
+        
+        # avoid duplicate metadata by image_path
+        existing = agg[agg_key]["metadatalist"]
+        current_path = metadata.get("image_path")
+        if current_path is None or all(md.get("image_path") != current_path for md in existing):
+            existing.append(metadata)
+        # else: skip adding duplicate image_path
+
+    # build the final list of tuples
+    out: list[tuple[str, int, list[dict]]] = [
+        (info["relpath"], info["distance"], info["metadatalist"])
+        for info in agg.values()
+    ]
+
+    # already roughly in ascending distance order; trim if needed
     if top_n is not None:
         out = out[:top_n]
+
     return out
-
-# def find_similar_in_namespace(namespace, target_hash, max_distance=10, top_n=None):
-#     if namespace not in BK_TREE_MAP:
-#         return []
-#     if isinstance(target_hash, str):
-#         target_hash = hex_to_hash(target_hash)
-#     results = BK_TREE_MAP[namespace].find((target_hash, None), max_distance)
-#     filtered = []
-#     for distance, item in results:
-#         # unpack the tuple you originally inserted
-#         hash_val, _metadata = item
-
-#         # turn that back into the string key you used in your rel-paths map
-#         key = str(hash_val)
-
-#         # only keep it if you have a relpath for it
-#         relpath = BK_TREE_RELPATHS[namespace].get(key)
-#         if relpath is not None:
-#             filtered.append((relpath, distance))
-
-#     # honor top_n if given
-#     return filtered[:top_n] if top_n is not None else filtered
-
 
 class HashIndex:
     """
@@ -383,16 +383,13 @@ class HashIndex:
 
     def build_with_overlays(self, overlays: dict):
         """
-        Apply each overlay to each icon and compute perceptual hashes.
-
-        Args:
-            overlays (dict): Mapping of overlay names to RGBA overlay images (numpy arrays).
+        Apply each overlay to each icon, compute perceptual hashes,
+        and record an MD5 checksum of the original file.
         """
         pattern = "**/*.png" if self.recursive else "*.png"
         updated = 0
         found_keys = set()
 
-        # Load the image cache
         self._load_image_cache()
 
         for path in self.base_dir.glob(pattern):
@@ -400,62 +397,59 @@ class HashIndex:
             try:
                 mtime = os.path.getmtime(path)
 
-                data = np.fromfile(str(path), dtype=np.uint8)
-                image_bgr = cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
+                # Read the file once into memory
+                file_bytes = path.read_bytes()
+                file_md5   = hashlib.md5(file_bytes).hexdigest()
 
-                # image_bgr = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+                # Build NumPy buffer for OpenCV from the same bytes
+                data      = np.frombuffer(file_bytes, dtype=np.uint8)
+                image_bgr = cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
                 if image_bgr is None or image_bgr.shape[2] < 3:
                     logger.warning(f"Failed to load or incomplete image: {rel_path}")
                     continue
 
                 for overlay_name, overlay_image in overlays.items():
-                    #key = f"{rel_path}::{overlay_name}"
-                    #self.hashes[key] = {"hash": hash_val, "mtime": mtime}
-                    
                     key = f"{rel_path}::{overlay_name}"
-                    
-                    # get filename portion of rel_path
                     filename = Path(rel_path).name
-
-                    # determine image category from parent folder name
                     category = Path(rel_path).parent.as_posix()
 
-                    # merge any user-supplied metadata with the category
                     metadata = dict(self.metadata_map.get(rel_path, {}))
-                    
-                    # add required metadata
-                    metadata["image_category"] = category
-                    metadata["image_path"] = rel_path
-                    metadata["image_filename"] = filename
+                    metadata.update({
+                        "image_category":  category,
+                        "image_path":      rel_path,
+                        "image_filename":  filename,
+                        "overlay_name":    overlay_name,
+                        "cargo_type":      self.image_cache.get(filename, {}).get("cargo", ""),
+                        "cargo_item_name": self.image_cache.get(filename, {}).get("name", ""),
+                        "cargo_filters":   self.image_cache.get(filename, {}).get("filters", {}),
+                        "item_name":       self.image_cache.get(filename, {}).get("cleaned_name", ""),
+                    })
 
-                    metadata["overlay_name"] = overlay_name
-                    
-                    metadata["cargo_type"] = self.image_cache.get(filename, {}).get("cargo", "")
-                    metadata["cargo_item_name"] = self.image_cache.get(filename, {}).get("name", "")
-                    metadata["cargo_filters"] = self.image_cache.get(filename, {}).get("filters", {})
-                    
-                    metadata["item_name"] = self.image_cache.get(filename, {}).get("cleaned_name", "")
-
-                    if metadata["image_category"] in ["space/traits/active_reputation", "space/traits/reputation", "ground/traits/active_reputation", "ground/traits/reputation"]:
+                    # decide mask_type
+                    if category in ["space/traits/active_reputation",
+                                    "space/traits/reputation",
+                                    "ground/traits/active_reputation",
+                                    "ground/traits/reputation"]:
                         metadata["mask_type"] = "reputation_trait_type"
-                    elif metadata["image_category"] in ["space/traits/starship", "space/traits/personal", "ground/traits/personal"]:
+                    elif category in ["space/traits/starship",
+                                      "space/traits/personal",
+                                      "ground/traits/personal"]:
                         metadata["mask_type"] = "none"
                     else:
                         metadata["mask_type"] = "item_type"
 
                     blended = apply_overlay(image_bgr[:, :, :3], overlay_image)
-
-                    masked = apply_mask(blended, metadata["mask_type"])
-
+                    masked  = apply_mask(blended, metadata["mask_type"])
                     _, buf = cv2.imencode(".png", masked)
-                    hash_val = self.hasher(
-                        buf.tobytes(), size=self.match_size, grayscale=False
-                    )
+                    hash_val = self.hasher(buf.tobytes(),
+                                           size=self.match_size,
+                                           grayscale=False)
 
                     entry_data = {
-                        "hash":  hash_val,
-                        "mtime": mtime,
-                        "data":  metadata,
+                        "hash":     hash_val,
+                        "mtime":    mtime,
+                        "md5_hash": file_md5,
+                        "data":     metadata,
                     }
 
                     self.hashes[key] = entry_data
@@ -468,9 +462,9 @@ class HashIndex:
                     f"Failed to hash overlays for {rel_path}: {e}"
                 ) from e
 
-        all_existing = set(self.hashes.keys())
-        stale_keys = all_existing - found_keys
-        for key in stale_keys:
+        # prune stale
+        stale = set(self.hashes) - found_keys
+        for key in stale:
             del self.hashes[key]
             logger.verbose(f"Pruned stale entry: {key}")
 

@@ -148,8 +148,22 @@ class PHashEngine:
                     #     print(f"roi_hash: {roi_hash}")
                     #     print(f"results: {results}")
                     #     show_image([roi])
+
+                    # if icon_group_label == "Starship Traits" and idx == 3:
+                    #     print(f"Starship Traits")
+                    #     print(f"roi_hash: {roi_hash}")
+                        # print(f"results: {results}")
+                    #     show_image([roi])
+
                     #print(f"results: {results}")
                     for rel_path, dist, metadata in results:
+                        # if icon_group_label == "Starship Traits" and idx == 3:
+                        #     print(f"Starship Traits")
+                        #     print(f"rel_path: {rel_path}")
+                        #     print(f"dist: {dist}")
+                        #     print(f"metadata: {metadata}")
+                        #     show_image([roi])
+
                         if "::" in rel_path:
                             path_part, overlay = rel_path.split("::", 1)
                         else:
@@ -180,6 +194,9 @@ class PHashEngine:
 
                         box_icons = found_icons[icon_group_label][box]
                         if filename not in box_icons or box_icons[filename]["dist"] > dist:
+                            # if filename == "Intruder_Discouragement.png":
+                            #     print(f"{icon_group_label} {box} {filename} {dist}: {metadata}")
+
                             box_icons[filename] = {
                                 "dist": dist,
                                 "overlay": overlay,

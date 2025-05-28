@@ -22,7 +22,11 @@ def multi_scale_match(
 
     # print(f"Region shape: {region_color.shape}, template shape: {template_color.shape}, scales: {scales}, threshold: {threshold}")
     region_color = apply_mask(cv2.GaussianBlur(region_color, (3, 3), 0), mask_type)
-    template_color = apply_mask(cv2.GaussianBlur(template_color, (3, 3), 0), mask_type)
+    
+    if mask_type == 'reputation_trait_type':
+        template_color = apply_mask(cv2.GaussianBlur(template_color, (5, 5), 2), mask_type)
+    else:
+        template_color = apply_mask(cv2.GaussianBlur(template_color, (3, 3), 0), mask_type)
 
     for scale in scales:
         resized_template = cv2.resize(
@@ -40,7 +44,7 @@ def multi_scale_match(
 
             roi = region_color[y : y + th, x : x + tw]
 
-            # if name == "Nukara_Tribble.png":
+            # if name == "Anti-Time_Entanglement_Singularity.png":
             #     print(f"Pre-stepped match: {name} scale: {scale} Stepping: x: {x} y: {y} Dimensions: w: {tw} h: {th}")
             #     show_image([region_color, roi, resized_template])
 
@@ -49,7 +53,7 @@ def multi_scale_match(
             except ValueError:
                 continue
 
-            # if name == "Nukara_Tribble.png":
+            # if name == "Anti-Time_Entanglement_Singularity.png":
             #     print(f"Score: {s}")
 
             if s > best_val:
@@ -61,6 +65,10 @@ def multi_scale_match(
                 # print("found by detected stepping")
 
         if not found_by_detected_stepping:
+            # if name == "Anti-Time_Entanglement_Singularity.png":
+            #     print(f"Un-stepped match: {name} scale: {scale} Dimensions: w: {tw} h: {th}")
+            #     show_image([region_color, resized_template])
+
             step_limit = 3
             step_count_y = 0
             for y in range(0, region_color.shape[0] - th, 1):
@@ -83,9 +91,9 @@ def multi_scale_match(
                         continue
 
                     # if s > threshold:
-                    #   if name == "Nukara_Tribble.png":
-                    #       print(f"Stepped match: {name} scale: {scale} Stepping: x: {x} y: {y} Dimensions: w: {tw} h: {th} score: {s}")
-                    #       show_image([region_color, roi, resized_template])
+                    # if name == "Anti-Time_Entanglement_Singularity.png":
+                    #     print(f"Stepped match: {name} scale: {scale} Stepping: x: {x} y: {y} Dimensions: w: {tw} h: {th} score: {s}")
+                    #     show_image([region_color, roi, resized_template])
                     if s > best_val:
                         best_val = s
                         best_loc = (x, y)

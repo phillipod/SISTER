@@ -136,12 +136,16 @@ class IconDetector:
                         #print(f"Matching {name} against {len(icons_for_slot)} icons for label '{icon_group_label}' at slot {idx} with overlay {detected_overlay}")
                         #print(f"icons_for_slot[name][metadata]: {icons_for_slot[name]['metadata']}")
 
+                        # if name == "Intruder_Discouragement.png":
+                        #     print(f"icons_for_slot[name][metadata]: {icons_for_slot[name]['metadata']}")
+                        #     print(f"icons_for_slot: {icons_for_slot}")
+
                         args = (
                             name,
                             idx,
                             roi,
                             icon_color,
-                            icons_for_slot[name]['metadata']['mask_type'],
+                            icons_for_slot[name]['metadata'].copy(),
                             detected_overlay,
                             threshold,
                             overlays,
@@ -226,7 +230,7 @@ class IconDetector:
                             idx,
                             roi,
                             icon_color,
-                            icons_for_slot[name]['metadata']['mask_type'],
+                            icons_for_slot[name]['metadata'].copy(),
                             detected_overlay,
                             threshold,
                             overlays,
@@ -296,7 +300,7 @@ def match_single_icon(args):
         slot_idx,
         roi,
         icon_color,
-        mask_type,
+        icon_metadata,
         detected_overlays,
         threshold,
         overlays,
@@ -306,6 +310,9 @@ def match_single_icon(args):
 
     found_matches = []
     matched_candidate_indexes = set()
+
+    # Icon metadata is an array, but it only has multiple entries if there are duplicate icons. Since we can't tell which item is correct when there is a duplicate image, we only need to use the mask_type from the first element
+    mask_type = icon_metadata[0]['mask_type']
 
     for overlay_idx, detected_overlay in enumerate(detected_overlays):
         if detected_overlay is None:
@@ -434,6 +441,7 @@ def match_single_icon(args):
                     "overlay_scale": overlay_scale,
                     "overlay": overlay_used,
                     "method": f"{method}-{method_suffix}",
+                    "metadata": icon_metadata
                 }
             )
             matched_candidate_indexes.add(slot_idx)
