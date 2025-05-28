@@ -14,7 +14,7 @@ from pybktree import BKTree
 from imagehash import hex_to_hash
 
 from ..exceptions import HashIndexError, HashIndexNotFoundError
-from ..utils.image import apply_overlay, apply_mask, show_image
+from ..utils.image import apply_overlay, apply_mask, map_mask_type, show_image
 
 logger = logging.getLogger(__name__)
 
@@ -413,16 +413,7 @@ class HashIndex:
                     })
 
                     # decide mask_type
-                    if category in ["space/traits/active_reputation",
-                                    "space/traits/reputation",
-                                    "ground/traits/active_reputation",
-                                    "ground/traits/reputation"]:
-                        metadata["mask_type"] = "reputation_trait_type"
-                    elif category in ["space/traits/personal",
-                                      "ground/traits/personal"]:
-                        metadata["mask_type"] = "personal_trait_type"
-                    else:
-                        metadata["mask_type"] = "item_type"
+                    metadata["mask_type"] = map_mask_type(category)
 
                     blended = apply_overlay(image_bgr[:, :, :3], overlay_image)
                     masked  = apply_mask(blended.copy(), metadata["mask_type"])
