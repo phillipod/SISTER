@@ -288,20 +288,7 @@ class HashIndex:
         try:
             with open(self.image_cache_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
-
-            # data looks like this: [
-            #   {
-            #     "file": "Counter-Command_Exo-Armor.png",
-            #     "cargo": "equipment",
-            #     "filters": {
-            #       "type": "Body Armor"
-            #     },
-            #     "name": "Counter-Command Exo-Armor Mk XII",
-            #     "cleaned_name": "Counter-Command Exo-Armor"
-            #   },
-            # ]
-            #
-            # we want to convert this to a dict with the file as the key and the rest as the value
+                
             self.image_cache = {}
             for entry in data:
                 self.image_cache[entry["file"]] = entry
@@ -336,7 +323,7 @@ class HashIndex:
                     data = f.read()
                     phash_val = self.compute_phash(data)
                     dhash_val = self.compute_dhash(data)
-                # self.hashes[rel_path] = {"hash": hash_val, "mtime": mtime}
+
                 # determine image category from parent folder name
                 category = Path(rel_path).parent.name
 

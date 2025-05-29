@@ -265,8 +265,6 @@ class HashEngine:
                     prefiltered[icon_group_label][idx].append(
                         {
                             "name": info["name"],
-                            # "top_left": (x, y),
-                            # "bottom_right": (x + w, y + h),
                             "score": info["dist"],
                             "match_threshold": int(threshold_val),
                             "icon_group": icon_group_label,
@@ -276,32 +274,12 @@ class HashEngine:
                             "roi_phash": target_hashes[icon_group_label]["phash"][idx],
                             "roi_dhash": target_hashes[icon_group_label]["dhash"][idx],
                             "metadata": info["metadata"]
-                            # "overlay_scale": 1.0,
-                            # "overlay_score":0.0,
-                            # "scale": 1.0,
                         }
                     )
 
                     filtered_slot_icons[filename] = info
 
                 found_icons[icon_group_label][idx] = filtered_slot_icons
-
-                # try:
-                #     for filename in filtered_slot_icons:
-                #         if filename not in filtered_icons[icon_group_label]:
-                #             full_path = self.hash_index.base_dir / filename
-                #             data = np.fromfile(str(full_path), dtype=np.uint8)
-                #             icon = cv2.imdecode(data, cv2.IMREAD_COLOR)
-                #             #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
-                #             if icon is not None:
-                #                 # Ensure icon is 49x64
-                #                 if icon.shape[0] != 64 or icon.shape[1] != 49:
-                #                     icon = cv2.resize(icon, (49, 64))                                
-                #                 filtered_icons[icon_group_label][filename] = icon
-                # except Exception as e:
-                #     raise PrefilterError(
-                #         f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
-                #     ) from e
 
                 phash_threshold_completed += 1
                 
@@ -316,7 +294,6 @@ class HashEngine:
                 logger.debug(
                     f"Prefiltered {len(prefiltered[icon_group_label][idx])} icons for icon group '{icon_group_label}' at slot {idx}."
                 )
-                # prefiltered.extend(candidate_prefiltered)
 
         self.on_progress("Complete", 100.0)
 

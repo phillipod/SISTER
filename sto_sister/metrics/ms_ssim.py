@@ -69,7 +69,7 @@ def multi_scale_match(
             #     print(f"Un-stepped match: {name} scale: {scale} Dimensions: w: {tw} h: {th}")
             #     show_image([region_color, resized_template])
 
-            step_limit = 3
+            # step_limit = 3
             step_count_y = 0
             for y in range(0, region_color.shape[0] - th, 1):
                 step_count_y += 1

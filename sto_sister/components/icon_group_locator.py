@@ -839,39 +839,6 @@ class IconGroupLocator:
 
         return merged
 
-#         print(f"build_info: {build_info}")
-#         build_type = build_info.get("build_type", "Unknown")
-#         icon_group_boxes = {}
-
-#         if build_type in ICON_GROUP_LOCATION_RULES:
-#             icon_group_boxes = self.compute_icon_groups(build_type, labels, contours)
-#         else:
-#             logger.warning(f"Unsupported build type: {build_type}")
-# #            raise IconGroupLocatorError(f"Unsupported build type: {build_type}")
-#             return {}
-
-#         merged = {}
-#         for label, icon_group in icon_group_boxes.items():
-#             label_box = labels[label]
-#             merged[label] = {
-#                 "Label": {key: [int(v[0]), int(v[1])] for key, v in label_box.items()},
-#                 "IconGroup": {
-#                     "top_left": [
-#                         int(icon_group["top_left"][0]),
-#                         int(icon_group["top_left"][1]),
-#                     ],
-#                     "bottom_right": [
-#                         int(icon_group["bottom_right"][0]),
-#                         int(icon_group["bottom_right"][1]),
-#                     ],
-#                 },
-#             }
-
-        # if self.debug and debug_output_path:
-        #    self._draw_debug_icon_groups(image, merged, debug_output_path)
-
-        return merged
-
     def _preprocess_grayscale(self, image):
         """
         Convert a color image to grayscale.

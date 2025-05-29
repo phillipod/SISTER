@@ -116,33 +116,6 @@ class IconOverlayDetector:
                     sub = f"{args_completed}/{args_total}"
                     self.on_progress(f"Detecting overlays -> {sub}", scaled_pct)
 
-        # detected_overlays_by_icon_group = {}
-        # with ProcessPoolExecutor() as executor:
-        #     futures = {
-        #         executor.submit(
-        #             self.identify_overlay, roi, overlays, icon_group_label, idx
-        #         ): (
-        #             icon_group_label,
-        #             idx,
-        #         )
-        #         for (roi, overlays), (icon_group_label, idx) in zip(
-        #             args_list, icon_group_slot_index
-        #         )
-        #     }
-
-        #     for future in as_completed(futures):
-        #         icon_group_label, idx = futures[future]
-        #         try:
-        #             # overlay, scale, method = future.result()
-        #             detected_overlays_by_icon_group.setdefault(icon_group_label, {})[
-        #                 idx
-        #             ] = future.result()
-        #         except Exception as e:
-        #             logger.warning(
-        #                 f"Overlay detection failed for icon group '{icon_group_label}', slot {idx}: {e}"
-        #             )
-        #             traceback.print_exc()
-
         logger.debug("Overlay detection complete.")
 
         # print(detected_overlays_by_icon_group)
@@ -241,8 +214,6 @@ def identify_overlay(
     }
 
     original_region_crop_shape = region_crop.shape
-    # if region_crop.shape[0] > (43 * 1.1) or region_crop.shape[1] > (33*1.1):
-    # if region_crop.shape[0] > (43 * 1.1) or region_crop.shape[1] > (33*1.1):
     if region_crop.shape[0] != 47 or region_crop.shape[1] != 36:
         scale_factor = min(47 / region_crop.shape[0], 36 / region_crop.shape[1])
         region_crop = cv2.resize(
@@ -391,14 +362,12 @@ def identify_overlay(
                     # Barcode Region setup
 
                     # Check colour and intensity patch
-                    # barcode_diff = compare_patches(barcode_region, barcode_overlay)
 
                     (
                         barcode_region_detected_overlay_by_patch,
                         _,
                     ) = classify_overlay_by_patch(barcode_region)
 
-                    # barcode_match, barcode_overlay_common_segments, barcode_region_common_segments = compare_barcodes_simple(barcode_overlay, barcode_region)
                     (
                         barcode_match,
                         barcode_overlay_common_segments,
@@ -462,9 +431,6 @@ def identify_overlay(
                         #     show_image([barcode_region_ssim, barcode_overlay_ssim])
 
                         score = ssim(barcode_region_ssim, barcode_overlay_ssim)
-                        # score = ssim(masked_region[:, :10], masked_overlay[:, :10], channel_axis=-1)
-                        # score = ssim(masked_region, masked_overlay, channel_axis=-1)
-                        # score = ssim(gray_region, gray_overlay)
                     except ValueError:
                         print(
                             f"{icon_group_label}#{slot}: Skipping due to ValueError: {overlay_name}"
@@ -571,4 +537,4 @@ def identify_overlay(
     return [
         (sorted(overlay_detections, key=lambda x: x["ssim_score"], reverse=True))[0]
     ]
-    # return overlay_detections
+

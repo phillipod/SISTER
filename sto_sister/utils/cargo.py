@@ -424,8 +424,6 @@ class CargoDownloader:
 
         items = download_items
 
-        #start_pct = 1.0
-        #end_pct   = 99.0
         items_total     = len(items)
         items_completed = 0
         with ThreadPoolExecutor() as executor:

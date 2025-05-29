@@ -223,34 +223,21 @@ class LayoutClassifier:
             dict: A dictionary with the most likely build type and its score.
         """
 
-        # scores = {
-        #     build_type: self._score_with_rules(label_positions, rules, build_type)
-        #     for build_type, rules in SCORING_RULES.items()
-        # }
-
-        # #best_match = max(scores.items(), key=lambda x: x[1])
-
-        # logger.info("Scoring breakdown:")
-        # for build_type, score in scores.items():
-        #     logger.info(f"  {build_type}: {score}")
-
-        # return scores
-
         results: Dict[str, Dict[str, Any]] = {}
+        
         for build_type, rules in SCORING_RULES.items():
             score, is_required = self._score_with_rules(label_positions, rules, build_type)
+            
             if score > 0:
                 results[build_type] = {"score": score, "is_required": is_required}
 
         logger.info("Scoring breakdown:")
+        
         for build_type, info in results.items():
             logger.info(f"  {build_type}: score={info['score']}, is_required={info['is_required']}")
 
         return results
-#        if best_match[1] == 0:
-#            return {"build_type": "Unknown", "score": 0}
 
-#        return {"build_type": best_match[0], "score": best_match[1]}
 
     def _score_with_rules(
         self,

@@ -9,9 +9,9 @@ def classify_overlay_by_patch(patch, min_sat=0.2, min_val=0.3, frac_thresh=0.3):
 
     Parameters:
     - patch: HxWx3 BGR image patch
-    - min_sat: minimum saturation (0–1) to consider a pixel colorful
-    - min_val: minimum value (0–1) to consider a pixel colorful
-    - frac_thresh: minimum fraction (0–1) of patch pixels that must be colorful
+    - min_sat: minimum saturation (0-1) to consider a pixel colorful
+    - min_val: minimum value (0-1) to consider a pixel colorful
+    - frac_thresh: minimum fraction (0-1) of patch pixels that must be colorful
 
     Returns one of: 'common', 'epic', 'uncommon', 'rare', 'ultra rare', 'very rare'
     """
