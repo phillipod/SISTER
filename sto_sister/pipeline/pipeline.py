@@ -34,6 +34,7 @@ from ..tasks import (
     StartExecutorPoolTask,
     StopExecutorPoolTask,
     DownloadAllIconsTask,
+    BuildHashCacheTask
 )
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,8 @@ class SISTER:
         self.config = config
         self.app_init()
 
+        self.init_tasks: List[PipelineTask] = []
+
         self.startup_tasks: List[PipelineTask] = [
             StartExecutorPoolTask(config.get("executor", {}), self.app_config),
         ]
@@ -73,6 +76,7 @@ class SISTER:
 
         self.callable_tasks: Dict[str, PipelineTask] = {
             "download_all_icons": DownloadAllIconsTask(config.get("download", {}), self.app_config),
+            "build_hash_cache": BuildHashCacheTask(config.get("hash_cache", {}), self.app_config),
         }
 
         self.stages: List[PipelineStage] = [
@@ -104,6 +108,8 @@ class SISTER:
 
         self.on_pipeline_complete = on_pipeline_complete
 
+        self.init()
+
     def app_init(self) -> None:
         logger.info(f"Initializing SISTER with config: {self.config}")
         self.app_config["hash_index"] = HashIndex(
@@ -115,6 +121,7 @@ class SISTER:
 
         self.app_config["log_level"] = self.config.get("log_level", "INFO")
         self.app_config["icon_dir"] = self.config.get("icon_dir")
+        self.app_config["overlay_dir"] = self.config.get("overlay_dir")
         
         icon_root = Path(self.config.get("icon_dir"))
 
@@ -229,39 +236,48 @@ class SISTER:
         # If task is in self.callable_tasks, run it. Callable tasks do not get ctx
 
         if task in self.callable_tasks:
-            return self._run_task(self.callable_tasks[task], None)
+            return self._run_task(self.callable_tasks[task], self._init_ctx)
 
-    def startup(self):
-        self.start_metric("pipeline_startup_tasks")
+    def init(self):
+        self.start_metric("pipeline_init_tasks")
         
-        if not getattr(self, "_started_ctx", False):
+        if not getattr(self, "_init_ctx", False):
             ctx = PipelineState(
                 screenshots=None, config=self.config, app_config=self.app_config
             )
 
-            for task in self.startup_tasks:
+            for task in self.init_tasks:
                 self._run_task(task, ctx)
 
-            self._started_ctx = ctx
+            self._init_ctx = ctx
+        
+        self.end_metric("pipeline_init_tasks")
+
+    def startup(self):
+        self.start_metric("pipeline_startup_tasks")
+        
+        if self._init_ctx:
+            for task in self.startup_tasks:
+                self._run_task(task, self._init_ctx)
+
             weakref.finalize(self, self.shutdown)
         
         self.end_metric("pipeline_startup_tasks")
 
     def shutdown(self):
         
-        if self._started_ctx:
+        if self._init_ctx:
             for task in self.shutdown_tasks:
-                self._run_task(task, self._started_ctx)
+                self._run_task(task, self._init_ctx)
         
-        self._started_ctx = None
+        self._init_ctx = None
  
 
     def run(self, screenshots: List[np.ndarray]) -> PipelineState:
-        ctx = self._started_ctx.copy()
+        ctx = self._init_ctx.copy()
         ctx.set_screenshots(screenshots)
 
         results: Dict[str, Any] = {}
-
 
         self.start_metric("pipeline")
 

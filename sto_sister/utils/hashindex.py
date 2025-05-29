@@ -7,6 +7,8 @@ import hashlib
 import cv2
 import numpy as np
 
+from typing import Any, Callable, Dict, List, Tuple, Optional
+
 from pathlib import Path
 from datetime import datetime
 from PIL import Image
@@ -225,6 +227,7 @@ class HashIndex:
         recursive=True,
         match_size=(32, 32),
         metadata_map: dict = None,
+        empty: bool = False
     ):
         self.base_dir = Path(base_dir)
 
@@ -238,7 +241,8 @@ class HashIndex:
 
         self.metadata_map = metadata_map or {}
 
-        self._load_cache()
+        if not empty: 
+            self._load_cache()
 
     def _load_cache(self):
         if not self.output_file.exists():
@@ -355,7 +359,7 @@ class HashIndex:
             f"Hash index update complete: {updated} updated, {len(stale_keys)} removed, {len(self.hashes)} total."
         )
 
-    def build_with_overlays(self, overlays: dict):
+    def build_with_overlays(self, overlays: dict, on_progress: Callable[[str, float], None] = None):
         """
         Apply each overlay to each icon, compute perceptual hashes,
         and record an MD5 checksum of the original file.
@@ -365,6 +369,9 @@ class HashIndex:
         found_keys = set()
 
         self._load_image_cache()
+
+        files_total = len(list(self.base_dir.glob(pattern)))
+        files_done  = 0
 
         for path in self.base_dir.glob(pattern):
             rel_path = str(path.relative_to(self.base_dir))
@@ -431,6 +438,13 @@ class HashIndex:
                     found_keys.add(key)
                     updated += 1
                     logger.verbose(f"Hashed {key}")
+
+                files_done += 1
+
+                if on_progress:
+                    if files_done % 100 == 0 or files_done == files_total:
+                        on_progress(f"{files_done}/{files_total}: {metadata["image_category"]}", files_done / files_total*100)
+
             except Exception as e:
                 logger.warning(f"Failed to hash overlays for {rel_path}: {e}")
                 raise HashIndexError(

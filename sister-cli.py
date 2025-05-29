@@ -129,6 +129,9 @@ def on_task_complete(task, ctx, output):
     elif task == 'stop_executor_pool':
         tqdm.write(f"[Callback] [on_task_complete] [{task}] Stopped executor pool")
         return
+    elif task == 'build_hash_cache':
+        tqdm.write(f"[Callback] [on_task_complete] [{task}] Built hash cache ({ctx.hashed_items} items)")
+        return
     else:
         tqdm.write(f"[Callback] [on_task_complete] [{task}] complete") 
     
@@ -283,7 +286,7 @@ if __name__ == "__main__":
     p.add_argument("--log-level", default="WARNING", help="Log level: DEBUG, VERBOSE, INFO, WARNING, ERROR")
     p.add_argument("--no-resize", action="store_true", help="Disable image downscaling to 1920x1080. Downscales only if screenshot is greater than 1920x1080.")
     p.add_argument("--download", action="store_true", help="Download icon data from STO Wiki. Exit after.")
-    p.add_argument("--build-phash-cache", action="store_true", help="Build a perceptual hash (phash) cache for all icons.")
+    p.add_argument("--build-hash-cache", action="store_true", help="Build a hash (phash, dhash) cache for all icons.")
     p.add_argument("--output_dir", default="output", help="Directory to store output summaries. Defaults to 'output' in current directory.")
     p.add_argument("--output", "-o", help="Output file prefix to save match summary to. Must be specified if more than one screenshot is provided.")
     p.add_argument("--gpu", action="store_true", help="Enable GPU usage for OCR.")
@@ -292,41 +295,7 @@ if __name__ == "__main__":
 
     if args.log_level:
         setup_logging(log_level=args.log_level)
-
-    # if args.download or args.build_phash_cache:
-    #     if args.download:
-    #         print("Downloading icon data from STO Wiki...")
-    #         download_icons(args.icons)
-
-    #     if args.build_phash_cache:
-    #         print("Building PHash cache...")
-            
-    #         icon_root = Path(args.icons)
-    #         hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
-    #         overlays = load_overlays(args.overlays)  # Must return dict of overlay -> RGBA overlay np.array
-    #         hash_index.build_with_overlays(overlays)
-
-    #         print(f"[DONE] Built PHash index with {len(hash_index.hashes)} entries.")
-
-    #     exit(0)
-
-    if args.build_phash_cache:
-        print("Building PHash cache...")
-        
-        icon_root = Path(args.icons)
-        hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
-        overlays = load_overlays(args.overlays)  # Must return dict of overlay -> RGBA overlay np.array
-        hash_index.build_with_overlays(overlays)
-
-        print(f"[DONE] Built PHash index with {len(hash_index.hashes)} entries.")
-
-        exit(0)
-
-
-    #icon_root = Path(args.icons)
-    #hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
-    
-    
+   
     # 2. assemble config dict
     config = {
         "debug": True,
@@ -358,6 +327,17 @@ if __name__ == "__main__":
     try:
         pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_task_start=on_task_start, on_task_complete=on_task_complete, on_pipeline_complete=bound_on_pipeline_complete)
 
+
+        if args.download or args.build_hash_cache:
+            if args.download:
+                print("Downloading icon data from STO Wiki...")
+                result: PipelineState = pipeline.execute_task("download_all_icons")
+
+            if args.build_hash_cache:
+                print("Building Hash cache...")
+                result: PipelineState = pipeline.execute_task("build_hash_cache")
+
+            exit(0)
 
         if args.download:
             print("Downloading icon data from STO Wiki...")
@@ -398,7 +378,3 @@ if __name__ == "__main__":
 #    print(f"[sister-cli.py] Python dependencies load time: {start_time - load_start_time}")
     print(f"[sister-cli.py] Total time: {end_time - start_time}")
 
-
-    # 4. dump
-    #for slot, match in result.icon_matches.items():
-    #    print(f"{slot.icon_group_label}[{slot.index}] -> {match}")
