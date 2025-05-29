@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, List, Tuple, Optional
 from pathlib import Path
 
 from ..pipeline import PipelineTask, TaskOutput, PipelineState
-from ..pipeline.progress_reporter import StageProgressReporter
+from ..pipeline.progress_reporter import TaskProgressReporter
 
 from ..utils.cargo import CargoDownloader
 
@@ -21,14 +21,13 @@ class DownloadAllIconsTask(PipelineTask):
     ) -> TaskOutput:
         report(self.name, "Downloading all icons", 0.0)
         
-        print("Task: Downloading all icons")
-        self.download_icons()
+        self.download_icons(report)
 
         report(self.name, "Downloaded all icons", 100.0)
 
         return TaskOutput(ctx, None)
 
-    def download_icons(self):
+    def download_icons(self, report: Callable[[str, str, float], None]):
         """
         Download all icons for equipment, personal traits, and starship traits from STO wiki.
         
@@ -81,7 +80,24 @@ class DownloadAllIconsTask(PipelineTask):
             ('starship_trait', None, 'space/traits/starship')
         ]
 
-        # Download all icons in one loop
-        for cargo_type, filters, subdir in download_mappings:
+         # Download all icons in one loop
+        for i, (cargo_type, filters, subdir) in enumerate(download_mappings):
+            start_frac = i / len(download_mappings)
+            end_frac   = (i + 1) / len(download_mappings)
+            sub = f"[{i+1}/{len(download_mappings)}] {subdir}"
+            # print(f"Downloading {sub} starting at {start_frac} and ending at {end_frac}")
+
+            reporter = TaskProgressReporter(
+                task_name   = self.name,
+                sub_prefix   = sub,
+                report_fn    = report,
+                window_start = start_frac,
+                window_end   = end_frac,
+            )
+
+            reporter("Downloading", 0.0)
+            
             dest_dir = images_root / subdir
-            downloader.download_icons(cargo_type, dest_dir, image_cache_path, filters)
+            downloader.download_icons(cargo_type, dest_dir, image_cache_path, filters, on_progress=reporter)
+            
+            reporter("Completed", 100.0)

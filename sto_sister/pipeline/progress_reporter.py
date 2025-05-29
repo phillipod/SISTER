@@ -25,9 +25,39 @@ class StageProgressReporter:
         # map into [window_start...window_end]
         win_frac = self.window_start + (self.window_end - self.window_start) * frac
         # back to 0–100
-        scaled = win_frac * 100.0
+        scaled = win_frac# * 100.0
         # emit via the pipeline’s report API
         self.report_fn(self.stage_name, f"{self.sub_prefix}: " + substage if self.sub_prefix else substage, scaled)
+
+class TaskProgressReporter:
+    """
+    Picklable callable for scaling a sub-task's 0-100% progress
+    into an arbitrary [start...end] slice of the overall stage.
+    """
+    def __init__(
+        self,
+        task_name: str,
+        report_fn: Callable[[str, str, float], None],
+        window_start: float = 0.0,
+        window_end:   float = 1.0,
+        sub_prefix: str = None,
+    ):
+        self.task_name   = task_name
+        self.report_fn    = report_fn
+        self.window_start = window_start
+        self.window_end   = window_end
+        self.sub_prefix   = sub_prefix
+
+    def __call__(self, subtask: str, pct: float):
+        # normalize detector pct (0–100) -> fraction
+        frac = pct / 100.0
+        # map into [window_start...window_end]
+        win_frac = self.window_start + (self.window_end - self.window_start) * frac
+        # back to 0–100
+        scaled = win_frac #* 100.0
+        # emit via the pipeline’s report API
+        self.report_fn(self.task_name, f"{self.sub_prefix}: " + subtask if self.sub_prefix else subtask, scaled)
+
 
 class PipelineProgressReporter:
     """

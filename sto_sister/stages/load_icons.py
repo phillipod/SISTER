@@ -23,6 +23,9 @@ class LoadIconsStage(PipelineStage):
     ) -> StageOutput:
         report(self.name, "Loading icons", 0.0)
 
+        start_pct = 1.0
+        end_pct   = 90.0
+
         download_icons = {}
         for icon_group in ctx.found_icons:
             for slot in ctx.found_icons[icon_group]:
@@ -31,10 +34,8 @@ class LoadIconsStage(PipelineStage):
                         full_path = ctx.app_config.get("hash_index").base_dir / metadata['image_path']
 
                         if full_path.exists():
-                            continue
+                             continue
 
-                        # cargo_item_name = ctx.found_icons[icon_group][slot][file]['metadata'][0]['cargo_item_name']
-                        # cargo_type = ctx.found_icons[icon_group][slot][file]['metadata'][0]['cargo_type']
                         destination_dir = metadata['image_category']
                         cargo_item_name = metadata['cargo_item_name']
                         cargo_type = metadata['cargo_type']
@@ -52,26 +53,53 @@ class LoadIconsStage(PipelineStage):
 
                         download_icons[cargo_type][destination_dir][cargo_filters]['name'].append(cargo_item_name)                      
 
-                    # if not full_path.exists():
-                    #     download_icons[icon_group][slot].append(file)
-                    
-        #print(f"Download icons: {download_icons}")
-
+                
         downloader = CargoDownloader()
         downloader.download_all()
 
         image_cache_path = ctx.app_config.get("hash_index").base_dir / "image_cache.json"
 
+        total_cargo_filters = (sum(len(download_icons[cargo_type][destination_dir]) for cargo_type in download_icons for destination_dir in download_icons[cargo_type]))
+
+        cargo_filters_processed = 0
+        final_frac = 0
         for cargo_type in download_icons:
             for destination_dir in download_icons[cargo_type]:
                 for cargo_filters in download_icons[cargo_type][destination_dir]:
+                    start_frac = cargo_filters_processed / (total_cargo_filters+1)
+                    end_frac   = (cargo_filters_processed + 1) / (total_cargo_filters+1)
+                    final_frac = end_frac
+                    sub = f"[{cargo_filters_processed+1}/{total_cargo_filters}] {destination_dir}"
+
+                    reporter = StageProgressReporter(
+                        stage_name   = self.name,
+                        sub_prefix   = sub,
+                        report_fn    = report,
+                        window_start = start_frac,
+                        window_end   = end_frac,
+                    )
+
                     cargo_filter = download_icons[cargo_type][destination_dir][cargo_filters]
                     dest_dir = ctx.app_config.get("hash_index").base_dir / destination_dir
-                    #print(f"download_icons {cargo_type} {dest_dir} {image_cache_path} {cargo_filter}")
-                    downloader.download_icons(cargo_type, dest_dir, image_cache_path, cargo_filter)
+
+                    downloader.download_icons(cargo_type, dest_dir, image_cache_path, cargo_filter, on_progress=reporter)
+                    
+                    cargo_filters_processed += 1
+                    
 
         ctx.loaded_icons = {}
 
+        sub = f"Loading icons"
+
+        reporter = StageProgressReporter(
+                stage_name   = self.name,
+                sub_prefix   = sub,
+                report_fn    = report,
+                window_start = final_frac,
+                window_end   = 1,
+            )
+
+        reporter("Loading icons", 0.0)
         for icon_group in ctx.found_icons:
             ctx.loaded_icons[icon_group] = {}
 
@@ -93,6 +121,6 @@ class LoadIconsStage(PipelineStage):
                     
         #print(f"Loaded icons: {ctx.loaded_icons}")
 
-        report(self.name, "Complete", 100.0)
+        reporter("Complete", 100.0)
 
         return StageOutput(ctx, ctx.loaded_icons)
