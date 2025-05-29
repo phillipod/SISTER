@@ -6,11 +6,8 @@ from typing import Any, Callable, Dict, List, Tuple, Optional
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..pipeline.progress_reporter import StageProgressReporter
 
+from ..utils.cargo import CargoDownloader
 from ..utils.persistent_executor import PersistentProcessPoolExecutor
-
-def _dummy_job(i):
-    # no-op work; could also do time.sleep(0) or something trivial
-    return i
 
 class LoadIconsStage(PipelineStage):
     name = "load_icons"
@@ -26,8 +23,52 @@ class LoadIconsStage(PipelineStage):
     ) -> StageOutput:
         report(self.name, "Loading icons", 0.0)
 
-        unique_files = {}
-        slot_file_pair_count = 0
+        download_icons = {}
+        for icon_group in ctx.found_icons:
+            for slot in ctx.found_icons[icon_group]:
+                for file in ctx.found_icons[icon_group][slot]:
+                    for metadata in ctx.found_icons[icon_group][slot][file]['metadata']:
+                        full_path = ctx.app_config.get("hash_index").base_dir / metadata['image_path']
+
+                        if full_path.exists():
+                            continue
+
+                        # cargo_item_name = ctx.found_icons[icon_group][slot][file]['metadata'][0]['cargo_item_name']
+                        # cargo_type = ctx.found_icons[icon_group][slot][file]['metadata'][0]['cargo_type']
+                        destination_dir = metadata['image_category']
+                        cargo_item_name = metadata['cargo_item_name']
+                        cargo_type = metadata['cargo_type']
+
+                        if cargo_type not in download_icons:
+                            download_icons[cargo_type] = {}
+
+                        if destination_dir not in download_icons[cargo_type]:
+                            download_icons[cargo_type][destination_dir] = {}
+
+                        cargo_filters = tuple(sorted(metadata['cargo_filters'].items()))
+                        if cargo_filters not in download_icons[cargo_type][destination_dir]:
+                            download_icons[cargo_type][destination_dir][cargo_filters] = metadata['cargo_filters'].copy()
+                            download_icons[cargo_type][destination_dir][cargo_filters]['name'] = []
+
+                        download_icons[cargo_type][destination_dir][cargo_filters]['name'].append(cargo_item_name)                      
+
+                    # if not full_path.exists():
+                    #     download_icons[icon_group][slot].append(file)
+                    
+        #print(f"Download icons: {download_icons}")
+
+        downloader = CargoDownloader()
+        downloader.download_all()
+
+        image_cache_path = ctx.app_config.get("hash_index").base_dir / "image_cache.json"
+
+        for cargo_type in download_icons:
+            for destination_dir in download_icons[cargo_type]:
+                for cargo_filters in download_icons[cargo_type][destination_dir]:
+                    cargo_filter = download_icons[cargo_type][destination_dir][cargo_filters]
+                    dest_dir = ctx.app_config.get("hash_index").base_dir / destination_dir
+                    #print(f"download_icons {cargo_type} {dest_dir} {image_cache_path} {cargo_filter}")
+                    downloader.download_icons(cargo_type, dest_dir, image_cache_path, cargo_filter)
 
         ctx.loaded_icons = {}
 
@@ -37,6 +78,8 @@ class LoadIconsStage(PipelineStage):
             for slot in ctx.found_icons[icon_group]:
                 for file in ctx.found_icons[icon_group][slot]:
                     if file not in ctx.loaded_icons[icon_group]:
+                            # print(f"{icon_group}#{slot} {file}: {ctx.found_icons[icon_group][slot][file]}")
+
                             full_path = ctx.app_config.get("hash_index").base_dir / file
                             data = np.fromfile(str(full_path), dtype=np.uint8)
                             icon = cv2.imdecode(data, cv2.IMREAD_COLOR)
