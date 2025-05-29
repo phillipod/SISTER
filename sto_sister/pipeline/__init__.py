@@ -1,4 +1,4 @@
-from .core import Slot, PipelineStage, StageOutput, PipelineState
+from .core import Slot, PipelineStage, PipelineTask, StageOutput, TaskOutput, PipelineState
 from .pipeline import SISTER, build_default_pipeline
 from .progress_reporter import StageProgressReporter
 

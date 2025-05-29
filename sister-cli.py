@@ -64,13 +64,7 @@ def on_stage_complete(stage, ctx, output):
             bar.update(bar.total - prev)
         bar.close()
 
-    if stage == 'start_executor_pool':
-        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Started executor pool ({ctx.executor_pool_total} workers)")
-        return
-    elif stage == 'stop_executor_pool':
-        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Stopped executor pool")
-        return
-    elif stage == 'locate_labels':
+    if stage == 'locate_labels':
         tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(label) for label in ctx.labels_list)} labels")
         return
     elif stage == 'locate_icon_groups':
@@ -118,6 +112,31 @@ def on_stage_complete(stage, ctx, output):
     pprint(output)
 
 
+def on_task_start(task, ctx): 
+    return #print(f"[Callback] [on_task_start] [{task}]")
+
+def on_task_complete(task, ctx, output):
+    bar = _progress_bars.pop(task, None)
+    if bar:
+        # if we never actually hit 100 inside on_progress, finish it now
+        prev = _prev_percents[task]
+        if prev < bar.total:
+            bar.update(bar.total - prev)
+        bar.close()
+
+    if task == 'start_executor_pool':
+        tqdm.write(f"[Callback] [on_task_complete] [{task}] Started executor pool ({ctx.executor_pool_total} workers)")
+        return
+    elif task == 'stop_executor_pool':
+        tqdm.write(f"[Callback] [on_task_complete] [{task}] Stopped executor pool")
+        return
+    else:
+        tqdm.write(f"[Callback] [on_task_complete] [{task}] complete") 
+    
+    #print(f"[Callback] [on_task_complete] [{stage}] Output: {output}")
+    tqdm.write(f"[Callback] [on_task_complete] [{task}] Pretty output: ")
+    pprint(output)
+
 def on_interactive(stage, ctx): return ctx  # no-op
 
 
@@ -141,7 +160,7 @@ def on_metrics_complete(metrics):
     #print(f"[Callback] [on_metrics] {metrics}")
     for metric in metrics:
         if not metric['name'].endswith('_complete') and not metric['name'].endswith('_interactive'):
-            print(f"[Callback] [on_metrics] {"\t" if metric['name'] != 'pipeline' else ""}{metric['name']} took {metric['duration']:.2f} seconds")
+            print(f"[Callback] [on_metrics] {"\t" if not metric['name'].startswith('pipeline') else ""}{metric['name']} took {metric['duration']:.2f} seconds")
 
 
 def download_icons(icons_dir):
@@ -405,7 +424,7 @@ if __name__ == "__main__":
 
     # 3. build & run
     try:
-        pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_pipeline_complete=bound_on_pipeline_complete)
+        pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_task_start=on_task_start, on_task_complete=on_task_complete, on_pipeline_complete=bound_on_pipeline_complete)
         result: PipelineState = pipeline.run(images)
         # save_match_summary(args.output_dir, args.output, result[1]["detect_icons"])
     except SISTERError as e:
