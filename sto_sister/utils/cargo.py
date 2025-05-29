@@ -359,8 +359,8 @@ class CargoDownloader:
             ).strip()
             cleaned_name = re.sub(r"[\/\\:\*\?\"\<\>\|]", "_", cleaned_name).strip()
 
-            filename = cleaned_name.replace(" ", "_") + ("_(" + item["faction_suffix"] + ")" if item["faction_suffix"] else "") + ".png"
-            url = FILE_PATH_BASE + cleaned_name.replace(" ", "_") + ("_(" + item["faction_suffix"] + ")" if item["faction_suffix"] else "") + "_icon.png"
+            filename = cleaned_name.replace(" ", "_") + ("_(" + item["faction_suffix"] + ")" if "faction_suffix" in item else "") + ".png"
+            url = FILE_PATH_BASE + cleaned_name.replace(" ", "_") + ("_(" + item["faction_suffix"] + ")" if "faction_suffix" in item else "") + "_icon.png"
             dest_path = dest_dir / filename
 
             local_counter = 0
@@ -420,7 +420,7 @@ class CargoDownloader:
                 item['faction_suffix'] = "Klingon"
                 download_items.append(item.copy()) # Klingon icon
             else:
-                download_items.append(item)
+                download_items.append(item.copy())
 
         items = download_items
 
