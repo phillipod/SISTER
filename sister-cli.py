@@ -355,40 +355,34 @@ if __name__ == "__main__":
     if args.log_level:
         setup_logging(log_level=args.log_level)
 
-    if args.download or args.build_phash_cache:
-        if args.download:
-            print("Downloading icon data from STO Wiki...")
-            download_icons(args.icons)
+    # if args.download or args.build_phash_cache:
+    #     if args.download:
+    #         print("Downloading icon data from STO Wiki...")
+    #         download_icons(args.icons)
 
-        if args.build_phash_cache:
-            print("Building PHash cache...")
+    #     if args.build_phash_cache:
+    #         print("Building PHash cache...")
             
-            icon_root = Path(args.icons)
-            hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
-            overlays = load_overlays(args.overlays)  # Must return dict of overlay -> RGBA overlay np.array
-            hash_index.build_with_overlays(overlays)
+    #         icon_root = Path(args.icons)
+    #         hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
+    #         overlays = load_overlays(args.overlays)  # Must return dict of overlay -> RGBA overlay np.array
+    #         hash_index.build_with_overlays(overlays)
 
-            print(f"[DONE] Built PHash index with {len(hash_index.hashes)} entries.")
+    #         print(f"[DONE] Built PHash index with {len(hash_index.hashes)} entries.")
+
+    #     exit(0)
+
+    if args.build_phash_cache:
+        print("Building PHash cache...")
+        
+        icon_root = Path(args.icons)
+        hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
+        overlays = load_overlays(args.overlays)  # Must return dict of overlay -> RGBA overlay np.array
+        hash_index.build_with_overlays(overlays)
+
+        print(f"[DONE] Built PHash index with {len(hash_index.hashes)} entries.")
 
         exit(0)
-
-    if len(args.screenshot) == 1 and args.output is None:
-        args.output = Path(args.screenshot[0]).stem
-
-
-    if args.screenshot is None or args.output is None:
-        p.print_help()
-        exit(1)
-
-
-    # 1. load image
-    images = [
-        load_image(path, resize_fullhd=not args.no_resize)
-        for path in args.screenshot
-    ]
-    
-    if images is None:
-        raise RuntimeError("Could not read image")
 
 
     #icon_root = Path(args.icons)
@@ -425,7 +419,37 @@ if __name__ == "__main__":
     # 3. build & run
     try:
         pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_task_start=on_task_start, on_task_complete=on_task_complete, on_pipeline_complete=bound_on_pipeline_complete)
+
+
+        if args.download:
+            print("Downloading icon data from STO Wiki...")
+            result: PipelineState = pipeline.execute_task("download_all_icons")
+            exit(0)
+
+        if len(args.screenshot) == 1 and args.output is None:
+            args.output = Path(args.screenshot[0]).stem
+
+
+        if args.screenshot is None or args.output is None:
+            p.print_help()
+            exit(1)
+
+
+        # 1. load image
+        images = [
+            load_image(path, resize_fullhd=not args.no_resize)
+            for path in args.screenshot
+        ]
+        
+        if images is None:
+            raise RuntimeError("Could not read image")
+
+        pipeline.startup()
+
         result: PipelineState = pipeline.run(images)
+        
+        
+        pipeline.shutdown()
         # save_match_summary(args.output_dir, args.output, result[1]["detect_icons"])
     except SISTERError as e:
         print(e)

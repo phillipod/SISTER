@@ -55,8 +55,9 @@ class StopExecutorPoolTask(PipelineTask):
         report: Callable[[str, str, float], None]
     ) -> TaskOutput:
         report(self.name, "Shutting down executor pool", 0.0)
-        ctx.executor_pool.shutdown()
-        ctx.executor_pool = None
+        if ctx.executor_pool is not None:
+            ctx.executor_pool.shutdown()
+            ctx.executor_pool = None
         report(self.name, "Executor pool shut down", 100.0)
 
         return TaskOutput(ctx, None)

@@ -33,6 +33,7 @@ from ..stages import (
 from ..tasks import (
     StartExecutorPoolTask,
     StopExecutorPoolTask,
+    DownloadAllIconsTask,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,10 +64,16 @@ class SISTER:
         self.startup_tasks: List[PipelineTask] = [
             StartExecutorPoolTask(config.get("executor", {}), self.app_config),
         ]
+        
         self.shutdown_tasks: List[PipelineTask] = [
             StopExecutorPoolTask(config.get("executor", {}), self.app_config),
         ]
+        
         self.run_tasks: List[PipelineTask] = []
+
+        self.callable_tasks: Dict[str, PipelineTask] = {
+            "download_all_icons": DownloadAllIconsTask(config.get("download", {}), self.app_config),
+        }
 
         self.stages: List[PipelineStage] = [
             LocateLabelsStage(config.get("locate_labels", {"debug": True}), self.app_config),
@@ -96,9 +103,6 @@ class SISTER:
         self.on_task_complete = on_task_complete
 
         self.on_pipeline_complete = on_pipeline_complete
-
-        self.startup()
-        weakref.finalize(self, self.shutdown)
 
     def app_init(self) -> None:
         logger.info(f"Initializing SISTER with config: {self.config}")
@@ -209,14 +213,23 @@ class SISTER:
         ]
 
     def _run_task(self, task: PipelineTask, ctx: Optional[PipelineState]):
-        # call hooks just like a stage
         if self.on_task_start:
             self.on_task_start(task.name, ctx)
+
         reporter = PipelineProgressReporter(self.on_progress, task.name, ctx)
+
         result = task.execute(ctx, reporter)
+
         if self.on_task_complete:
             self.on_task_complete(task.name, ctx, result)
+
         return result
+
+    def execute_task(self, task: str):
+        # If task is in self.callable_tasks, run it. Callable tasks do not get ctx
+
+        if task in self.callable_tasks:
+            return self._run_task(self.callable_tasks[task], None)
 
     def startup(self):
         self.start_metric("pipeline_startup_tasks")
@@ -229,21 +242,19 @@ class SISTER:
             for task in self.startup_tasks:
                 self._run_task(task, ctx)
 
-            self._started_ctx = ctx        
+            self._started_ctx = ctx
+            weakref.finalize(self, self.shutdown)
+        
         self.end_metric("pipeline_startup_tasks")
 
     def shutdown(self):
-        self.start_metric("pipeline_shutdown_tasks")
         
-        for task in self.shutdown_tasks:
-            self._run_task(task, self._started_ctx)
+        if self._started_ctx:
+            for task in self.shutdown_tasks:
+                self._run_task(task, self._started_ctx)
         
-        self.end_metric("pipeline_shutdown_tasks")
-
-        # # on_metrics_complete hook
-        # if self.on_metrics_complete:
-        #     with self._handle_errors("metrics_complete", self._started_ctx):
-        #         self.on_metrics_complete(self.get_metrics())
+        self._started_ctx = None
+ 
 
     def run(self, screenshots: List[np.ndarray]) -> PipelineState:
         ctx = self._started_ctx.copy()
