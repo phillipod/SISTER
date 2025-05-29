@@ -255,7 +255,7 @@ class CargoDownloader:
         types = {item.get("type") for item in equipment_data if item.get("type")}
         return sorted(types)
 
-    def download_icons(self, cargo_type, dest_dir, image_cache_path, filters=None):
+    def download_icons(self, cargo_type, dest_dir, image_cache_path, filters=None, on_progress=None):
         """
         Download icons for cargo entries of the specified type.
 
@@ -308,11 +308,11 @@ class CargoDownloader:
         )
 
         self._download_icons(
-            matching_items, dest_dir, image_cache_path, cargo_type, filters
+            matching_items, dest_dir, image_cache_path, cargo_type, filters, on_progress=on_progress
         )
 
     def _download_icons(
-        self, items, dest_dir, image_cache_path, cargo_type=None, filters=None
+        self, items, dest_dir, image_cache_path, cargo_type=None, filters=None, on_progress=None
     ):
         """
         Internal function to handle threaded downloading of icon images.
@@ -359,8 +359,8 @@ class CargoDownloader:
             ).strip()
             cleaned_name = re.sub(r"[\/\\:\*\?\"\<\>\|]", "_", cleaned_name).strip()
 
-            filename = cleaned_name.replace(" ", "_") + ("_(" + item["faction_suffix"] + ")" if item["faction_suffix"] else "") + ".png"
-            url = FILE_PATH_BASE + cleaned_name.replace(" ", "_") + ("_(" + item["faction_suffix"] + ")" if item["faction_suffix"] else "") + "_icon.png"
+            filename = cleaned_name.replace(" ", "_") + ("_(" + item["faction_suffix"] + ")" if "faction_suffix" in item else "") + ".png"
+            url = FILE_PATH_BASE + cleaned_name.replace(" ", "_") + ("_(" + item["faction_suffix"] + ")" if "faction_suffix" in item else "") + "_icon.png"
             dest_path = dest_dir / filename
 
             local_counter = 0
@@ -397,7 +397,7 @@ class CargoDownloader:
 
                     logger.verbose(f"  [Downloaded] {filename}")
                 else:
-                    logger.warning(f"  [Failed] {filename} ({response.status_code})")
+                    logger.verbose(f"  [Failed] {filename} ({response.status_code})")
             except Exception as e:
                 logger.error(f"  [Error] {filename}: {e}")
                 raise CargoDownloadError(f"Failed to download {filename}") from e
@@ -420,16 +420,26 @@ class CargoDownloader:
                 item['faction_suffix'] = "Klingon"
                 download_items.append(item.copy()) # Klingon icon
             else:
-                download_items.append(item)
+                download_items.append(item.copy())
 
         items = download_items
 
+        #start_pct = 1.0
+        #end_pct   = 99.0
+        items_total     = len(items)
+        items_completed = 0
         with ThreadPoolExecutor() as executor:
             try:
                 futures = [
                     executor.submit(download_single_icon, item) for item in items
                 ]
                 for future in as_completed(futures):
+                    items_completed += 1
+                    
+                    frac       = items_completed / items_total
+                    sub = f"{items_completed}/{items_total}"
+
+                    on_progress(f"Downloading icons -> {sub}", frac*100.0)
                     pass
             except KeyboardInterrupt:
                 print("\n[Abort] Keyboard interrupt received, shutting down...")

@@ -109,7 +109,7 @@ class IconDetector:
                     if idx not in matches[icon_group_label]:
                         matches[icon_group_label][idx] = []
 
-                    icons_for_slot = found_icons[icon_group_label].get(box, {})
+                    icons_for_slot = found_icons[icon_group_label].get(idx, {})
                     
                     if not icons_for_slot:
                         continue
@@ -202,7 +202,7 @@ class IconDetector:
                         # logger.info(f"Skipping {icon_group_label} {idx} as already matched")
                         continue
 
-                    icons_for_slot = found_icons[icon_group_label].get(box, {})
+                    icons_for_slot = found_icons[icon_group_label].get(idx, {})
                     if not icons_for_slot:
                         continue
 

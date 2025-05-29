@@ -34,7 +34,6 @@ class PrefilterIconsStage(PipelineStage):
         screenshots_count = len(ctx.slots_list)
         pre_list   = []
         found_list = []
-        filt_list  = []
 
         for i, (slots, cls) in enumerate(zip(ctx.slots_list, ctx.classifications)):
             # carve out [i/screenshots_count ... (i+1)/screenshots_count] of the 0–100% range
@@ -53,7 +52,7 @@ class PrefilterIconsStage(PipelineStage):
 
             reporter("Running", 0.0)
 
-            pre, found, filt = self.strategy.prefilter(
+            pre, found = self.strategy.prefilter(
                 slots,
                 cls,
                 ctx.app_config.get("icon_dir"),
@@ -65,7 +64,6 @@ class PrefilterIconsStage(PipelineStage):
 
             pre_list.append(pre)
             found_list.append(found)
-            filt_list.append(filt)
 
         # 3) Merge results across all screenshots
         merged_pref = {}
@@ -74,13 +72,9 @@ class PrefilterIconsStage(PipelineStage):
         merged_found = {}
         for d in found_list:
             merged_found.update(d)
-        merged_filt = {}
-        for d in filt_list:
-            merged_filt.update(d)
 
         ctx.prefiltered_icons = merged_pref
         ctx.found_icons       = merged_found
-        ctx.filtered_icons    = merged_filt
 
         # 4) Final stage completion
         report(

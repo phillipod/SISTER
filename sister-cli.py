@@ -16,7 +16,6 @@ from log_config import setup_logging
 from sto_sister.pipeline import build_default_pipeline, PipelineState
 from sto_sister.exceptions import SISTERError, PipelineError, StageError
 
-from sto_sister.utils.cargo import CargoDownloader
 from sto_sister.utils.hashindex import HashIndex
 from sto_sister.utils.image import load_image, load_overlays
 
@@ -64,13 +63,7 @@ def on_stage_complete(stage, ctx, output):
             bar.update(bar.total - prev)
         bar.close()
 
-    if stage == 'start_executor_pool':
-        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Started executor pool ({ctx.executor_pool_total} workers)")
-        return
-    elif stage == 'stop_executor_pool':
-        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Stopped executor pool")
-        return
-    elif stage == 'locate_labels':
+    if stage == 'locate_labels':
         tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(label) for label in ctx.labels_list)} labels")
         return
     elif stage == 'locate_icon_groups':
@@ -104,6 +97,9 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'prefilter_icons':
         tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(slots) for icon_group in output.values() for slots in icon_group.values())} potential matches")
         return
+    elif stage == 'load_icons':
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Loaded icons")
+        return
     elif stage == 'output_transformation':
         #tqdm.write(f"[Callback] [on_stage_complete] [{stage}]")
         return
@@ -114,6 +110,31 @@ def on_stage_complete(stage, ctx, output):
     tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Pretty output: ")
     pprint(output)
 
+
+def on_task_start(task, ctx): 
+    return #print(f"[Callback] [on_task_start] [{task}]")
+
+def on_task_complete(task, ctx, output):
+    bar = _progress_bars.pop(task, None)
+    if bar:
+        # if we never actually hit 100 inside on_progress, finish it now
+        prev = _prev_percents[task]
+        if prev < bar.total:
+            bar.update(bar.total - prev)
+        bar.close()
+
+    if task == 'start_executor_pool':
+        tqdm.write(f"[Callback] [on_task_complete] [{task}] Started executor pool ({ctx.executor_pool_total} workers)")
+        return
+    elif task == 'stop_executor_pool':
+        tqdm.write(f"[Callback] [on_task_complete] [{task}] Stopped executor pool")
+        return
+    else:
+        tqdm.write(f"[Callback] [on_task_complete] [{task}] complete") 
+    
+    #print(f"[Callback] [on_task_complete] [{stage}] Output: {output}")
+    tqdm.write(f"[Callback] [on_task_complete] [{task}] Pretty output: ")
+    pprint(output)
 
 def on_interactive(stage, ctx): return ctx  # no-op
 
@@ -138,68 +159,7 @@ def on_metrics_complete(metrics):
     #print(f"[Callback] [on_metrics] {metrics}")
     for metric in metrics:
         if not metric['name'].endswith('_complete') and not metric['name'].endswith('_interactive'):
-            print(f"[Callback] [on_metrics] {"\t" if metric['name'] != 'pipeline' else ""}{metric['name']} took {metric['duration']:.2f} seconds")
-
-
-def download_icons(icons_dir):
-    """
-    Download all icons for equipment, personal traits, and starship traits from STO wiki.
-    
-    This function is a wrapper around CargoDownloader, which is used to download icons.
-    The mappings from cargo types to subdirectories are hardcoded.
-    """
-    images_root = Path(icons_dir)
-    image_cache_path = images_root / "image_cache.json"
-
-    downloader = CargoDownloader()
-    downloader.download_all()
-
-    # Define all mappings as a list of tuples: (cargo_type, filters, subdirectory)
-    download_mappings = [
-        # Equipment types
-        ('equipment', {'type': 'Body Armor'}, 'ground/armor'),
-        ('equipment', {'type': 'Personal Shield'}, 'ground/shield'),
-        ('equipment', {'type': 'EV Suit'}, 'ground/ev_suit'),
-        ('equipment', {'type': 'Kit Module'}, 'ground/kit_module'),
-        ('equipment', {'type': 'Kit'}, 'ground/kit'),
-        ('equipment', {'type': 'Ground Weapon'}, 'ground/weapon'),
-        ('equipment', {'type': 'Ground Device'}, 'ground/device'),
-        ('equipment', {'type': 'Ship Deflector Dish'}, 'space/deflector'),
-        ('equipment', {'type': 'Ship Secondary Deflector'}, 'space/secondary_deflector'),
-        ('equipment', {'type': 'Ship Shields'}, 'space/shield'),
-        ('equipment', {'type': 'Ship Vanity Shield'}, 'space/vanity_shield'),
-        ('equipment', {'type': 'Experimental Weapon'}, 'space/weapons/experimental'),
-        ('equipment', {'type': 'Ship Weapon'}, 'space/weapons/unrestricted'),
-        ('equipment', {'type': 'Ship Aft Weapon'}, 'space/weapons/aft'),
-        ('equipment', {'type': 'Ship Fore Weapon'}, 'space/weapons/fore'),
-        ('equipment', {'type': 'Universal Console'}, 'space/consoles/universal'),
-        ('equipment', {'type': 'Ship Engineering Console'}, 'space/consoles/engineering'),
-        ('equipment', {'type': 'Ship Tactical Console'}, 'space/consoles/tactical'),
-        ('equipment', {'type': 'Ship Science Console'}, 'space/consoles/science'),
-        ('equipment', {'type': 'Impulse Engine'}, 'space/impulse'),
-        ('equipment', {'type': 'Warp Engine'}, 'space/warp'),
-        ('equipment', {'type': 'Singularity Engine'}, 'space/singularity'),
-        ('equipment', {'type': 'Hangar Bay'}, 'space/hangar'),
-        ('equipment', {'type': 'Ship Device'}, 'space/device'),
-
-        # Personal traits
-        ('personal_trait', {'environment': 'ground', 'type': '!reputation,!activereputation', 'chartype': 'char'}, 'ground/traits/personal'),
-        ('personal_trait', {'environment': 'ground', 'type': 'reputation', 'chartype': 'char'}, 'ground/traits/reputation'),
-        ('personal_trait', {'environment': 'ground', 'type': 'activereputation', 'chartype': 'char'}, 'ground/traits/active_reputation'),
-        ('personal_trait', {'environment': 'space', 'type': '!reputation,!activereputation', 'chartype': 'char'}, 'space/traits/personal'),
-        ('personal_trait', {'environment': 'space', 'type': 'reputation', 'chartype': 'char'}, 'space/traits/reputation'),
-        ('personal_trait', {'environment': 'space', 'type': 'activereputation', 'chartype': 'char'}, 'space/traits/active_reputation'),
-
-        # Starship traits (no filters)
-        ('starship_trait', None, 'space/traits/starship')
-    ]
-
-    # Download all icons in one loop
-    for cargo_type, filters, subdir in download_mappings:
-        dest_dir = images_root / subdir
-        downloader.download_icons(cargo_type, dest_dir, image_cache_path, filters)
-
-    return download_mappings
+            print(f"[Callback] [on_metrics] {"\t" if not metric['name'].startswith('pipeline') else ""}{metric['name']} took {metric['duration']:.2f} seconds")
 
 def save_match_summary(output_dir, output_prefix, matches):
     """
@@ -333,40 +293,34 @@ if __name__ == "__main__":
     if args.log_level:
         setup_logging(log_level=args.log_level)
 
-    if args.download or args.build_phash_cache:
-        if args.download:
-            print("Downloading icon data from STO Wiki...")
-            download_icons(args.icons)
+    # if args.download or args.build_phash_cache:
+    #     if args.download:
+    #         print("Downloading icon data from STO Wiki...")
+    #         download_icons(args.icons)
 
-        if args.build_phash_cache:
-            print("Building PHash cache...")
+    #     if args.build_phash_cache:
+    #         print("Building PHash cache...")
             
-            icon_root = Path(args.icons)
-            hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
-            overlays = load_overlays(args.overlays)  # Must return dict of overlay -> RGBA overlay np.array
-            hash_index.build_with_overlays(overlays)
+    #         icon_root = Path(args.icons)
+    #         hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
+    #         overlays = load_overlays(args.overlays)  # Must return dict of overlay -> RGBA overlay np.array
+    #         hash_index.build_with_overlays(overlays)
 
-            print(f"[DONE] Built PHash index with {len(hash_index.hashes)} entries.")
+    #         print(f"[DONE] Built PHash index with {len(hash_index.hashes)} entries.")
+
+    #     exit(0)
+
+    if args.build_phash_cache:
+        print("Building PHash cache...")
+        
+        icon_root = Path(args.icons)
+        hash_index = HashIndex(icon_root, "phash", match_size=(16, 16))
+        overlays = load_overlays(args.overlays)  # Must return dict of overlay -> RGBA overlay np.array
+        hash_index.build_with_overlays(overlays)
+
+        print(f"[DONE] Built PHash index with {len(hash_index.hashes)} entries.")
 
         exit(0)
-
-    if len(args.screenshot) == 1 and args.output is None:
-        args.output = Path(args.screenshot[0]).stem
-
-
-    if args.screenshot is None or args.output is None:
-        p.print_help()
-        exit(1)
-
-
-    # 1. load image
-    images = [
-        load_image(path, resize_fullhd=not args.no_resize)
-        for path in args.screenshot
-    ]
-    
-    if images is None:
-        raise RuntimeError("Could not read image")
 
 
     #icon_root = Path(args.icons)
@@ -402,8 +356,38 @@ if __name__ == "__main__":
 
     # 3. build & run
     try:
-        pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_pipeline_complete=bound_on_pipeline_complete)
+        pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_task_start=on_task_start, on_task_complete=on_task_complete, on_pipeline_complete=bound_on_pipeline_complete)
+
+
+        if args.download:
+            print("Downloading icon data from STO Wiki...")
+            result: PipelineState = pipeline.execute_task("download_all_icons")
+            exit(0)
+
+        if len(args.screenshot) == 1 and args.output is None:
+            args.output = Path(args.screenshot[0]).stem
+
+
+        if args.screenshot is None or args.output is None:
+            p.print_help()
+            exit(1)
+
+
+        # 1. load image
+        images = [
+            load_image(path, resize_fullhd=not args.no_resize)
+            for path in args.screenshot
+        ]
+        
+        if images is None:
+            raise RuntimeError("Could not read image")
+
+        pipeline.startup()
+
         result: PipelineState = pipeline.run(images)
+        
+        
+        pipeline.shutdown()
         # save_match_summary(args.output_dir, args.output, result[1]["detect_icons"])
     except SISTERError as e:
         print(e)

@@ -61,9 +61,8 @@ class HashEngine:
 
         filtered_icons = {}
         found_icons = {}
-        target_phashes = {}
-        target_dhashes = {}
-
+        target_hashes = {}
+        
         # select_items = {
         #    "Science Console": { 3: True },
         # }
@@ -104,46 +103,89 @@ class HashEngine:
                 
                 filtered_icons[icon_group_label] = {}
                 found_icons[icon_group_label] = {}
-                target_phashes[icon_group_label] = []
-                target_dhashes[icon_group_label] = []
+                target_hashes[icon_group_label] = { "phash": [], "dhash": [] }
 
                 for slot in icon_slots[icon_group_label]:
                     idx = slot["Slot"]
                     box = slot["Box"]
                     roi = slot["ROI"]
-                    roi_phash = slot["PHash"]
-                    roi_dhash = slot["DHash"]
+                    roi_phash = slot["phash"]
+                    roi_dhash = slot["dhash"]
 
                     logger.debug(
                         f"Prefiltering icons for icon group '{icon_group_label}' at slot {idx}"
                     )
 
-                    found_icons[icon_group_label][box] = {}
+                    found_icons[icon_group_label][idx] = {}
                     filtered_icons[icon_group_label][box] = {}
 
-                    try:
-                        phash_results = self.hash_index.find_similar_to_image(
-                            "phash", roi_phash, max_distance=18, top_n=None, grayscale=False, filters={"image_category": ",".join(categories)}
-                        )
-                        target_phashes[icon_group_label].append(roi_phash)
-                        #print(f"hash_index.find_similar_to_image: {results}")
-                    except Exception as e:
-                        raise PrefilterError(
-                            f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
-                        ) from e
+                    distance_config = {
+                        "phash": {"max_distance": 18 },
+                        "dhash": {"max_distance": 10 },
+                    }
+                    
+                    for hash in ("phash", "dhash"):
+                        try:
+                            results = self.hash_index.find_similar_to_image(
+                                hash, slot[hash], max_distance=distance_config[hash]["max_distance"], top_n=None, grayscale=False, filters={"image_category": ",".join(categories)}
+                            )
+                            target_hashes[icon_group_label][hash].append(roi_phash)
+                            #print(f"hash_index.find_similar_to_image: {results}")
+                        except Exception as e:
+                            raise PrefilterError(
+                                f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
+                            ) from e
 
+                        box_icons = found_icons[icon_group_label][idx]
 
-                    try:
-                        dhash_results = self.hash_index.find_similar_to_image(
-                            "dhash", roi_dhash, max_distance=10, top_n=None, grayscale=False, filters={"image_category": ",".join(categories)}
-                        )
-                        target_dhashes[icon_group_label].append(roi_dhash)
-                        #print(f"hash_index.find_similar_to_image: {results}")
-                    except Exception as e:
-                        raise PrefilterError(
-                            f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
-                        ) from e
+                        # if icon_group_label == "Active Ground Reputation":
+                        #     print(f"Active Ground Reputation")
+                        #     print(f"roi_hash: {roi_hash}")
+                        #     print(f"results: {results}")
+                        #     show_image([roi])
 
+                        # if icon_group_label == "Starship Traits" and idx >= 5:
+                        #     print(f"Starship Traits")
+                        #     print(f"roi_hash: {roi_hash}")
+                        #     print(f"results: {results}")
+                        #     show_image([roi])
+
+                        # if icon_group_label == "Personal Space Traits" and idx == 8:
+                        #     print(f"Personal Space Traits")
+                        #     print(f"roi_phash: {roi_phash}")
+                        #     print(f"roi_dhash: {roi_dhash}")
+                        #     print(f"phash_results: {phash_results}")
+                        #     print(f"dhash_results: {dhash_results}")
+                        #     show_image([roi])
+
+                        #print(f"results: {results}")
+
+                        for rel_path, dist, metadata in results:
+                            # if icon_group_label == "Starship Traits" and idx >= 5:
+                            #     print(f"Starship Traits")
+                            #     print(f"rel_path: {rel_path}")
+                            #     print(f"dist: {dist}")
+                            #     print(f"metadata: {metadata}")
+                            #     show_image([roi])
+
+                            if "::" in rel_path:
+                                path_part, overlay = rel_path.split("::", 1)
+                            else:
+                                path_part, overlay = rel_path, None
+
+                            filename = os.path.basename(path_part)
+
+                            if path_part not in box_icons or box_icons[path_part]["dist"] > dist:
+                                # if filename == "Intruder_Discouragement.png":
+                                #     print(f"{icon_group_label} {box} {filename} {dist}: {metadata}")
+
+                                box_icons[path_part] = {
+                                    "dist": dist,
+                                    "hash_method": hash,
+                                    "overlay": overlay,
+                                    "name": filename,
+                                    "metadata": metadata,
+                                }
 
 
                     hash_search_completed += 1
@@ -155,161 +197,10 @@ class HashEngine:
                         sub = f"{hash_search_completed}/{slots_total}"
                         self.on_progress(f"Hash search -> {sub}", scaled_pct)
 
-                    # if icon_group_label == "Active Ground Reputation":
-                    #     print(f"Active Ground Reputation")
-                    #     print(f"roi_hash: {roi_hash}")
-                    #     print(f"results: {results}")
-                    #     show_image([roi])
-
-                    # if icon_group_label == "Starship Traits" and idx >= 5:
-                    #     print(f"Starship Traits")
-                    #     print(f"roi_hash: {roi_hash}")
-                    #     print(f"results: {results}")
-                    #     show_image([roi])
-
-                    # if icon_group_label == "Personal Space Traits" and idx == 8:
-                    #     print(f"Personal Space Traits")
-                    #     print(f"roi_phash: {roi_phash}")
-                    #     print(f"roi_dhash: {roi_dhash}")
-                    #     print(f"phash_results: {phash_results}")
-                    #     print(f"dhash_results: {dhash_results}")
-                    #     show_image([roi])
-
-                    #print(f"results: {results}")
-                    for rel_path, dist, metadata in phash_results:
-                        # if icon_group_label == "Starship Traits" and idx >= 5:
-                        #     print(f"Starship Traits")
-                        #     print(f"rel_path: {rel_path}")
-                        #     print(f"dist: {dist}")
-                        #     print(f"metadata: {metadata}")
-                        #     show_image([roi])
-
-                        if "::" in rel_path:
-                            path_part, overlay = rel_path.split("::", 1)
-                        else:
-                            path_part, overlay = rel_path, None
-
-                        full_path = self.hash_index.base_dir / path_part
-                        filename = os.path.basename(path_part)
-                        name = os.path.splitext(filename)[0]
-                        normalized_path = os.path.normpath(path_part)
-
-                        # Folder filtering
-                        allowed = False
-                        for folder in folders:
-                            try:
-                                relative_folder = folder.relative_to(
-                                    self.hash_index.base_dir
-                                )
-                                if normalized_path.startswith(
-                                    os.path.normpath(str(relative_folder))
-                                ):
-                                    allowed = True
-                                    break
-                            except ValueError:
-                                continue
-
-                        if not allowed or not full_path.exists():
-                            continue
-
-                        box_icons = found_icons[icon_group_label][box]
-                        if filename not in box_icons or box_icons[filename]["dist"] > dist:
-                            # if filename == "Intruder_Discouragement.png":
-                            #     print(f"{icon_group_label} {box} {filename} {dist}: {metadata}")
-
-                            box_icons[filename] = {
-                                "dist": dist,
-                                "hash_method": "phash",
-                                "overlay": overlay,
-                                "name": filename,
-                                "metadata": metadata,
-                            }
-
-                        try:
-                            if filename not in filtered_icons[icon_group_label]:
-                                data = np.fromfile(str(full_path), dtype=np.uint8)
-                                icon = cv2.imdecode(data, cv2.IMREAD_COLOR)
-                                #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
-                                if icon is not None:
-                                    # Ensure icon is 49x64
-                                    if icon.shape[0] != 64 or icon.shape[1] != 49:
-                                        icon = cv2.resize(icon, (49, 64))
-                                    filtered_icons[icon_group_label][filename] = icon
-                        except Exception as e:
-                            raise PrefilterError(
-                                f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
-                            ) from e
-
-                    for rel_path, dist, metadata in dhash_results:
-                        # if icon_group_label == "Starship Traits" and idx >= 5:
-                        #     print(f"Starship Traits")
-                        #     print(f"rel_path: {rel_path}")
-                        #     print(f"dist: {dist}")
-                        #     print(f"metadata: {metadata}")
-                        #     show_image([roi])
-
-                        if "::" in rel_path:
-                            path_part, overlay = rel_path.split("::", 1)
-                        else:
-                            path_part, overlay = rel_path, None
-
-                        full_path = self.hash_index.base_dir / path_part
-                        filename = os.path.basename(path_part)
-                        name = os.path.splitext(filename)[0]
-                        normalized_path = os.path.normpath(path_part)
-
-                        # Folder filtering
-                        allowed = False
-                        for folder in folders:
-                            try:
-                                relative_folder = folder.relative_to(
-                                    self.hash_index.base_dir
-                                )
-                                if normalized_path.startswith(
-                                    os.path.normpath(str(relative_folder))
-                                ):
-                                    allowed = True
-                                    break
-                            except ValueError:
-                                continue
-
-                        if not allowed or not full_path.exists():
-                            continue
-
-                        box_icons = found_icons[icon_group_label][box]
-                        if filename not in box_icons or box_icons[filename]["dist"] > dist:
-                            # if filename == "Intruder_Discouragement.png":
-                            #     print(f"{icon_group_label} {box} {filename} {dist}: {metadata}")
-
-                            box_icons[filename] = {
-                                "dist": dist,
-                                "hash_method": "dhash",
-                                "overlay": overlay,
-                                "name": filename,
-                                "metadata": metadata,
-                            }
-
-                        try:
-                            if filename not in filtered_icons[icon_group_label]:
-                                data = np.fromfile(str(full_path), dtype=np.uint8)
-                                icon = cv2.imdecode(data, cv2.IMREAD_COLOR)
-                                #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
-                                if icon is not None:
-                                    # Ensure icon is 49x64
-                                    if icon.shape[0] != 64 or icon.shape[1] != 49:
-                                        icon = cv2.resize(icon, (49, 64))
-                                    filtered_icons[icon_group_label][filename] = icon
-                        except Exception as e:
-                            raise PrefilterError(
-                                f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
-                            ) from e                            
-
-
-
         candidates_total = sum(
-            len(found_icons[icon_group_label][box])
+            len(found_icons[icon_group_label][idx])
             for icon_group_label in icon_slots
-            for box in found_icons[icon_group_label]
+            for idx in found_icons[icon_group_label]
         )
 
         start_pct = 66.0
@@ -335,8 +226,8 @@ class HashEngine:
                 idx = slot["Slot"]
                 box = slot["Box"]
                 roi = slot["ROI"]
-                roi_phash = slot["PHash"]
-                roi_dhash = slot["DHash"]
+                roi_phash = slot["phash"]
+                roi_dhash = slot["dhash"]
 
                 if select_items and icon_group_label in select_items:
                     if (
@@ -350,7 +241,7 @@ class HashEngine:
 
                 prefiltered[icon_group_label][idx] = []
 
-                candidates = found_icons[icon_group_label][box]
+                candidates = found_icons[icon_group_label][idx]
 
                 dists = [info["dist"] for info in candidates.values()]
                 if not dists:
@@ -382,8 +273,8 @@ class HashEngine:
                             "slot": idx,
                             "method": "hash-" + info["hash_method"],
                             "overlay": info["overlay"],
-                            "roi_phash": target_phashes[icon_group_label][idx],
-                            "roi_dhash": target_dhashes[icon_group_label][idx],
+                            "roi_phash": target_hashes[icon_group_label]["phash"][idx],
+                            "roi_dhash": target_hashes[icon_group_label]["dhash"][idx],
                             "metadata": info["metadata"]
                             # "overlay_scale": 1.0,
                             # "overlay_score":0.0,
@@ -393,24 +284,24 @@ class HashEngine:
 
                     filtered_slot_icons[filename] = info
 
-                found_icons[icon_group_label][box] = filtered_slot_icons
+                found_icons[icon_group_label][idx] = filtered_slot_icons
 
-                try:
-                    for filename in filtered_slot_icons:
-                        if filename not in filtered_icons[icon_group_label]:
-                            full_path = self.hash_index.base_dir / filename
-                            data = np.fromfile(str(full_path), dtype=np.uint8)
-                            icon = cv2.imdecode(data, cv2.IMREAD_COLOR)
-                            #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
-                            if icon is not None:
-                                # Ensure icon is 49x64
-                                if icon.shape[0] != 64 or icon.shape[1] != 49:
-                                    icon = cv2.resize(icon, (49, 64))                                
-                                filtered_icons[icon_group_label][filename] = icon
-                except Exception as e:
-                    raise PrefilterError(
-                        f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
-                    ) from e
+                # try:
+                #     for filename in filtered_slot_icons:
+                #         if filename not in filtered_icons[icon_group_label]:
+                #             full_path = self.hash_index.base_dir / filename
+                #             data = np.fromfile(str(full_path), dtype=np.uint8)
+                #             icon = cv2.imdecode(data, cv2.IMREAD_COLOR)
+                #             #icon = cv2.imread(str(full_path), cv2.IMREAD_COLOR)
+                #             if icon is not None:
+                #                 # Ensure icon is 49x64
+                #                 if icon.shape[0] != 64 or icon.shape[1] != 49:
+                #                     icon = cv2.resize(icon, (49, 64))                                
+                #                 filtered_icons[icon_group_label][filename] = icon
+                # except Exception as e:
+                #     raise PrefilterError(
+                #         f"Hash prefilter failed for icon group '{icon_group_label}' at {box}: {e}"
+                #     ) from e
 
                 phash_threshold_completed += 1
                 
@@ -434,4 +325,4 @@ class HashEngine:
         )
         logger.verbose("Completed prefiltering all candidates.")
 
-        return prefiltered, found_icons, filtered_icons
+        return prefiltered, found_icons

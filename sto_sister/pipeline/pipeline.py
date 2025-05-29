@@ -19,16 +19,21 @@ from ..utils.persistent_executor import PersistentProcessPoolExecutor
 
 from .progress_reporter import PipelineProgressReporter
 from ..stages import (
-    StartExecutorPoolStage,
-    StopExecutorPoolStage,
     LocateLabelsStage,
     ClassifyLayoutStage,
     LocateIconGroupsStage,
     LocateIconSlotsStage,
     PrefilterIconsStage,
+    LoadIconsStage,
     DetectIconOverlaysStage,
     DetectIconsStage,
     OutputTransformationStage,
+)
+
+from ..tasks import (
+    StartExecutorPoolTask,
+    StopExecutorPoolTask,
+    DownloadAllIconsTask,
 )
 
 logger = logging.getLogger(__name__)
@@ -44,6 +49,8 @@ class SISTER:
         on_metrics_complete: Optional[Callable[[str, PipelineState, Any], None]] = None,
         on_stage_start: Optional[Callable[[str, PipelineState], None]] = None,
         on_stage_complete: Optional[Callable[[str, PipelineState, Any], None]] = None,
+        on_task_start: Optional[Callable[[str, PipelineState], None]] = None,
+        on_task_complete: Optional[Callable[[str, PipelineState, Any], None]] = None,
         on_pipeline_complete: Optional[
             Callable[[PipelineState, Dict[str, Any], Dict[str, Any]], None]
         ] = None,
@@ -54,8 +61,21 @@ class SISTER:
         self.config = config
         self.app_init()
 
+        self.startup_tasks: List[PipelineTask] = [
+            StartExecutorPoolTask(config.get("executor", {}), self.app_config),
+        ]
+        
+        self.shutdown_tasks: List[PipelineTask] = [
+            StopExecutorPoolTask(config.get("executor", {}), self.app_config),
+        ]
+        
+        self.run_tasks: List[PipelineTask] = []
+
+        self.callable_tasks: Dict[str, PipelineTask] = {
+            "download_all_icons": DownloadAllIconsTask(config.get("download", {}), self.app_config),
+        }
+
         self.stages: List[PipelineStage] = [
-            StartExecutorPoolStage(config.get("executor", {}), self.app_config),
             LocateLabelsStage(config.get("locate_labels", {"debug": True}), self.app_config),
             ClassifyLayoutStage(config.get("classify_layout", {}), self.app_config),
             LocateIconGroupsStage(config.get("icon_group", {}), self.app_config),
@@ -63,11 +83,11 @@ class SISTER:
             PrefilterIconsStage(
                 config.get("prefilter_icons", {"debug": True}), self.app_config
             ),
+            LoadIconsStage(config.get("load_icons", {}), self.app_config),
             DetectIconOverlaysStage(
                 config.get("icon_overlay", {}), self.app_config
             ),
             DetectIconsStage(config.get("detect_icons", {}), self.app_config),
-            StopExecutorPoolStage(config.get("executor", {}), self.app_config),
             OutputTransformationStage(config.get("output_transformation", {}), self.app_config),
         ]
 
@@ -79,6 +99,9 @@ class SISTER:
 
         self.on_stage_start = on_stage_start
         self.on_stage_complete = on_stage_complete
+        self.on_task_start = on_task_start
+        self.on_task_complete = on_task_complete
+
         self.on_pipeline_complete = on_pipeline_complete
 
     def app_init(self) -> None:
@@ -189,13 +212,66 @@ class SISTER:
             for name, metric in self.metrics.items()
         ]
 
+    def _run_task(self, task: PipelineTask, ctx: Optional[PipelineState]):
+        if self.on_task_start:
+            self.on_task_start(task.name, ctx)
+
+        reporter = PipelineProgressReporter(self.on_progress, task.name, ctx)
+
+        result = task.execute(ctx, reporter)
+
+        if self.on_task_complete:
+            self.on_task_complete(task.name, ctx, result)
+
+        return result
+
+    def execute_task(self, task: str):
+        # If task is in self.callable_tasks, run it. Callable tasks do not get ctx
+
+        if task in self.callable_tasks:
+            return self._run_task(self.callable_tasks[task], None)
+
+    def startup(self):
+        self.start_metric("pipeline_startup_tasks")
+        
+        if not getattr(self, "_started_ctx", False):
+            ctx = PipelineState(
+                screenshots=None, config=self.config, app_config=self.app_config
+            )
+
+            for task in self.startup_tasks:
+                self._run_task(task, ctx)
+
+            self._started_ctx = ctx
+            weakref.finalize(self, self.shutdown)
+        
+        self.end_metric("pipeline_startup_tasks")
+
+    def shutdown(self):
+        
+        if self._started_ctx:
+            for task in self.shutdown_tasks:
+                self._run_task(task, self._started_ctx)
+        
+        self._started_ctx = None
+ 
+
     def run(self, screenshots: List[np.ndarray]) -> PipelineState:
+        ctx = self._started_ctx.copy()
+        ctx.set_screenshots(screenshots)
+
+        results: Dict[str, Any] = {}
+
+
         self.start_metric("pipeline")
 
-        ctx = PipelineState(
-            screenshots=screenshots, config=self.config, app_config=self.app_config
-        )
-        results: Dict[str, Any] = {}
+        if len(self.run_tasks) > 0: 
+            self.start_metric("run_tasks")
+
+            for task in self.run_tasks:
+                self._run_task(task, ctx)   
+
+            self.end_metric("run_tasks")
 
         for stage in self.stages:
             # notify start
@@ -282,6 +358,8 @@ def build_default_pipeline(
     on_metrics_complete: Optional[Callable[[str, PipelineState, Any], None]] = None,
     on_stage_start: Optional[Callable[[str, PipelineState, Any], None]] = None,
     on_stage_complete: Optional[Callable[[str, PipelineState, Any], None]] = None,
+    on_task_start: Optional[Callable[[str, PipelineState, Any], None]] = None,
+    on_task_complete: Optional[Callable[[str, PipelineState, Any], None]] = None,
     on_pipeline_complete: Optional[
         Callable[[PipelineState, Dict[str, Any]], None]
     ] = None,
@@ -295,5 +373,7 @@ def build_default_pipeline(
         on_metrics_complete=on_metrics_complete,
         on_stage_start=on_stage_start,
         on_stage_complete=on_stage_complete,
+        on_task_start=on_task_start,
+        on_task_complete=on_task_complete,
         on_pipeline_complete=on_pipeline_complete,
     )

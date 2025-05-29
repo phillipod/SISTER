@@ -37,13 +37,13 @@ class DetectIconsStage(PipelineStage):
 
         icon_sets = ctx.app_config.get("icon_sets", {})
         ctx.overlays = load_overlays(ctx.config.get("overlay_dir", ""))
-        # print(f"[Matching] ctx.filtered_icons: {ctx.filtered_icons}")
+        
         ctx.matches = self.detector.detect(
             ctx.slots,
             icon_sets,
             ctx.overlays,
             ctx.detected_overlays,
-            ctx.filtered_icons,
+            ctx.loaded_icons,
             ctx.found_icons,
             threshold=self.opts.get("threshold", 0.7),
             executor_pool=ctx.executor_pool
