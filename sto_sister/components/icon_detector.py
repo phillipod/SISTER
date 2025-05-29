@@ -82,7 +82,7 @@ class IconDetector:
 
         try:
             args_list = []
-            self.on_progress("Detecting icons", 10.0)
+            self.on_progress("Detecting icons", 5.0)
             for icon_group_label in icon_slots:
                 matches[icon_group_label] = {}
 
@@ -154,8 +154,8 @@ class IconDetector:
                         )
                         args_list.append(args)
 
-            start_pct = 10.0
-            end_pct   = 65.0
+            start_pct = 5.0
+            end_pct   = 90.0
 
             self.on_progress("Detecting icons", start_pct)
 
@@ -239,8 +239,8 @@ class IconDetector:
                         )
                         fallback_args_list.append(args)
 
-            start_pct = 66.0
-            end_pct   = 95.0
+            start_pct = 90.0
+            end_pct   = 99.0
 
             self.on_progress("Detecting icons(Fallback pass)", start_pct)
 
