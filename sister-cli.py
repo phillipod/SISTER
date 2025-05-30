@@ -4,6 +4,7 @@ load_start_time = time.time()
 import argparse
 import cv2
 import traceback
+import multiprocessing
 
 from functools import partial
 from tqdm import tqdm
@@ -280,6 +281,8 @@ def save_match_summary(output_dir, output_prefix, matches):
     return True, output_file
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
+
     start_time = time.time()
 
     p = argparse.ArgumentParser()
@@ -323,6 +326,10 @@ if __name__ == "__main__":
         "overlay_dir": args.overlays,
     }
 
+    # if args.output is not specifed, take the stem of the first screenshot
+    if args.output is None and len(args.screenshot) > 0:
+        args.output = Path(args.screenshot[0]).stem
+
     # bind args to on_pipeline_complete
     bound_on_pipeline_complete = partial(on_pipeline_complete, save_dir=args.output_dir, save_file=args.output)
 
@@ -347,11 +354,8 @@ if __name__ == "__main__":
             result: PipelineState = pipeline.execute_task("download_all_icons")
             exit(0)
 
-        if len(args.screenshot) == 1 and args.output is None:
-            args.output = Path(args.screenshot[0]).stem
-
-
-        if args.screenshot is None or args.output is None:
+        
+        if args.screenshot is None:
             p.print_help()
             exit(1)
 

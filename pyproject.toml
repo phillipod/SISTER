@@ -1,8 +1,8 @@
 [project]
 name = "sister"
-version = "0.1.0"
+version = "v2025.05.30"
 description = "SISTER (Screenshot Interrogation System for Traits and Equipment Recognition): computer vision pipeline designed to match icons within screenshots"
-authors = ["Phillip O'Donnell <phillip.odonnell@gmail.com>"]
+authors = [{"name" = "Phillip O'Donnell", "email" = "phillip.odonnell@gmail.com"}]
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
