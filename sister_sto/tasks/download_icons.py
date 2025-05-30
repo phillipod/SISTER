@@ -1,11 +1,13 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 from pathlib import Path
+import logging
 
 from ..pipeline import PipelineTask, TaskOutput, PipelineState
 from ..pipeline.progress_reporter import TaskProgressReporter
 
 from ..utils.cargo import CargoDownloader
 
+logger = logging.getLogger(__name__)
 
 class DownloadAllIconsTask(PipelineTask):
     name = "download_all_icons"

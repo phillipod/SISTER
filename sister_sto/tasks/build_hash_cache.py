@@ -1,11 +1,14 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 from pathlib import Path
+import logging
 
 from ..pipeline import PipelineTask, TaskOutput, PipelineState
 from ..pipeline.progress_reporter import TaskProgressReporter
 
 from ..utils.hashindex import HashIndex
 from ..utils.image import load_overlays
+
+logger = logging.getLogger(__name__)
 
 class BuildHashCacheTask(PipelineTask):
     name = "build_hash_cache"
@@ -32,7 +35,7 @@ class BuildHashCacheTask(PipelineTask):
 
         icon_root = Path(self.app_config["icon_dir"])
         
-        hash_index = HashIndex(icon_root, "phash", match_size=(16, 16), empty=True)
+        hash_index = HashIndex(icon_root, match_size=(16, 16), empty=True)
         
         overlays = load_overlays(self.app_config["overlay_dir"])  # Must return dict of overlay -> RGBA overlay np.array
         

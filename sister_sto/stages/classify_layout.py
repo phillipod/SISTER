@@ -1,8 +1,10 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
+import logging
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..components.layout_classifier import LayoutClassifier
 
+logger = logging.getLogger(__name__)
 
 class ClassifyLayoutStage(PipelineStage):
     name = "classify_layout"

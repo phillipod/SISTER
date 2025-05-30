@@ -1,3 +1,5 @@
+import os
+import sys
 import time
 load_start_time = time.time()
 
@@ -12,13 +14,13 @@ from collections import defaultdict
 from pathlib import Path
 from pprint import pprint
 
-from log_config import setup_logging
+#from log_config import setup_logging
 
-from sto_sister.pipeline import build_default_pipeline, PipelineState
-from sto_sister.exceptions import SISTERError, PipelineError, StageError
+from sister_sto.pipeline import build_default_pipeline, PipelineState
+from sister_sto.exceptions import SISTERError, PipelineError, StageError
 
-from sto_sister.utils.hashindex import HashIndex
-from sto_sister.utils.image import load_image, load_overlays
+from sister_sto.utils.hashindex import HashIndex
+from sister_sto.utils.image import load_image, load_overlays
 
 import traceback
 
@@ -283,57 +285,80 @@ def save_match_summary(output_dir, output_prefix, matches):
 if __name__ == "__main__":
     multiprocessing.freeze_support()
 
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    else:
+        # Fallback for older versions
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+
+
     start_time = time.time()
 
     p = argparse.ArgumentParser()
-    p.add_argument("--screenshot", "-s", nargs="+", help="Path to screenshot")
-    p.add_argument("--icons", default="images", help="Directory containing downloaded icons. Defaults to 'images' in current directory.")
-    p.add_argument("--overlays", default="overlays", help="Directory containing icon overlay images. Defaults to 'overlays' in current directory.")
+    p.add_argument("--data-dir", default="~/.sister_sto", help="Directory containing STO data. Defaults to '.sister_sto' in user home directory.")
+    p.add_argument("--log-dir", default="log", help="Directory to write logfile to. Defaults to 'log' in data-dir directory.")
+    p.add_argument("--icon-dir", default="icons", help="Directory containing downloaded icons. Defaults to 'icons' in data-dir directory.")
+    p.add_argument("--overlay-dir", default="overlays", help="Directory containing icon overlay images. Defaults to 'overlays' in data-dir directory.")
+    p.add_argument("--output-dir", default="./", help="Directory to store output summaries. Defaults to current directory.")
     p.add_argument("--log-level", default="WARNING", help="Log level: DEBUG, VERBOSE, INFO, WARNING, ERROR")
-    p.add_argument("--no-resize", action="store_true", help="Disable image downscaling to 1920x1080. Downscales only if screenshot is greater than 1920x1080.")
     p.add_argument("--download", action="store_true", help="Download icon data from STO Wiki. Exit after.")
     p.add_argument("--build-hash-cache", action="store_true", help="Build a hash (phash, dhash) cache for all icons.")
-    p.add_argument("--output_dir", default="output", help="Directory to store output summaries. Defaults to 'output' in current directory.")
-    p.add_argument("--output", "-o", help="Output file prefix to save match summary to. Must be specified if more than one screenshot is provided.")
     p.add_argument("--gpu", action="store_true", help="Enable GPU usage for OCR.")
+    p.add_argument("--no-resize", action="store_true", help="Disable image downscaling to 1920x1080. Downscales only if screenshot is greater than 1920x1080.")
+    p.add_argument("--screenshot", "-s", nargs="+", help="Path to screenshot")
+    p.add_argument("--output", "-o", help="Output file prefix to save match summary to. Defaults to stem of the first screenshot.")
 
     args = p.parse_args()
 
-    if args.log_level:
-        setup_logging(log_level=args.log_level)
-   
-    # 2. assemble config dict
     config = {
         "debug": True,
         "log_level": args.log_level,
+        "log_dir": args.log_dir,
+        "output_dir": args.output_dir,
         "locate_labels": {
             "gpu": args.gpu
         },
+
         "prefilter_icons": {
-            "method": "phash"
+            "method": "hash"
         },
+
         "output_transformation": {
             "transformations_enabled_list": [
                 "BACKFILL_MATCHES_WITH_PREFILTERED" # If no matches are found for a given slot, this transformation will merge any prefiltered icons into the output
             ]
         },
-        "engine": "phash",
-        "hash_index_dir": args.icons,
-        "hash_index_file": "hash_index.json",
-        "hash_max_size": (16, 16),
 
-        "icon_dir": args.icons,
-        "overlay_dir": args.overlays,
+        "engine": "phash",
+        "data_dir": args.data_dir,
     }
 
+    # if any directories are overriden on the command line, set them in config
+    path_args = [
+        "log_dir",
+        "icon_dir",
+        "overlay_dir",
+        "cache_dir",
+        "cargo_dir",
+        "output_dir"
+    ]
+
+    args_dict = vars(args)
+    for path_arg in path_args:
+        if path_arg not in args_dict:
+            continue
+        
+        if args_dict[path_arg] != p.get_default(path_arg):
+            config[path_arg] = args_dict[path_arg]
+    
     # if args.output is not specifed, take the stem of the first screenshot
-    if args.output is None and len(args.screenshot) > 0:
+    if args.output is None and args.screenshot and len(args.screenshot) > 0:
         args.output = Path(args.screenshot[0]).stem
 
     # bind args to on_pipeline_complete
     bound_on_pipeline_complete = partial(on_pipeline_complete, save_dir=args.output_dir, save_file=args.output)
 
-    # 3. build & run
     try:
         pipeline = build_default_pipeline(on_progress, on_interactive, on_error, config=config, on_metrics_complete=on_metrics_complete, on_stage_start=on_stage_start, on_stage_complete=on_stage_complete, on_task_start=on_task_start, on_task_complete=on_task_complete, on_pipeline_complete=bound_on_pipeline_complete)
 
@@ -347,20 +372,19 @@ if __name__ == "__main__":
                 print("Building Hash cache...")
                 result: PipelineState = pipeline.execute_task("build_hash_cache")
 
-            exit(0)
+            sys.exit(0)
 
         if args.download:
             print("Downloading icon data from STO Wiki...")
             result: PipelineState = pipeline.execute_task("download_all_icons")
-            exit(0)
+            sys.exit(0)
 
         
         if args.screenshot is None:
             p.print_help()
-            exit(1)
+            sys.exit(1)
 
 
-        # 1. load image
         images = [
             load_image(path, resize_fullhd=not args.no_resize)
             for path in args.screenshot

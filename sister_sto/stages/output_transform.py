@@ -1,7 +1,9 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
+import logging
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 
+logger = logging.getLogger(__name__)
 
 class OutputTransformationStage(PipelineStage):
     name = "output_transformation"

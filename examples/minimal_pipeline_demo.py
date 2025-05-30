@@ -9,10 +9,10 @@ from pprint import pprint
 
 from log_config import setup_logging
 
-from sto_sister.pipeline import build_default_pipeline, PipelineState
-from sto_sister.exceptions import SISTERError, PipelineError, StageError
-from sto_sister.utils.hashindex import HashIndex
-from sto_sister.utils.image import load_image
+from sister_sto.pipeline import build_default_pipeline, PipelineState
+from sister_sto.exceptions import SISTERError, PipelineError, StageError
+from sister_sto.utils.hashindex import HashIndex
+from sister_sto.utils.image import load_image
 
 import traceback
 

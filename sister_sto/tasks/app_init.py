@@ -1,7 +1,12 @@
+import os
+import sys
+import importlib.resources
+
 from typing import Any, Callable, Dict, List, Tuple, Optional
 from pathlib import Path
 
-from logging import getLogger
+import logging
+
 from log_config import setup_logging
 
 from ..pipeline import PipelineTask, TaskOutput, PipelineState
@@ -10,7 +15,7 @@ from ..pipeline.progress_reporter import TaskProgressReporter
 from ..utils.hashindex import HashIndex
 from ..utils.image import load_overlays
 
-logger = getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 class AppInitTask(PipelineTask):
     name = "app_init"
@@ -27,30 +32,58 @@ class AppInitTask(PipelineTask):
     ) -> TaskOutput:
         report(self.name, "Initializing", 0.0)
         
-        self.app_init()
+        sub = f"Initializing"
+
+        reporter = TaskProgressReporter(
+            task_name   = self.name,
+            sub_prefix   = sub,
+            report_fn    = report,
+            window_start = 0.0,
+            window_end   = 1.0,
+        )
+
+        self.app_init(reporter)
         
         report(self.name, "Initialized", 100.0)
 
         return TaskOutput(ctx, None)
 
 
-    def app_init(self) -> None:
+    def app_init(self, reporter: Callable[[str, float], None]) -> None:
         logger.info(f"Initializing SISTER with config: {self.config}")
+
+        self.app_config["data_dir"] = Path(os.path.expanduser(self.config.get("data_dir")))
+
+        default_paths = {
+            "log_dir": "log",
+            "icon_dir": "icons",
+            "overlay_dir": "overlays",
+            "cache_dir": "cache",
+            "cargo_dir": "cargo",
+        }
+        
+        for key, value in default_paths.items():
+            if self.config.get(key):
+                self.app_config[key] = Path(os.path.expanduser(self.config.get(key)))
+            else:
+                self.app_config[key] = self.app_config["data_dir"] / value
+
+        if not os.path.exists(self.app_config["data_dir"]):
+            self.first_run_init(reporter)
+
+        reporter("Loading hash cache", 10.0)
+        self.app_config["hash_match_size"] = self.config.get("hash_match_size", (16, 16))
         self.app_config["hash_index"] = HashIndex(
-            self.config.get("hash_index_dir"),
-            self.config.get("engine", "phash"),
-            match_size=self.config.get("hash_max_size", (16, 16)),
-            output_file=self.config.get("hash_index_file", "hash_index.json"),
+            self.app_config.get("cache_dir"),
+            match_size=self.app_config["hash_match_size"],
+            cache_file=self.config.get("hash_cache_file", "hash_cache.json"),
         )
+        reporter("Loaded hash cache", 95.0)
 
         self.app_config["log_level"] = self.config.get("log_level", "INFO")
-        setup_logging(self.app_config.get("log_level"))
-
-
-        self.app_config["icon_dir"] = self.config.get("icon_dir")
-        self.app_config["overlay_dir"] = self.config.get("overlay_dir")
+        setup_logging(self.app_config.get("log_level"), log_file=self.app_config.get("log_dir") / "sister.log")
         
-        icon_root = Path(self.config.get("icon_dir"))
+        icon_root = Path(self.app_config.get("icon_dir"))
 
         self.app_config["icon_sets"] = {
             "ship": {
@@ -128,3 +161,42 @@ class AppInitTask(PipelineTask):
                 "Starship Traits": [ "space/traits/starship" ],
             }
         }
+
+        reporter("Completed", 100.0)
+
+    def first_run_init(self, reporter):
+        src_dir = None
+
+        try:
+            # Python 3.9+: get a Traversable for resources dir
+            import importlib.resources as pkg_resources
+            resources_root = pkg_resources.files("sister_sto").joinpath("resources")
+            
+            if not (resources_root.is_dir() and any(resources_root.iterdir())):
+                raise FileNotFoundError
+            
+            # If we got here, resources_root points inside the wheel/egg or source tree.
+            src_dir = resources_root
+        except (ModuleNotFoundError, FileNotFoundError, AttributeError):
+            # importlib.resources didn’t work (no package-data or running raw exe without it)
+            if getattr(sys, "frozen", False):
+                bundle_dir = Path(sys.executable).parent
+                src_dir = bundle_dir / "resources"
+            else:
+                import sister_sto
+                bundle_dir = Path(sister_sto.__file__).resolve().parent.parent
+                src_dir = bundle_dir / "resources"
+
+
+        for directory in ["data_dir", "log_dir", "cache_dir", "cargo_dir", "icon_dir", "overlay_dir"]:
+            self.app_config[directory].mkdir(parents=True, exist_ok=True)
+        
+        # find all files under src_dir and copy them to the data directory, preserving the directory structure
+        for src_path in src_dir.rglob('*'):
+            if src_path.is_file():
+                relative_path = src_path.relative_to(src_dir)
+                dest_path = self.app_config["data_dir"] / relative_path
+                # print(f"Copying {src_path} to {dest_path}") 
+                dest_path.parent.mkdir(parents=True, exist_ok=True)
+                dest_path.write_bytes(src_path.read_bytes())
+

@@ -1,10 +1,12 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
+import logging
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..pipeline.progress_reporter import StageProgressReporter
 from ..utils.image import load_overlays
 from ..components.icon_detector import IconDetector
 
+logger = logging.getLogger(__name__)
 
 class DetectIconsStage(PipelineStage):
     name = "detect_icons"
@@ -36,7 +38,7 @@ class DetectIconsStage(PipelineStage):
         report(self.name, "Starting", 0.0)
 
         icon_sets = ctx.app_config.get("icon_sets", {})
-        ctx.overlays = load_overlays(ctx.config.get("overlay_dir", ""))
+        ctx.overlays = load_overlays(ctx.app_config.get("overlay_dir", ""))
         
         ctx.matches = self.detector.detect(
             ctx.slots,

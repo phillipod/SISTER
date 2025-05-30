@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import logging
 
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
@@ -8,6 +9,8 @@ from ..pipeline.progress_reporter import StageProgressReporter
 
 from ..utils.cargo import CargoDownloader
 from ..utils.persistent_executor import PersistentProcessPoolExecutor
+
+logger = logging.getLogger(__name__)
 
 class LoadIconsStage(PipelineStage):
     name = "load_icons"
@@ -31,7 +34,7 @@ class LoadIconsStage(PipelineStage):
             for slot in ctx.found_icons[icon_group]:
                 for file in ctx.found_icons[icon_group][slot]:
                     for metadata in ctx.found_icons[icon_group][slot][file]['metadata']:
-                        full_path = ctx.app_config.get("hash_index").base_dir / metadata['image_path']
+                        full_path = ctx.app_config.get("icon_dir") / metadata['image_path']
 
                         if full_path.exists():
                              continue
@@ -54,10 +57,10 @@ class LoadIconsStage(PipelineStage):
                         download_icons[cargo_type][destination_dir][cargo_filters]['name'].append(cargo_item_name)                      
 
                 
-        downloader = CargoDownloader()
+        downloader = CargoDownloader(cache_dir=ctx.app_config.get("cargo_dir"))
         downloader.download_all()
 
-        image_cache_path = ctx.app_config.get("hash_index").base_dir / "image_cache.json"
+        image_cache_path = ctx.app_config.get("cache_dir") / "image_cache.json"
 
         total_cargo_filters = (sum(len(download_icons[cargo_type][destination_dir]) for cargo_type in download_icons for destination_dir in download_icons[cargo_type]))
 
@@ -80,7 +83,7 @@ class LoadIconsStage(PipelineStage):
                     )
 
                     cargo_filter = download_icons[cargo_type][destination_dir][cargo_filters]
-                    dest_dir = ctx.app_config.get("hash_index").base_dir / destination_dir
+                    dest_dir = ctx.app_config.get("icon_dir") / destination_dir
 
                     downloader.download_icons(cargo_type, dest_dir, image_cache_path, cargo_filter, on_progress=reporter)
                     
@@ -108,7 +111,7 @@ class LoadIconsStage(PipelineStage):
                     if file not in ctx.loaded_icons[icon_group]:
                             # print(f"{icon_group}#{slot} {file}: {ctx.found_icons[icon_group][slot][file]}")
 
-                            full_path = ctx.app_config.get("hash_index").base_dir / file
+                            full_path = ctx.app_config.get("icon_dir") / file
                             data = np.fromfile(str(full_path), dtype=np.uint8)
                             icon = cv2.imdecode(data, cv2.IMREAD_COLOR)
                             

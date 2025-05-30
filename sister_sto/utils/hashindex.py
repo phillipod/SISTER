@@ -184,11 +184,18 @@ def find_similar_in_namespace(
         if filters and not item_matches(metadata, filters):
             continue
 
-        agg_key = entry_dict["md5_hash"]
+        # build a unique key per (perceptual-hash + md5)
+        raw_hash_key = str(hash_obj)
+        md5 = entry_dict["md5_hash"]
+        agg_key = f"{raw_hash_key}:{md5}"
+
+        # pick relpath from the metadata itself, so you don't lose
+        # one file when two share the same perceptual-hash
+        file_path = metadata.get("image_path", BK_TREE_RELPATHS[namespace].get(raw_hash_key))
 
         if agg_key not in agg:
             agg[agg_key] = {
-                "relpath": relpath,
+                "relpath": file_path,
                 "distance": distance,
                 "metadatalist": []
             }
@@ -222,8 +229,7 @@ class HashIndex:
     def __init__(
         self,
         base_dir,
-        hasher,
-        output_file="hash_index.json",
+        cache_file="hash_index.json",
         recursive=True,
         match_size=(32, 32),
         metadata_map: dict = None,
@@ -231,8 +237,11 @@ class HashIndex:
     ):
         self.base_dir = Path(base_dir)
 
-        self.output_file = self.base_dir / output_file
+        self.cache_file = self.base_dir / cache_file
+        self.default_cache_file = self.base_dir / "hash_cache.default.json"
+
         self.image_cache_file = self.base_dir / "image_cache.json"
+
         self.recursive = recursive
         self.match_size = match_size
 
@@ -245,18 +254,25 @@ class HashIndex:
             self._load_cache()
 
     def _load_cache(self):
-        if not self.output_file.exists():
-            logger.info(f"No existing hash index at {self.output_file}")
-            return
+        cache_file = self.cache_file
+
+        if not self.cache_file.exists():
+            logger.info(f"No existing hash index at {self.cache_file}, using default {self.default_cache_file}.")
+
+            if not self.default_cache_file.exists():
+                raise HashIndexError(f"No default hash index found at {self.default_cache_file}")
+                return
+
+            cache_file = self.default_cache_file
 
         try:
-            with open(self.output_file, "r", encoding="utf-8") as f:
+            with open(cache_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             self.hashes = data.get("hashes", {})
 
             logger.verbose(
-                f"Loaded hash index from {self.output_file} with {len(self.hashes)} entries."
+                f"Loaded hash index from {cache_file} with {len(self.hashes)} entries."
             )
 
             for rel_path, entry in self.hashes.items():
@@ -279,10 +295,10 @@ class HashIndex:
                 "generated": datetime.utcnow().isoformat(),
                 "hashes": self.hashes,
             }
-            with open(self.output_file, "w", encoding="utf-8") as f:
+            with open(self.cache_file, "w", encoding="utf-8") as f:
                 json.dump(out, f, indent=2)
             logger.info(
-                f"Saved hash index to {self.output_file} with {len(self.hashes)} entries."
+                f"Saved hash index to {self.cache_file} with {len(self.hashes)} entries."
             )
         except Exception as e:
             logger.error(f"Failed to write hash index: {e}")

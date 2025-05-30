@@ -1,8 +1,11 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
+import logging
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..components.label_locator import LabelLocator
 from ..pipeline.progress_reporter import StageProgressReporter
+
+logger = logging.getLogger(__name__)
 
 class LocateLabelsStage(PipelineStage):
     name = "locate_labels"
@@ -38,18 +41,15 @@ class LocateLabelsStage(PipelineStage):
 
             reporter(sub, 0.0)
 
-            # 4) run locator
             labels = self.label_locator.locate_labels(
                 image,
                 on_progress=reporter
             )
 
-            # 5) ensure this slice ends at 100%
             reporter(sub, 100.0)
 
             labels_list.append(labels)
 
-        # finally, the stage itself is done
         report(self.name, f"Completed - Found {sum(len(label) for label in labels_list)} labels", 100.0)
         ctx.labels_list = labels_list
         return StageOutput(ctx, labels_list)

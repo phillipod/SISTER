@@ -1,6 +1,7 @@
 import os
 import cv2
 import numpy as np
+import logging
 
 from ..exceptions import ImageProcessingError, ImageNotFoundError
 
@@ -11,6 +12,7 @@ from skimage.metrics import structural_similarity as ssim
 
 #    print("[WARNING] fast_ssim C-extension not available, falling back to skimage SSIM.")
 
+logger = logging.getLogger(__name__)
 
 def load_image(image_or_path, resize_fullhd=False):
     """

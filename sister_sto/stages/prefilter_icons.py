@@ -1,4 +1,5 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
+import logging
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..pipeline.progress_reporter import StageProgressReporter
@@ -6,9 +7,10 @@ from ..pipeline.progress_reporter import StageProgressReporter
 
 from ..components.prefilter_hash import HashEngine
 
+logger = logging.getLogger(__name__)
 
 STRATEGY_CLASSES = {
-    "phash": HashEngine,
+    "hash": HashEngine,
     # "dhash": DHashEngine,
 }
 

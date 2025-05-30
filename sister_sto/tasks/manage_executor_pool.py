@@ -1,9 +1,12 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
+import logging
 
 from ..pipeline import PipelineTask, TaskOutput, PipelineState
 from ..pipeline.progress_reporter import StageProgressReporter
 
 from ..utils.persistent_executor import PersistentProcessPoolExecutor
+
+logger = logging.getLogger(__name__)
 
 def _dummy_job(i):
     # no-op work; could also do time.sleep(0) or something trivial

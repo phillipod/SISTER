@@ -1,4 +1,5 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
+import logging
 
 from ..pipeline import PipelineStage, StageOutput, PipelineState
 from ..pipeline.progress_reporter import StageProgressReporter
@@ -6,6 +7,7 @@ from ..components.icon_overlay_detector import IconOverlayDetector
 
 from ..utils.image import load_overlays
 
+logger = logging.getLogger(__name__)
 
 class DetectIconOverlaysStage(PipelineStage):
     name = "detect_icon_overlays"
@@ -36,7 +38,7 @@ class DetectIconOverlaysStage(PipelineStage):
 
         report(self.name, "Running", 0.0)
 
-        overlays = load_overlays(ctx.config.get("overlay_dir", ""))
+        overlays = load_overlays(ctx.app_config.get("overlay_dir", ""))
 
         ctx.detected_overlays = self.strategy.detect(
             ctx.slots,

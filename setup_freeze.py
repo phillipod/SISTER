@@ -10,7 +10,7 @@ build_exe_options = {
         'os', 'sys', 'cv2', 'numpy', 'skimage', 'easyocr', 'imagehash', 'pybktree', 'requests', 'torch'
     ],
     'include_files': [
-        'overlays/', 'images/',
+        'resources/'
     ],
 
     'excludes': [
