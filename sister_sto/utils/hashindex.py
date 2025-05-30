@@ -241,6 +241,7 @@ class HashIndex:
         self.default_cache_file = self.base_dir / "hash_cache.default.json"
 
         self.image_cache_file = self.base_dir / "image_cache.json"
+        self.default_image_cache_file = self.base_dir / "image_cache.default.json"
 
         self.recursive = recursive
         self.match_size = match_size
@@ -305,8 +306,19 @@ class HashIndex:
             raise HashIndexError("Failed to write hash index") from e
 
     def _load_image_cache(self):
+        cache_file = self.image_cache_file
+
+        if not self.image_cache_file.exists():
+            logger.info(f"No existing image cacheat {self.image_cache_file}, using default {self.default_image_cache_file}.")
+
+            if not self.default_image_cache_file.exists():
+                raise HashIndexError(f"No default image cache found at {self.default_image_cache_file}")
+                return
+
+            cache_file = self.default_image_cache_file
+
         try:
-            with open(self.image_cache_file, "r", encoding="utf-8") as f:
+            with open(cache_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 
             self.image_cache = {}
@@ -315,7 +327,7 @@ class HashIndex:
 
 
             logger.verbose(
-                f"Loaded image cache from {self.image_cache_file} with {len(self.image_cache)} entries."
+                f"Loaded image cache from {self.cache_file} with {len(self.image_cache)} entries."
             )
 
         except Exception as e:
