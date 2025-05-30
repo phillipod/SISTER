@@ -129,7 +129,7 @@ class HashEngine:
                             results = self.hash_index.find_similar_to_image(
                                 hash, slot[hash], max_distance=distance_config[hash]["max_distance"], top_n=None, grayscale=False, filters={"image_category": ",".join(categories)}
                             )
-                            target_hashes[icon_group_label][hash].append(roi_phash)
+                            target_hashes[icon_group_label][hash].append(slot[hash])
                             #print(f"hash_index.find_similar_to_image: {results}")
                         except Exception as e:
                             raise PrefilterError(
