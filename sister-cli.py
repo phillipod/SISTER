@@ -373,12 +373,6 @@ if __name__ == "__main__":
                 result: PipelineState = pipeline.execute_task("build_hash_cache")
 
             sys.exit(0)
-
-        if args.download:
-            print("Downloading icon data from STO Wiki...")
-            result: PipelineState = pipeline.execute_task("download_all_icons")
-            sys.exit(0)
-
         
         if args.screenshot is None:
             p.print_help()
