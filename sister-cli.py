@@ -123,7 +123,10 @@ def on_task_complete(task, ctx, output):
             bar.update(bar.total - prev)
         bar.close()
 
-    if task == 'start_executor_pool':
+    if task == 'app_init':
+        tqdm.write(f"[Callback] [on_task_complete] [{task}] Initialized")
+        return
+    elif task == 'start_executor_pool':
         tqdm.write(f"[Callback] [on_task_complete] [{task}] Started executor pool ({ctx.executor_pool_total} workers)")
         return
     elif task == 'stop_executor_pool':
@@ -366,7 +369,6 @@ if __name__ == "__main__":
 
         result: PipelineState = pipeline.run(images)
         
-        
         pipeline.shutdown()
         # save_match_summary(args.output_dir, args.output, result[1]["detect_icons"])
     except SISTERError as e:
@@ -375,6 +377,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     end_time = time.time()
-#    print(f"[sister-cli.py] Python dependencies load time: {start_time - load_start_time}")
+    #print(f"[sister-cli.py] Python dependencies load time: {start_time - load_start_time}")
     print(f"[sister-cli.py] Total time: {end_time - start_time}")
 

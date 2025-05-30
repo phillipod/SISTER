@@ -18,6 +18,14 @@ from ..utils.hashindex import HashIndex
 from ..utils.persistent_executor import PersistentProcessPoolExecutor
 
 from .progress_reporter import PipelineProgressReporter
+from ..tasks import (
+    AppInitTask,
+    StartExecutorPoolTask,
+    StopExecutorPoolTask,
+    DownloadAllIconsTask,
+    BuildHashCacheTask,
+)
+
 from ..stages import (
     LocateLabelsStage,
     ClassifyLayoutStage,
@@ -28,13 +36,6 @@ from ..stages import (
     DetectIconOverlaysStage,
     DetectIconsStage,
     OutputTransformationStage,
-)
-
-from ..tasks import (
-    StartExecutorPoolTask,
-    StopExecutorPoolTask,
-    DownloadAllIconsTask,
-    BuildHashCacheTask
 )
 
 logger = logging.getLogger(__name__)
@@ -60,9 +61,27 @@ class SISTER:
         self.app_config: Dict[str, Any] = {}
 
         self.config = config
-        self.app_init()
 
-        self.init_tasks: List[PipelineTask] = []
+        self.on_progress = on_progress
+        self.on_interactive = on_interactive
+        self.on_error = on_error
+
+        self.on_metrics_complete = on_metrics_complete
+
+        self.on_stage_start = on_stage_start
+        self.on_stage_complete = on_stage_complete
+        self.on_task_start = on_task_start
+        self.on_task_complete = on_task_complete
+
+        self.on_pipeline_complete = on_pipeline_complete
+
+        self._started = False
+
+        self.init_tasks: List[PipelineTask] = [
+            AppInitTask(config, self.app_config),
+        ]
+
+        self.init()
 
         self.startup_tasks: List[PipelineTask] = [
             StartExecutorPoolTask(config.get("executor", {}), self.app_config),
@@ -95,116 +114,6 @@ class SISTER:
             OutputTransformationStage(config.get("output_transformation", {}), self.app_config),
         ]
 
-        self.on_progress = on_progress
-        self.on_interactive = on_interactive
-        self.on_error = on_error
-
-        self.on_metrics_complete = on_metrics_complete
-
-        self.on_stage_start = on_stage_start
-        self.on_stage_complete = on_stage_complete
-        self.on_task_start = on_task_start
-        self.on_task_complete = on_task_complete
-
-        self.on_pipeline_complete = on_pipeline_complete
-
-        self.init()
-
-    def app_init(self) -> None:
-        logger.info(f"Initializing SISTER with config: {self.config}")
-        self.app_config["hash_index"] = HashIndex(
-            self.config.get("hash_index_dir"),
-            self.config.get("engine", "phash"),
-            match_size=self.config.get("hash_max_size", (16, 16)),
-            output_file=self.config.get("hash_index_file", "hash_index.json"),
-        )
-
-        self.app_config["log_level"] = self.config.get("log_level", "INFO")
-        self.app_config["icon_dir"] = self.config.get("icon_dir")
-        self.app_config["overlay_dir"] = self.config.get("overlay_dir")
-        
-        icon_root = Path(self.config.get("icon_dir"))
-
-        self.app_config["icon_sets"] = {
-            "ship": {
-                "Fore Weapon": [
-                    "space/weapons/fore",
-                    "space/weapons/unrestricted",
-                ],
-                "Aft Weapon": [
-                    "space/weapons/aft",
-                    "space/weapons/unrestricted",
-                ],
-                "Experimental Weapon": ["space/weapons/experimental"],
-                "Shield": ["space/shield"],
-                "Secondary Deflector": ["space/secondary_deflector"],
-                "Deflector": [
-                    "space/deflector",
-                    "space/secondary_deflector",
-                ],  # Console doesn't have a specific label for Secondary Deflector, it's located under the Deflector label.
-                "Impulse": ["space/impulse"],
-                "Warp": ["space/warp"],
-                "Singularity": ["space/singularity"],
-                "Hangar": ["space/hangar"],
-                "Devices": ["space/device"],
-                "Universal Console": [
-                    "space/consoles/universal",
-                    "space/consoles/engineering",
-                    "space/consoles/tactical",
-                    "space/consoles/science",
-                ],
-                "Engineering Console": [
-                    "space/consoles/engineering",
-                    "space/consoles/universal",
-                ],
-                "Tactical Console": [
-                    "space/consoles/tactical",
-                    "space/consoles/universal",
-                ],
-                "Science Console": [
-                    "space/consoles/science",
-                    "space/consoles/universal",
-                ],
-            },
-            "pc_ground": {
-                "Body": ["ground/armor"],
-                "Shield": ["ground/shield"],
-                "EV Suit": ["ground/ev_suit"],
-                "Kit Modules": ["ground/kit_module"],
-                "Kit": ["ground/kit"],
-                "Devices": ["ground/device"],
-                "Weapon": ["ground/weapon"],
-            },
-            "console_ground": {
-                "Body": ["ground/armor"],
-                "Shield": ["ground/shield"],
-                "EV Suit": ["ground/ev_suit"],
-                "Kit": [
-                    "ground/kit_module"
-                ],  # Console swaps "Kit Modules" to "Kit"
-                "Kit Frame": [
-                    "ground/kit"
-                ],  # And "Kit" becomes "Kit Frame"
-                "Devices": ["ground/device"],
-                "Weapon": ["ground/weapon"],
-            },
-
-            "traits": {
-                "Personal Space Traits": [ "space/traits/personal" ],
-                "Space Reputation": [ "space/traits/reputation" ],
-                "Active Space Reputation": [ "space/traits/active_reputation" ],
-
-                "Personal Ground Traits": [ "ground/traits/personal" ],
-                "Ground Reputation": [ "ground/traits/reputation" ],
-                "Active Ground Reputation": [ "ground/traits/active_reputation" ],
-
-                "Starship Traits": [ "space/traits/starship" ],
-            }
-        }
-
-        #self.app_config["executor_pool"] = PersistentProcessPoolExecutor()
-        #weakref.finalize(self, self.app_config["executor_pool"].shutdown)
-
     def start_metric(self, name: str) -> None:
         self.metrics[name] = {
             "start": time.time(),
@@ -233,7 +142,7 @@ class SISTER:
         return result
 
     def execute_task(self, task: str):
-        # If task is in self.callable_tasks, run it. Callable tasks do not get ctx
+        # If task is in self.callable_tasks, run it. Callable tasks get the _init_ctx
 
         if task in self.callable_tasks:
             return self._run_task(self.callable_tasks[task], self._init_ctx)
@@ -254,24 +163,24 @@ class SISTER:
         self.end_metric("pipeline_init_tasks")
 
     def startup(self):
-        self.start_metric("pipeline_startup_tasks")
-        
-        if self._init_ctx:
-            for task in self.startup_tasks:
-                self._run_task(task, self._init_ctx)
+        if not self._started:
+            self.start_metric("pipeline_startup_tasks")
+            
+            if self._init_ctx:
+                for task in self.startup_tasks:
+                    self._run_task(task, self._init_ctx)
 
-            weakref.finalize(self, self.shutdown)
-        
-        self.end_metric("pipeline_startup_tasks")
+                self._started = True
+                weakref.finalize(self, self.shutdown)
+            
+            self.end_metric("pipeline_startup_tasks")
 
     def shutdown(self):
-        
-        if self._init_ctx:
+        if self._init_ctx and self._started:
             for task in self.shutdown_tasks:
                 self._run_task(task, self._init_ctx)
         
         self._init_ctx = None
- 
 
     def run(self, screenshots: List[np.ndarray]) -> PipelineState:
         ctx = self._init_ctx.copy()
@@ -290,10 +199,9 @@ class SISTER:
             self.end_metric("run_tasks")
 
         for stage in self.stages:
-            # notify start
+            # start metric and notify start
             with self._handle_errors(stage.name, ctx):
                 self.start_metric(stage.name)
-                #self.on_progress(stage.name, "Stage startup", 0.0, ctx)
 
                 if self.on_stage_start:
                     self.on_stage_start(stage.name, ctx)
@@ -306,17 +214,12 @@ class SISTER:
                     ctx
                 )
                 stage_result = stage.process(ctx, prog_cb)
-                # stage_result = stage.process(
-                #     ctx, lambda pct, substage=None, name=stage.name: self.on_progress(name, substage, pct, ctx)
-                # )
-                # update context and results
+
                 ctx = stage_result.context
                 results[stage.name] = stage_result.output
 
-            # notify completion
-            with self._handle_errors(stage.name, ctx):
-                #self.on_progress(stage.name, "Stage completion", 1.0, ctx)
-                self.end_metric(stage.name)
+            # end metric
+            self.end_metric(stage.name)
 
             # on_stage_complete hook
             if self.on_stage_complete:
@@ -365,7 +268,6 @@ class SISTER:
             else:
                 # no on_error -> re-raise so non-pipeline callers still see it
                 raise
-
 
 def build_default_pipeline(
     on_progress: Callable[[str, float, PipelineState], None],

@@ -53,9 +53,6 @@ class PipelineState:
             self.screenshots = screenshots
         else: 
             raise TypeError(f"PipelineState.screenshots must be ndarray or list, got {type(screenshots)}")
-    
-            
-        
 
     @property
     def screenshot(self) -> np.ndarray:
@@ -93,7 +90,6 @@ class PipelineStage:
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         self.opts = opts
         self.app_config = app_config
-        setup_logging(self.app_config.get("log_level"))
 
     def run(
         self, ctx: PipelineState, report: Callable[[str, float], None]
@@ -113,7 +109,6 @@ class PipelineTask:
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         self.opts = opts
         self.app_config = app_config
-        setup_logging(self.app_config.get("log_level"))
 
     def execute(
         self, ctx: PipelineState, report: Callable[[str, float], None]

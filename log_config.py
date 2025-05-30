@@ -1,5 +1,6 @@
 import logging
 from logging.handlers import RotatingFileHandler
+from tqdm.contrib.logging import _TqdmLoggingHandler 
 
 class SuppressDebugFromIconMatch(logging.Filter):
     def __init__(self, allow_debug=False):
@@ -50,7 +51,7 @@ def setup_logging(log_level="INFO", log_file="log/sister.log", allow_iconmatch_d
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    console = logging.StreamHandler()
+    console = _TqdmLoggingHandler()
     console.setFormatter(formatter)
     console.setLevel(log_level)
 
