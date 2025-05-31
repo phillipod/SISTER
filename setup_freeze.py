@@ -24,7 +24,7 @@ base = 'Console' if sys.platform == 'win32' else None
 
 setup(
     name='sister_sto',
-    version='v2025.05.30',
+    version='v2025.05.31',
     description='Screenshot Interrogation System for Traits and Equipment Recognition - Star Trek Online',
     options={
         'build_exe': build_exe_options,
@@ -43,7 +43,7 @@ setup(
                 ],
                 #"Property": [
                     #("ProductName", "SISTER - Star Trek Online - Screenshot Interrogator"),
-                    # ("ProductVersion", "2025.05.30"),
+                    # ("ProductVersion", "2025.05.31"),
                     #("Manufacturer", "Phillip O'Donnell"),
                 #],
                 "Icon": [
