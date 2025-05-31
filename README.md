@@ -1,133 +1,262 @@
-# SISTER
+# SISTER (Screenshot Interrogation System for Traits and Equipment Icons)
 
-**SISTER** (Screenshot Interrogation System for Traits and Equipment Recognition) is a computer vision pipeline designed to analyze **Star Trek Online** character build screenshots. It detects labels, classifies build types, extracts icon slots, and matches equipment and trait icons using image similarity methods.
+**SISTER** is a computer vision pipeline designed to detect and match equipment and trait icons within Star Trek Online (STO) screenshots. It automates OCR-based label detection, layout classification, icon slot extraction, and icon matching using a combination of perceptual hashing and SSIM for robust performance.
 
 ---
 
 ## 🚀 Features
 
-- 🎮 Support for PC and Console builds (Ship & Ground).
-- 🔍 OCR-based label detection via EasyOCR.
-- 🧠 Heuristic-based build classification.
-- 🖼 Region detection using a rule-based DSL.
-- 🔲 Icon slot extraction using contour analysis.
-- 🧩 Icon matching using:
-  - **Perceptual hash + BK-Tree** (**pre-filter**)
-  - **SSIM** (Structural Similarity Index **matching engine**)
-- 🎨 Quality overlay detection (e.g. Epic, Rare).
-- 🧠 Auto-scaling and downsampling for large screenshots.
-- 📝 Match summaries exported as text files.
-- 🧰 CLI with debugging, GPU toggle for OCR, and cache building.
+- **OCR-based label detection** using EasyOCR with optional GPU acceleration.
+- **Icon slot extraction** via contour analysis and heuristic filters.
+- **Icon matching** leveraging:
+  - **Perceptual Hash (phash/dhash) + BK-Tree prefilter** for fast candidate selection.
+  - **SSIM (Structural Similarity Index) matching engine** for precise matching.
+- **Quality overlay detection** (e.g., Epic, Rare overlays).
+- **Layout classification** to handle different screenshot formats (PC and Console builds, Ship & Ground).
+- **Auto-scaling and downsampling** support for high-resolution screenshots.
+- **Extensible pipeline** with modular stages and tasks.
+- **CLI interface** (`sister-cli`) with debugging, logging, and customizable configuration.
+- **Tasks** to download STO Wiki icon assets and build a hash cache for pre-filtering.
+- **Match summary export** as a text file
 
 ---
 
 ## 📦 Installation
 
-Clone the repository and install the dependencies:
+### Downloadable MSI (Windows)
+
+Windows users can download the latest MSI installer from the [GitHub Releases](https://github.com/phillipod/SISTER/releases) page. After downloading, run the installer to set up `sister-cli` on your system path.
+
+### Install via pip (Cross-platform)
+
+Clone the repository and install using pip. Note that the package is *not* published on PyPI and must be installed from source:
 
 ```bash
-git clone https://github.com/phillipod/SISTER.git
-cd SISTER
-pip install -r requirements.txt
+git clone https://github.com/phillipod/sister.git
+cd sister_sto
+pip install .
 ```
 
-
-Requires:
-
-- Python 3.8+
-- [EasyOCR](https://github.com/JaidedAI/EasyOCR) dependencies (PyTorch, etc.)
-- [pybktree](https://github.com/Jetsetter/pybktree)
-- [imagehash](https://github.com/JohannesBuchner/imagehash)
-- [Pillow](https://python-pillow.org/) (required by imagehash)
-
----
-
-## 📸 Usage
+Alternatively, if you already have the codebase locally (e.g., from a release ZIP), navigate to the root directory containing `pyproject.toml` and run:
 
 ```bash
-python sister.py --screenshot path/to/screenshot.png
+pip install .
 ```
 
-### Common Options
-
-| Option                     | Description |
-|---------------------------|-------------|
-| `--screenshot`            | Path to the screenshot image |
-| `--icons`                 | Directory of downloaded icons (default: `images`) |
-| `--overlays`              | Overlay images for quality detection (default: `overlays`) |
-| `--output`                | Output directory (default: `output`) |
-| `--download`              | Download icon data from STO Wiki |
-| `--build-phash-cache`     | Generate perceptual hash index for faster matching |
-| `--no-resize`             | Disable downscaling screenshots to 1920x1080 |
-| `--debug`                 | Enable debug image output |
-| `--gpu`                   | Enable GPU for OCR (if supported) |
-| `--threshold`             | Matching confidence threshold (default: `0.7`) |
+This will install the `sister_sto` package along with its console script entry point `sister-cli`.
 
 ---
 
-## 🧠 Pipeline Overview
+## 📖 Usage
 
-- **Pipeline Orchestrator** via `SISTER` class and `build_default_pipeline()`
-  - Compose stages:
-    1. Label Detection (OCR)
-    2. Build Classification (heuristic rules)
-    3. Region Detection (rule-based DSL)
-    4. Slot Detection (contour analysis)
-    5. Candidate Prefilter (PHash + BK-Tree)
-    6. Quality Overlay Detection (e.g., Rare, Epic)
-    7. Icon Matching (SSIM)
+After installation, the primary entry point is the `sister-cli` command.
 
-- **Callback Hooks** for integration or UI:
-  - `on_progress(stage, pct, ctx)` — start/end of each stage
-  - `on_stage_complete(stage, ctx, output)` — access raw stage output
-  - `on_interactive(stage, ctx)` — inspect/adjust mid-pipeline
-  - `on_pipeline_complete(ctx, results)` — final summary
+### Common Arguments
 
----
+```text
+--data-dir <path>       Directory for STO data (default: ~/.sister_sto)
+--log-dir <path>        Directory to write log files (default: log under data-dir)
+--icon-dir <path>       Directory for downloaded icon images (default: icons under data-dir)
+--overlay-dir <path>    Directory for overlay images (default: overlays under data-dir)
+--output-dir <path>     Directory to save match summary outputs (default: current working directory)
+--log-level <level>     Logging level (DEBUG, INFO, WARNING, ERROR; default: WARNING)
+--gpu                   Enable GPU support for OCR (EasyOCR)
+--no-resize             Disable automatic downscaling of screenshots larger than 1920×1080
+-s, --screenshot <paths>  Paths to one or more screenshot image files to process (required for matching)
+-o, --output <prefix>   Output file prefix for saving match summary (default: stem of first screenshot)
+--download              Download all icon assets from the STO Wiki (runs `download_all_icons` task and exits)
+--build-hash-cache      Build/update the perceptual hash cache for all downloaded icons (runs `build_hash_cache` task and exits)
+```
 
-## 📥 Downloading Icons
+Below are common usage patterns:
 
-Run this to download all icons:
+#### 1. Download STO Wiki icon assets
+
+Before running icon matching, you can download the latest icon images from the STO Wiki:
 
 ```bash
-python sister.py --download
+sister-cli --download
 ```
 
-Icons will be saved into a structured `images/` directory by category (ground, space, traits, etc.).
+This will fetch all relevant icons and store them under `--icon-dir` (defaults to `~/.sister_sto/icons`) and overlays under `--overlay-dir`.
 
----
+#### 2. Build the perceptual hash cache
 
-## 🧪 Building Hash Index
-
-Build a perceptual hash index (used for pre-filtering):
+After downloading icons (or when the icon directory is updated), generate a hash cache to speed up matching:
 
 ```bash
-python sister.py --build-phash-cache
+sister-cli --build-hash-cache
 ```
 
-This will overlay each icon with rarity color bands and hash the result along with the uncomposed icon.
+The cache will be stored under `--cache-dir` (defaults to `~/.sister_sto/cache`). This is mandatory for fast prefiltering in subsequent runs.
+
+#### 3. Match icons in screenshots
+
+Process one or more screenshots and generate a match summary:
+
+```bash
+sister-cli -s path/to/screenshot1.png path/to/screenshot2.jpg -o my_match_results
+```
+
+Options explained:
+- `-s`/`--screenshot`: Provide one or more screenshot file paths.
+- `-o`/`--output`: Specify the prefix for the output summary file. By default, uses the stem of the first screenshot.
+- `--gpu`: Enable GPU for OCR (if supported).
+- `--no-resize`: Keep original resolution (if you wish to skip downscaling).
+
+**Windows users:** Be sure to run the command from `cmd.exe` or `powershell.exe`, and make sure you are in a directory where you want the output files to be stored. Otherwise, the output summary will be created in your current working directory.
 
 ---
 
-## 🔍 Known Limitations
+## 🛠 Pipeline Overview
 
-- Specific to Star Trek Online layouts and label conventions.
-- No deep learning for icon detection — performance depends on OCR accuracy and overlay visibility.
-- OCR errors may propagate through later stages, though safeguards exist.
+SISTER's core is built as a modular pipeline. The default pipeline (`build_default_pipeline`) orchestrates the following **Tasks** and **Stages**:
+
+### Tasks
+
+1. **app_init**  
+   Initialize application directories, logging, and configurations.
+
+2. **start_executor_pool**  
+   Spin up a multiprocessing or thread pool to parallelize CPU-bound tasks (e.g., SSIM matching).
+
+3. **download_all_icons**  
+   Fetch icon files (and overlays) from the STO Wiki. Requires internet access.
+
+4. **build_hash_cache**  
+   Compute and store perceptual hashes (phash/dhash) for all icons. Speeds up the prefilter stage.
+
+5. **stop_executor_pool**  
+   Cleanly shut down the parallel executor pool after processing completes.
+
+### Stages
+
+1. **prefilter_icons** (`sister_sto/stages/prefilter_icons.py`)  
+   Quickly identifies candidate icons for each detected slot using perceptual hashing (configurable method: `hash` by default).
+
+2. **load_icons** (`sister_sto/stages/load_icons.py`)  
+   Loads icon images into memory for deeper matching stages.
+
+3. **locate_labels** (`sister_sto/stages/locate_labels.py`)  
+   Uses EasyOCR to detect and recognize text labels (e.g., equipment type labels) in the screenshot. Can leverage GPU with `--gpu`.
+
+4. **locate_icon_groups** (`sister_sto/stages/locate_icon_groups.py`)  
+   Determines groups of icon slots (e.g., equipment clusters) based on layout heuristics.
+
+5. **classify_layout** (`sister_sto/stages/classify_layout.py`)  
+   Classifies the overall build type or screenshot layout (e.g., PC vs. Console, Ship vs. Ground).
+
+6. **locate_icon_slots** (`sister_sto/stages/locate_icon_slots.py`)  
+   Identifies bounding boxes for individual icon slots using contour detection.
+
+7. **detect_icon_overlays** (`sister_sto/stages/detect_icon_overlays.py`)  
+   Detects rarity/quality overlays on icons (e.g., epic, rare) to adjust matching scoring.
+
+8. **detect_icons** (`sister_sto/stages/detect_icons.py`)  
+   Performs SSIM-based matching on candidate icon slots to find the best match(es) among prefiltered icons.
+
+9. **output_transformation** (`sister_sto/stages/output_transform.py`)  
+   Merges prefiltered icons with SSIM results (if configured), applies post-processing transforms, and formats final match data.
+
+After all stages run, the pipeline writes a match summary file (e.g., `*_matches.txt`) containing detected icon groups, slots, the best matches (with scores), and any runner-up candidates.
 
 ---
-## 📄 License
 
-AGPL-3.0 License © 2025 Phillip O'Donnell
+## ⚙ Configuration
+
+Most configuration is handled via CLI flags, but advanced users can modify settings by editing or overriding entries in the configuration dictionary (see `sister_sto/cli.py`):
+
+```python
+config = {
+    "debug": True,
+    "log_level": "INFO",
+    "locate_labels": {
+        "gpu": False
+    },
+    "prefilter_icons": {
+        "method": "hash"  # options: "hash", "dhash"
+    },
+    "output_transformation": {
+        "transformations_enabled_list": [
+            "BACKFILL_MATCHES_WITH_PREFILTERED"
+        ]
+    },
+    "engine": "phash",   # Primary matching engine: "phash" or "dhash"
+    "data_dir": "/absolute/path/to/.sister_sto",
+    # Optionally override directories:
+    # "log_dir": "/path/to/log",
+    # "icon_dir": "/path/to/icons",
+    # "overlay_dir": "/path/to/overlays",
+    # "cache_dir": "/path/to/cache",
+    # "cargo_dir": "/path/to/cargo",
+    # "output_dir": "/path/to/output"
+}
+```
 
 ---
 
-## 💬 Acknowledgements
+## 📁 Directory Structure
 
-- `STO Wiki` (stowiki.net) for public asset data and metadata
-- `EasyOCR` for OCR support
-- `imagehash` for perceptual hashing
-- `pybktree` for BKTree
-- `scikit-image` for ssim
+```
+sister_sto/           
+├── cli.py                    # Main entry point for the CLI
+├── exceptions.py             # Custom exception classes
+├── log_config.py             # Logging configuration utilities
+├── pipeline/                 # Core pipeline definitions
+│   ├── core.py               # Pipeline state and controller
+│   ├── pipeline.py           # Builds the default pipeline
+│   └── progress_reporter.py  # Progress callbacks
+├── stages/                   # Image processing and matching stages
+│   ├── classify_layout.py
+│   ├── detect_icon_overlays.py
+│   ├── detect_icons.py
+│   ├── load_icons.py
+│   ├── locate_icon_groups.py
+│   ├── locate_icon_slots.py
+│   ├── locate_labels.py
+│   ├── output_transform.py
+│   └── prefilter_icons.py
+├── tasks/                    # Pipeline tasks for app initialization, downloads, and cache
+│   ├── app_init.py
+│   ├── build_hash_cache.py
+│   ├── download_icons.py
+│   └── manage_executor_pool.py
+├── utils/                    # Utility modules (image loading, hashing, etc.)
+│   ├── cargo.py
+│   ├── hashindex.py
+│   ├── image.py
+│   └── persistent_executor.py
+└── ... (other folders such as components/, metrics/, documentation files)
+```
 
 ---
+
+## 📝 Output
+
+By default, after running the pipeline on one or more screenshots, the match results are written to:
+
+```
+<output_dir>/<output_prefix>_matches.txt
+```
+
+Each match summary file contains sections for each **Icon Group** detected, listing individual slots, the best-matched icon (with overlay and score), and any runner-up candidates. This text format allows for easy integration into larger data processing or reporting workflows.
+
+---
+## 🐛 Bug Reports
+
+If you encounter any issues—especially incorrect icon identifications—please raise them via [GitHub Issues](https://github.com/phillipod/SISTER/issues). Your feedback helps improve matching accuracy and feature robustness.
+
+## 🛡 License
+
+This project is licensed under the **AGPL-3.0 License** © 2025 Phillip O'Donnell.
+
+---
+
+## 💬 Acknowledgments
+
+- **STO Wiki** (https://stowiki.net) for public game asset data and metadata.
+- **EasyOCR** for OCR support.
+- **imagehash** for perceptual hashing.
+- **pybktree** for BK-Tree indexing.
+- **scikit-image** for SSIM-based matching.
+- **OpenCV (cv2)** for image processing primitives.
