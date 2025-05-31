@@ -1,4 +1,4 @@
-# SISTER (Screenshot Interrogation System for Traits and Equipment Icons)
+# SISTER (Screenshot Interrogation System for Traits and Equipment Recognition)
 
 **SISTER** is a computer vision pipeline designed to detect and match equipment and trait icons within Star Trek Online (STO) screenshots. It automates OCR-based label detection, layout classification, icon slot extraction, and icon matching using a combination of perceptual hashing and SSIM for robust performance.
 
