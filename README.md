@@ -27,6 +27,8 @@
 
 Windows users can download the latest MSI installer from the [GitHub Releases](https://github.com/phillipod/SISTER/releases) page. After downloading, run the installer to set up `sister-cli` on your system path.
 
+The current release is [v2025.05.31](https://github.com/phillipod/SISTER/releases/tag/v2025.05.31-release)
+
 ### Install via pip (Cross-platform)
 
 Clone the repository and install using pip. Note that the package is *not* published on PyPI and must be installed from source:
