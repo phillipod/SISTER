@@ -7,7 +7,7 @@ import sys, os
 # Include necessary packages, modules, and data files
 build_exe_options = {
     'packages': [
-        'os', 'sys', 'cv2', 'numpy', 'skimage', 'easyocr', 'imagehash', 'pybktree', 'requests', 'torch'
+        'os', 'sys', 'cv2', 'numpy', 'skimage', 'easyocr', 'imagehash', 'pybktree', 'requests', 'torch', 'tqdm'
     ],
     'include_files': [
         ('docs/icon.ico', 'icon.ico'),
