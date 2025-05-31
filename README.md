@@ -228,7 +228,7 @@ sister_sto/
 │   ├── hashindex.py
 │   ├── image.py
 │   └── persistent_executor.py
-└── ... (other folders such as components/, metrics/, documentation files)
+└── ... (other folders such as components/, metrics/)
 ```
 
 ---
