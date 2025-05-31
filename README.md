@@ -250,7 +250,9 @@ If you encounter any issues—especially incorrect icon identifications—please
 
 ## 🛡 License
 
-This project is licensed under the **AGPL-3.0 License** © 2025 Phillip O'Donnell.
+This project is licensed under the **AGPL-3.0 License** 
+
+Copyright © 2025 Phillip O'Donnell.
 
 ---
 
