@@ -12,6 +12,7 @@ build_exe_options = {
     'include_files': [
         ('docs/icon.ico', 'icon.ico'),
         ('docs/licenses/', 'licenses/'),
+        "README.md",
         'resources/',
     ],
 

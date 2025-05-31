@@ -70,26 +70,28 @@ After installation, the primary entry point is the `sister-cli` command.
 
 Below are common usage patterns:
 
-#### 1. Download STO Wiki icon assets
+#### 1. Download STO Wiki icon assets (optional)
 
-Before running icon matching, you can download the latest icon images from the STO Wiki:
+By default, SISTER will lazily download icon assets as needed during matching. Lazy downloads occur on-the-fly—icons are fetched and cached so that subsequent runs do not re-download them. While this avoids a long initial download, it can slow down matching the first time an icon is needed.
+
+Alternatively, you can pre-download all icon assets upfront to ensure the fastest matching performance and to avoid on-the-fly downloads. To download the latest icons and overlays from the STO Wiki, run:
 
 ```bash
 sister-cli --download
 ```
 
-This will fetch all relevant icons and store them under `--icon-dir` (defaults to `~/.sister_sto/icons`) and overlays under `--overlay-dir`.
+This will fetch all relevant icons and store them under `--icon-dir` (defaults to `~/.sister_sto/icons`) and overlays under `--overlay-dir`. Note: downloading all icons can take a considerable amount of time, depending on your connection.
+#### 2. Build the perceptual hash cache (optional)
 
-#### 2. Build the perceptual hash cache
+A pre-built perceptual hash cache is provided with this release, so you do not need to update the cache for normal use. Only rebuild the cache when new icons are released or if you have added custom icons.
 
-After downloading icons (or when the icon directory is updated), generate a hash cache to speed up matching:
+If you need to rebuild the cache, ensure that you have completed a full download of all icon assets (see step 1) so there are no missing icons. To rebuild, run:
 
 ```bash
 sister-cli --build-hash-cache
 ```
 
-The cache will be stored under `--cache-dir` (defaults to `~/.sister_sto/cache`). This is mandatory for fast prefiltering in subsequent runs.
-
+The new cache will be stored under `--cache-dir` (defaults to `~/.sister_sto/cache`). You only need to run this when icons change; the provided cache is sufficient otherwise.
 #### 3. Match icons in screenshots
 
 Process one or more screenshots and generate a match summary:
