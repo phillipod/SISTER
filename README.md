@@ -122,34 +122,35 @@ SISTER's core is built as a modular pipeline. The default pipeline (`build_defau
 2. **start_executor_pool**  
    Spin up a multiprocessing or thread pool to parallelize CPU-bound tasks (e.g., SSIM matching).
 
-3. **download_all_icons**  
+3. **stop_executor_pool**  
+   Cleanly shut down the parallel executor pool after processing completes.
+
+4. **download_all_icons**  
    Fetch icon files (and overlays) from the STO Wiki. Requires internet access.
 
-4. **build_hash_cache**  
+5. **build_hash_cache**  
    Compute and store perceptual hashes (phash/dhash) for all icons. Speeds up the prefilter stage.
 
-5. **stop_executor_pool**  
-   Cleanly shut down the parallel executor pool after processing completes.
 
 ### Stages
 
-1. **prefilter_icons** (`sister_sto/stages/prefilter_icons.py`)  
-   Quickly identifies candidate icons for each detected slot using perceptual hashing (configurable method: `hash` by default).
-
-2. **load_icons** (`sister_sto/stages/load_icons.py`)  
-   Loads icon images into memory for deeper matching stages.
-
-3. **locate_labels** (`sister_sto/stages/locate_labels.py`)  
+1. **locate_labels** (`sister_sto/stages/locate_labels.py`)  
    Uses EasyOCR to detect and recognize text labels (e.g., equipment type labels) in the screenshot. Can leverage GPU with `--gpu`.
 
-4. **locate_icon_groups** (`sister_sto/stages/locate_icon_groups.py`)  
-   Determines groups of icon slots (e.g., equipment clusters) based on layout heuristics.
-
-5. **classify_layout** (`sister_sto/stages/classify_layout.py`)  
+2. **classify_layout** (`sister_sto/stages/classify_layout.py`)  
    Classifies the overall build type or screenshot layout (e.g., PC vs. Console, Ship vs. Ground).
 
-6. **locate_icon_slots** (`sister_sto/stages/locate_icon_slots.py`)  
+3. **locate_icon_groups** (`sister_sto/stages/locate_icon_groups.py`)  
+   Determines groups of icon slots (e.g., equipment clusters) based on layout heuristics.
+
+4. **locate_icon_slots** (`sister_sto/stages/locate_icon_slots.py`)  
    Identifies bounding boxes for individual icon slots using contour detection.
+
+5. **prefilter_icons** (`sister_sto/stages/prefilter_icons.py`)  
+   Quickly identifies candidate icons for each detected slot using perceptual hashing (configurable method: `hash` by default).
+
+6. **load_icons** (`sister_sto/stages/load_icons.py`)  
+   Loads icon images into memory for deeper matching stages.
 
 7. **detect_icon_overlays** (`sister_sto/stages/detect_icon_overlays.py`)  
    Detects rarity/quality overlays on icons (e.g., epic, rare) to adjust matching scoring.
