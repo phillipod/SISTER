@@ -32,7 +32,7 @@ Windows users can download the latest MSI installer from the [GitHub Releases](h
 Clone the repository and install using pip. Note that the package is *not* published on PyPI and must be installed from source:
 
 ```bash
-git clone https://github.com/phillipod/sister.git
+git clone https://github.com/phillipod/SISTER.git
 cd sister_sto
 pip install .
 ```
