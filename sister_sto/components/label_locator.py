@@ -1,11 +1,19 @@
 import warnings
 
-# suppress only the “pin_memory” UserWarning from torch.utils.data
+# suppress the “pin_memory” UserWarning from torch.utils.data
 warnings.filterwarnings(
     "ignore",
     message=".*pin_memory.*no accelerator is found.*",
     category=UserWarning,
     module="torch.utils.data.dataloader"
+)
+
+# suppress the “Unable to retrieve source for @torch.jit._overload function” warning
+warnings.filterwarnings(
+    "ignore",
+    message=r".*Unable to retrieve source for @torch\.jit\._overload function.*",
+    category=UserWarning,
+    module=r"torch\._jit_internal"
 )
 
 import cv2
