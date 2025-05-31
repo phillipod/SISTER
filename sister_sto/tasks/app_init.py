@@ -68,8 +68,7 @@ class AppInitTask(PipelineTask):
             else:
                 self.app_config[key] = self.app_config["data_dir"] / value
 
-        if not os.path.exists(self.app_config["data_dir"]):
-            self.first_run_init(reporter)
+        self.validate_app_directory(reporter)
 
         reporter("Loading hash cache", 10.0)
         self.app_config["hash_match_size"] = self.config.get("hash_match_size", (16, 16))
@@ -164,7 +163,7 @@ class AppInitTask(PipelineTask):
 
         reporter("Completed", 100.0)
 
-    def first_run_init(self, reporter):
+    def validate_app_directory(self, reporter):
         src_dir = None
 
         try:
@@ -197,6 +196,8 @@ class AppInitTask(PipelineTask):
                 relative_path = src_path.relative_to(src_dir)
                 dest_path = self.app_config["data_dir"] / relative_path
                 # print(f"Copying {src_path} to {dest_path}") 
+                if dest_path.exists():
+                    continue
                 dest_path.parent.mkdir(parents=True, exist_ok=True)
                 dest_path.write_bytes(src_path.read_bytes())
 
