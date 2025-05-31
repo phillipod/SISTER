@@ -33,7 +33,7 @@ Clone the repository and install using pip. Note that the package is *not* publi
 
 ```bash
 git clone https://github.com/phillipod/SISTER.git
-cd sister_sto
+cd SISTER
 pip install .
 ```
 
