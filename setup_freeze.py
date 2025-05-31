@@ -25,12 +25,12 @@ build_exe_options = {
 base = 'Console' if sys.platform == 'win32' else None
 
 setup(
-    name='sister',
+    name='sister_sto',
     version='v2025.05.30',
     description='Screenshot Interrogation System for Traits and Equipment Recognition - Star Trek Online',
     options={'build_exe': build_exe_options},
     executables=[Executable(
-        script='sister-cli.py',
+        script='sister_sto/cli.py',
         base=base,
         target_name='sister-cli.exe'
     )]

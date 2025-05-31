@@ -4,7 +4,7 @@ import logging
 
 from typing import Any, Callable, Dict, List, Tuple, Optional
 
-from ..pipeline import PipelineStage, StageOutput, PipelineState
+from ..pipeline.core import PipelineStage, StageOutput, PipelineState
 from ..pipeline.progress_reporter import StageProgressReporter
 
 from ..utils.cargo import CargoDownloader

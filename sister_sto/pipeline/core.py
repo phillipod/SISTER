@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Tuple, Optional, Union
 
-from log_config import setup_logging
-
 import numpy as np
 
 

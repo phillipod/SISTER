@@ -7,9 +7,9 @@ from pathlib import Path
 
 import logging
 
-from log_config import setup_logging
+from ..log_config import setup_logging
 
-from ..pipeline import PipelineTask, TaskOutput, PipelineState
+from ..pipeline.core import PipelineTask, TaskOutput, PipelineState
 from ..pipeline.progress_reporter import TaskProgressReporter
 
 from ..utils.hashindex import HashIndex

@@ -1,5 +1,5 @@
 [project]
-name = "sister"
+name = "sister_sto"
 version = "v2025.05.30"
 description = "SISTER (Screenshot Interrogation System for Traits and Equipment Recognition): computer vision pipeline designed to match icons within screenshots"
 authors = [{"name" = "Phillip O'Donnell", "email" = "phillip.odonnell@gmail.com"}]
@@ -15,11 +15,15 @@ dependencies = [
     "requests",
 ]
 
-[tool.setuptools]
-scripts = ["sister-cli.py"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["sister_sto*"]
 
 [tool.setuptools.package-data]
 "sister" = ["resources/*.json"]
+
+[project.entry-points.console_scripts]
+sister-cli = "sister_sto.cli:main"
 
 [tool.black]
 line-length = 88

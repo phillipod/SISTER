@@ -2,7 +2,7 @@ from typing import Any, Callable, Dict, List, Tuple, Optional
 from pathlib import Path
 import logging
 
-from ..pipeline import PipelineTask, TaskOutput, PipelineState
+from ..pipeline.core import PipelineTask, TaskOutput, PipelineState
 from ..pipeline.progress_reporter import TaskProgressReporter
 
 from ..utils.cargo import CargoDownloader

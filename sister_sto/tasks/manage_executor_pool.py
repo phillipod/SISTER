@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, List, Tuple, Optional
 import logging
 
-from ..pipeline import PipelineTask, TaskOutput, PipelineState
+from ..pipeline.core import PipelineTask, TaskOutput, PipelineState
 from ..pipeline.progress_reporter import StageProgressReporter
 
 from ..utils.persistent_executor import PersistentProcessPoolExecutor
