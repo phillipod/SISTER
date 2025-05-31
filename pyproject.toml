@@ -19,10 +19,9 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["sister_sto*"]
 
 [tool.setuptools.package-data]
-"sister" = ["resources/*.json"]
+sister_sto = ["resources/overlays/*.png", "resources/cache/*.json"]
 
 [project.entry-points.console_scripts]
 sister-cli = "sister_sto.cli:main"

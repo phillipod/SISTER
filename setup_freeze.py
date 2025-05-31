@@ -12,8 +12,8 @@ build_exe_options = {
     'include_files': [
         ('docs/icon.ico', 'icon.ico'),
         ('docs/licenses/', 'licenses/'),
+        ('sister_sto/resources/', 'resources/'),
         "README.md",
-        'resources/',
     ],
 
     'excludes': [
