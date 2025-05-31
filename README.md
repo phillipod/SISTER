@@ -176,7 +176,7 @@ config = {
         "gpu": False
     },
     "prefilter_icons": {
-        "method": "hash"  # options: "hash", "dhash"
+        "method": "hash"
     },
     "output_transformation": {
         "transformations_enabled_list": [
