@@ -183,7 +183,6 @@ config = {
             "BACKFILL_MATCHES_WITH_PREFILTERED"
         ]
     },
-    "engine": "phash",   # Primary matching engine: "phash" or "dhash"
     "data_dir": "/absolute/path/to/.sister_sto",
     # Optionally override directories:
     # "log_dir": "/path/to/log",
