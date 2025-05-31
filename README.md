@@ -197,42 +197,6 @@ config = {
 
 ---
 
-## 📁 Directory Structure
-
-```
-sister_sto/           
-├── cli.py                    # Main entry point for the CLI
-├── exceptions.py             # Custom exception classes
-├── log_config.py             # Logging configuration utilities
-├── pipeline/                 # Core pipeline definitions
-│   ├── core.py               # Pipeline state and controller
-│   ├── pipeline.py           # Builds the default pipeline
-│   └── progress_reporter.py  # Progress callbacks
-├── stages/                   # Image processing and matching stages
-│   ├── classify_layout.py
-│   ├── detect_icon_overlays.py
-│   ├── detect_icons.py
-│   ├── load_icons.py
-│   ├── locate_icon_groups.py
-│   ├── locate_icon_slots.py
-│   ├── locate_labels.py
-│   ├── output_transform.py
-│   └── prefilter_icons.py
-├── tasks/                    # Pipeline tasks for app initialization, downloads, and cache
-│   ├── app_init.py
-│   ├── build_hash_cache.py
-│   ├── download_icons.py
-│   └── manage_executor_pool.py
-├── utils/                    # Utility modules (image loading, hashing, etc.)
-│   ├── cargo.py
-│   ├── hashindex.py
-│   ├── image.py
-│   └── persistent_executor.py
-└── ... (other folders such as components/, metrics/)
-```
-
----
-
 ## 📝 Output
 
 By default, after running the pipeline on one or more screenshots, the match results are written to:
