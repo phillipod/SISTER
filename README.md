@@ -153,7 +153,7 @@ SISTER's core is built as a modular pipeline. The default pipeline (`build_defau
    Loads icon images into memory for deeper matching stages.
 
 7. **detect_icon_overlays** (`sister_sto/stages/detect_icon_overlays.py`)  
-   Detects rarity/quality overlays on icons (e.g., epic, rare) to adjust matching scoring.
+   Detects rarity/quality overlays on icons (e.g., epic, rare) and refines the bounding boxes for individual icon slots using stepping.
 
 8. **detect_icons** (`sister_sto/stages/detect_icons.py`)  
    Performs SSIM-based matching on candidate icon slots to find the best match(es) among prefiltered icons.
