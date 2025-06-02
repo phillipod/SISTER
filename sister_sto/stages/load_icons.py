@@ -9,6 +9,7 @@ from ..pipeline.progress_reporter import StageProgressReporter
 
 from ..utils.cargo import CargoDownloader
 from ..utils.persistent_executor import PersistentProcessPoolExecutor
+from ..utils.image import normalize_path
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +113,7 @@ class LoadIconsStage(PipelineStage):
                             # print(f"{icon_group}#{slot} {file}: {ctx.found_icons[icon_group][slot][file]}")
 
                             full_path = ctx.app_config.get("icon_dir") / file
-                            data = np.fromfile(full_path, dtype=np.uint8)
+                            data = np.fromfile(normalize_path(full_path), dtype=np.uint8)
                             icon = cv2.imdecode(data, cv2.IMREAD_COLOR)
                             
                             if icon is not None:

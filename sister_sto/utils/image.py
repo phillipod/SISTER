@@ -390,3 +390,12 @@ def map_mask_type(icon_group_label_or_category):
         return "personal_trait_type"
     else:
         return "item_type"
+
+
+def normalize_path(path):
+    if os.name == "nt" or sys.platform.startswith("win"):
+        return path
+    
+    fixed = path.replace("\\", "/")
+    
+    return os.path.normpath(fixed)
