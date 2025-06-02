@@ -22,7 +22,7 @@ CARGO_EXPORT_PAGE = "Special:CargoExport"
 FILE_PATH_BASE = "https://stowiki.net/wiki/Special:FilePath/"
 
 DEFAULT_CACHE_DIR = Path(os.path.expanduser("~")) / ".sto-cargo-cache"
-CACHE_EXPIRE_DAYS = 3
+CACHE_EXPIRE_DAYS = 7
 
 CARGO_TYPES = {
     "equipment": {
