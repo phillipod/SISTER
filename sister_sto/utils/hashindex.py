@@ -278,8 +278,8 @@ class HashIndex:
 
             for rel_path, entry in self.hashes.items():
                 try:
-                    add_to_bktree("phash", entry["phash"], rel_path, entry)
-                    add_to_bktree("dhash", entry["dhash"], rel_path, entry)
+                    add_to_bktree("phash" + "_" + entry["data"]["image_category"], entry["phash"], rel_path, entry)
+                    add_to_bktree("dhash" + "_" + entry["data"]["image_category"], entry["dhash"], rel_path, entry)
                     # self.bktree_map[hash_obj] = rel_path
                 except Exception as e:
                     logger.warning(f"Failed to rehydrate BKTree for {rel_path}: {e}")
@@ -529,16 +529,26 @@ class HashIndex:
         # print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
         return str(target_hash)
 
-    def find_similar(self, hash_type, target_hash, max_distance=10, top_n=None, filters=None):
+    def find_similar(self, hash_type, target_hash, categories, max_distance=10, top_n=None, filters=None):
         if hash_type not in HASH_TYPES:
             raise HashIndexError(f"Unknown hash type: {hash_type}")
 
-        return find_similar_in_namespace(
-            hash_type, target_hash, max_distance, top_n, filters
-        )
+        # for each of categories, concat hash_type "_" category and pass that as the hash type. combine all results. 
+
+        results = []
+        for category in categories:
+            results.extend(find_similar_in_namespace(
+                hash_type + "_" + category, target_hash, max_distance, top_n, filters
+            ))
+
+        return results
+        
+        #return find_similar_in_namespace(
+        #    hash_type, target_hash, max_distance, top_n, filters
+        #)
 
     def find_similar_to_image(
-        self, hash_type, target_hash, max_distance=20, top_n=None, size=None, grayscale=False, filters=None
+        self, hash_type, target_hash, categories, max_distance=20, top_n=None, size=None, grayscale=False, filters=None
     ):
         """
         Compute the perceptual hash of the ROI and return matching icons within max Hamming distance.
@@ -554,4 +564,4 @@ class HashIndex:
 
         # print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
         #print(f"filter: {filter}") 
-        return self.find_similar(hash_type, target_hash, max_distance=max_distance, top_n=top_n, filters=filters)
+        return self.find_similar(hash_type, target_hash, categories, max_distance=max_distance, top_n=top_n, filters=filters)
