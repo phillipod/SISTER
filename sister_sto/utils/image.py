@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 import logging
 
+import pathlib 
+
 from ..exceptions import ImageProcessingError, ImageNotFoundError
 
 # try:
@@ -397,6 +399,6 @@ def normalize_path(path):
     if os.name == "nt" or sys.platform.startswith("win"):
         return path
     
-    fixed = path.replace("\\", "/")
+    fixed = str(path).replace("\\", "/")
     
     return os.path.normpath(fixed)
