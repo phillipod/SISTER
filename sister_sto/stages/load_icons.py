@@ -112,7 +112,7 @@ class LoadIconsStage(PipelineStage):
                             # print(f"{icon_group}#{slot} {file}: {ctx.found_icons[icon_group][slot][file]}")
 
                             full_path = ctx.app_config.get("icon_dir") / file
-                            data = np.fromfile(str(full_path), dtype=np.uint8)
+                            data = np.fromfile(full_path, dtype=np.uint8)
                             icon = cv2.imdecode(data, cv2.IMREAD_COLOR)
                             
                             if icon is not None:
