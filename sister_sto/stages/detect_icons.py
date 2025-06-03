@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 class DetectIconsStage(PipelineStage):
     name = "detect_icons"
+    dependencies = ["detect_icon_overlays", "load_icons", "prefilter_icons"]
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         super().__init__(opts, app_config)

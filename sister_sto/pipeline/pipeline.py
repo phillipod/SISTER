@@ -59,6 +59,7 @@ class SISTER:
     ):
         self.metrics: Dict[str, Dict[str, float]] = {}
         self.app_config: Dict[str, Any] = {}
+        self.stage_statuses: Dict[str, StageStatus] = {}
 
         self.config = config
 
@@ -98,6 +99,7 @@ class SISTER:
             "build_hash_cache": BuildHashCacheTask(config.get("hash_cache", {}), self.app_config),
         }
 
+        # Define stage dependencies
         self.stages: List[PipelineStage] = [
             LocateLabelsStage(config.get("locate_labels", {"debug": True}), self.app_config),
             ClassifyLayoutStage(config.get("classify_layout", {}), self.app_config),
@@ -113,6 +115,14 @@ class SISTER:
             DetectIconsStage(config.get("detect_icons", {}), self.app_config),
             OutputTransformationStage(config.get("output_transformation", {}), self.app_config),
         ]
+
+        # Initialize stage statuses
+        for stage in self.stages:
+            self.stage_statuses[stage.name] = stage.status
+            
+        # Add special statuses for pipeline operations
+        self.stage_statuses["pipeline_complete"] = StageStatus("pipeline_complete")
+        self.stage_statuses["metrics_complete"] = StageStatus("metrics_complete")
 
     def start_metric(self, name: str) -> None:
         self.metrics[name] = {
@@ -182,6 +192,26 @@ class SISTER:
         
         self._init_ctx = None
 
+    @contextmanager
+    def _handle_errors(self, stage_name: str, ctx: PipelineState):
+        """
+        Context manager for handling stage errors and updating stage status.
+        """
+        try:
+            yield
+            self.stage_statuses[stage_name].completed = True
+            self.stage_statuses[stage_name].success = True
+        except Exception as e:
+            self.stage_statuses[stage_name].completed = True
+            self.stage_statuses[stage_name].success = False
+            self.stage_statuses[stage_name].error = e
+            if isinstance(e, StageError):
+                # Re-raise stage errors directly
+                raise
+            else:
+                # Wrap other exceptions in PipelineError
+                raise PipelineError(stage_name, e, ctx) from e
+
     def run(self, screenshots: List[np.ndarray]) -> PipelineState:
         ctx = self._init_ctx.copy()
         ctx.set_screenshots(screenshots)
@@ -199,6 +229,16 @@ class SISTER:
             self.end_metric("run_tasks")
 
         for stage in self.stages:
+            # Check dependencies before running stage
+            if not stage.check_dependencies(self.stage_statuses):
+                error_msg = f"Dependencies not met for stage {stage.name}"
+                self.stage_statuses[stage.name].completed = True
+                self.stage_statuses[stage.name].success = False
+                self.stage_statuses[stage.name].error = StageError(error_msg)
+                if self.on_error:
+                    self.on_error(PipelineError(stage.name, StageError(error_msg), ctx))
+                continue
+
             # start metric and notify start
             with self._handle_errors(stage.name, ctx):
                 self.start_metric(stage.name)
@@ -207,16 +247,30 @@ class SISTER:
                     self.on_stage_start(stage.name, ctx)
 
             # run stage
-            with self._handle_errors(stage.name, ctx):
-                prog_cb = PipelineProgressReporter(
-                    self.on_progress,
-                    stage.name,
-                    ctx
-                )
-                stage_result = stage.process(ctx, prog_cb)
+            try:
+                with self._handle_errors(stage.name, ctx):
+                    prog_cb = PipelineProgressReporter(
+                        self.on_progress,
+                        stage.name,
+                        ctx
+                    )
+                    stage_result = stage.process(ctx, prog_cb)
 
-                ctx = stage_result.context
-                results[stage.name] = stage_result.output
+                    # Update context and results only if stage succeeded
+                    if stage_result.success:
+                        ctx = stage_result.context
+                        results[stage.name] = stage_result.output
+                    else:
+                        error_msg = f"Stage {stage.name} failed"
+                        if self.on_error:
+                            self.on_error(PipelineError(stage.name, StageError(error_msg), ctx))
+                        continue
+
+            except Exception as e:
+                # Handle any unhandled exceptions
+                if self.on_error:
+                    self.on_error(PipelineError(stage.name, e, ctx))
+                continue
 
             # end metric
             self.end_metric(stage.name)
@@ -238,36 +292,25 @@ class SISTER:
         # end pipeline metric
         self.end_metric("pipeline")
 
-        # on_pipeline_complete hook
+        # Call pipeline complete callback if all stages succeeded
         if self.on_pipeline_complete:
             self.start_metric("pipeline_complete")
             with self._handle_errors("pipeline_complete", ctx):
-                self.on_pipeline_complete(
-                    ctx, ctx.output if ctx.output else {}, results
-                )
+                # Only check regular stage statuses, not the special ones
+                regular_stages = {name: status for name, status in self.stage_statuses.items() 
+                                if name not in ["pipeline_complete", "metrics_complete"]}
+                if all(status.success for status in regular_stages.values()):
+                    self.on_pipeline_complete(
+                        ctx, ctx.output if ctx.output else {}, results
+                    )
             self.end_metric("pipeline_complete")
 
-        # on_metrics_complete hook
+        # Call metrics complete callback after pipeline complete
         if self.on_metrics_complete:
             with self._handle_errors("metrics_complete", ctx):
                 self.on_metrics_complete(self.get_metrics())
 
         return ctx, results
-
-    @contextmanager
-    def _handle_errors(self, stage_name: str, ctx: PipelineState):
-        try:
-            yield
-        except Exception as e:
-            err = PipelineError(stage_name, e, ctx)
-            if self.on_error:
-                try:
-                    self.on_error(err)
-                except Exception as hook_exc:
-                    logging.error(f"on_error hook failed: {hook_exc}")
-            else:
-                # no on_error -> re-raise so non-pipeline callers still see it
-                raise
 
 def build_default_pipeline(
     on_progress: Callable[[str, float, PipelineState], None],

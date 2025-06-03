@@ -15,6 +15,7 @@ from tqdm import tqdm
 from collections import defaultdict
 from pathlib import Path
 from pprint import pprint
+from logging import getLogger
 
 from sister_sto.pipeline.pipeline import build_default_pipeline, PipelineState
 from sister_sto.exceptions import SISTERError, PipelineError, StageError
@@ -23,6 +24,8 @@ from sister_sto.utils.hashindex import HashIndex
 from sister_sto.utils.image import load_image, load_overlays
 
 import traceback
+
+logger = getLogger(__name__)   
 
 _progress_bars = {}
 _prev_percents = defaultdict(int)
@@ -149,7 +152,23 @@ def on_interactive(stage, ctx): return ctx  # no-op
 
 
 def on_pipeline_complete(ctx, output, all_results, save_dir, save_file): 
-    
+    # Get the matches from the output transformation stage results
+    # output = {}
+    # if 'output_transformation' in results:
+    #     output = results['output_transformation']
+    # elif hasattr(ctx, 'output') and isinstance(ctx.output, dict):
+    #     output = ctx.output
+    #pprint(all_results) 
+    #pprint(output)
+
+    if not isinstance(output, dict):
+        logger.error("Pipeline output is not a dictionary")
+        return
+
+    if "matches" not in output:
+        logger.error("Pipeline output does not contain matches")
+        return
+
     success, result = save_match_summary(save_dir, save_file, output["matches"])
 
     tqdm.write(f"[Callback] [on_pipeline_complete] Pipeline is complete. Saved: {success} File: {result}")
@@ -260,7 +279,7 @@ def save_match_summary(output_dir, output_prefix, matches):
                     if prev is None or score > prev.get("score", 0.0):
                         deduped[name_str] = m
 
-                # If any remain, emit “Others:”
+                # If any remain, emit "Others:"
                 if deduped:
                     f.write("    Others:\n")
                     # sort the deduped runners by descending score

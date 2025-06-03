@@ -68,6 +68,18 @@ class StageOutput:
 
     context: PipelineState
     output: Any
+    success: bool = True  # Indicates if the stage completed successfully
+
+@dataclass
+class StageStatus:
+    """
+    Tracks the status of a pipeline stage.
+    """
+    name: str
+    completed: bool = False
+    success: bool = False
+    dependencies: List[str] = field(default_factory=list)
+    error: Optional[Exception] = None
 
 @dataclass
 class TaskOutput:
@@ -84,10 +96,12 @@ class TaskOutput:
 class PipelineStage:
     name: str = ""
     interactive: bool = False
+    dependencies: List[str] = []  # List of stage names this stage depends on
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         self.opts = opts
         self.app_config = app_config
+        self.status = StageStatus(self.name, dependencies=self.dependencies)
 
     def run(
         self, ctx: PipelineState, report: Callable[[str, float], None]
@@ -98,8 +112,19 @@ class PipelineStage:
         """
         raise NotImplementedError
 
+    def check_dependencies(self, stage_statuses: Dict[str, StageStatus]) -> bool:
+        """
+        Check if all dependencies have completed successfully.
+        """
+        for dep in self.dependencies:
+            if dep not in stage_statuses:
+                return False
+            if not stage_statuses[dep].completed or not stage_statuses[dep].success:
+                return False
+        return True
 
-# --- Abstract PipelineStage ---
+
+# --- Abstract PipelineTask ---
 class PipelineTask:
     name: str = ""
     interactive: bool = False
