@@ -7,12 +7,13 @@ import sys, os
 # Include necessary packages, modules, and data files
 build_exe_options = {
     'packages': [
-        'os', 'sys', 'cv2', 'numpy', 'skimage', 'easyocr', 'imagehash', 'pybktree', 'requests', 'torch', 'tqdm'
+        'os', 'sys', 'cv2', 'numpy', 'skimage', 'easyocr', 'imagehash', 'pybktree', 'requests', 'torch', 'tqdm', 'yaml'
     ],
     'include_files': [
         ('docs/icon.ico', 'icon.ico'),
         ('docs/licenses/', 'licenses/'),
         ('sister_sto/resources/', 'resources/'),
+        ('sister_sto/config/', 'config/'),
         "README.md",
     ],
 

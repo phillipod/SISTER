@@ -307,6 +307,7 @@ def main():
     start_time = time.time()
 
     p = argparse.ArgumentParser()
+    p.add_argument("--config", dest="config_file", default="~/.sister_sto/config/config.yaml", help="Path to a custom config file. Will be merged with default config and ~/.sister_sto/config/config.yaml.")
     p.add_argument("--data-dir", default="~/.sister_sto", help="Directory containing STO data. Defaults to '.sister_sto' in user home directory.")
     p.add_argument("--log-dir", default="log", help="Directory to write logfile to. Defaults to 'log' in data-dir directory.")
     p.add_argument("--icon-dir", default="icons", help="Directory containing downloaded icons. Defaults to 'icons' in data-dir directory.")
@@ -322,35 +323,36 @@ def main():
 
     args = p.parse_args()
 
+    # Base config with CLI-specific settings
     config = {
         "debug": True,
-        "log_level": args.log_level,
         "locate_labels": {
             "gpu": args.gpu
         },
-
         "prefilter_icons": {
             "method": "hash"
         },
-
         "output_transformation": {
             "transformations_enabled_list": [
-                "BACKFILL_MATCHES_WITH_PREFILTERED" # If no matches are found for a given slot, this transformation will merge any prefiltered icons into the output
+                "BACKFILL_MATCHES_WITH_PREFILTERED"
             ]
         },
-
         "engine": "phash",
         "data_dir": args.data_dir,
     }
 
-    # if any directories are overriden on the command line, set them in config
+    # Add config file path if specified
+    if args.config_file:
+        config["config_file"] = args.config_file
+
+    # Add any explicitly set directory paths from command line
     path_args = [
         "log_dir",
         "icon_dir",
         "overlay_dir",
         "cache_dir",
         "cargo_dir",
-        "output_dir"
+        "output_dir",
     ]
 
     args_dict = vars(args)
