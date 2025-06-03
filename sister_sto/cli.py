@@ -332,11 +332,6 @@ def main():
         "prefilter_icons": {
             "method": "hash"
         },
-        "output_transformation": {
-            "transformations_enabled_list": [
-                "BACKFILL_MATCHES_WITH_PREFILTERED"
-            ]
-        },
         "engine": "phash",
         "data_dir": args.data_dir,
     }
