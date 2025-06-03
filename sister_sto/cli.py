@@ -328,7 +328,7 @@ def main():
         },
 
         "crop_label_regions": {
-            "participate_learning_data_acquisition": False,
+            "participate_learning_data_acquisition": True,
             "label_output_dir": str(Path(args.output_dir) / "label_output" / args.output if args.output else Path(args.output_dir) / "label_output")
         },
 
