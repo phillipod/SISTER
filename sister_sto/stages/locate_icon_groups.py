@@ -46,6 +46,7 @@ class LocateIconGroupsStage(PipelineStage):
 
             reporter(sub, 0.0)
 
+            # Pass the labels with ROI data to locate_icon_groups
             groups = self.detector.locate_icon_groups(
                 img, 
                 labels, 
@@ -56,10 +57,11 @@ class LocateIconGroupsStage(PipelineStage):
             reporter(sub, 100.0)
             icon_groups_list.append(groups)
 
-        # merge all icon_group dicts
+        # merge all icon_group dicts while preserving the full structure
         merged = {}
-        for g in icon_groups_list:
-            merged.update(g)
+        for groups in icon_groups_list:
+            merged.update(groups)
+
         ctx.icon_groups_list = icon_groups_list
         ctx.icon_groups      = merged
 

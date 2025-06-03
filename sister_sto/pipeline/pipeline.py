@@ -36,6 +36,7 @@ from ..stages import (
     DetectIconOverlaysStage,
     DetectIconsStage,
     OutputTransformationStage,
+    CropLabelRegionsStage,
 )
 
 logger = logging.getLogger(__name__)
@@ -101,6 +102,7 @@ class SISTER:
         self.stages: List[PipelineStage] = [
             LocateLabelsStage(config.get("locate_labels", {"debug": True}), self.app_config),
             ClassifyLayoutStage(config.get("classify_layout", {}), self.app_config),
+            CropLabelRegionsStage(config.get("crop_label_regions", {}), self.app_config),
             LocateIconGroupsStage(config.get("icon_group", {}), self.app_config),
             LocateIconSlotsStage(config.get("icon_slot", {}), self.app_config),
             PrefilterIconsStage(

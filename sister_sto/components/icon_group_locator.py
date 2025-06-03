@@ -785,23 +785,17 @@ class IconGroupLocator:
         """
         self.debug = debug
 
-    def locate_icon_groups(
-        self,
-        image: np.ndarray,
-        labels: Dict[str, Tuple[int, int, int, int]],
-        build_info: any = None,
-    ) -> Dict[str, Tuple[int, int, int, int]]:
+    def locate_icon_groups(self, image: np.ndarray, labels: Dict[str, Dict], build_info: any = None) -> Dict[str, Dict]:
         """
-        Main detection entry point. Based on build type, routes to appropriate detection logic.
+        Locate allowed labels within an image array.
 
         Args:
-            screenshot_color (np.array): Original BGR screenshot.
-            build_info (dict): Output from BuildClassifier, includes build_type and score.
-            label_positions (dict): Output from LabelLocator with bounding boxes.
-            debug_output_path (str, optional): If set, draws debug output to this file.
+            image: np.ndarray (BGR screenshot)
+            labels: Dict[str, Dict] - Label data including ROI information
+            build_info: Build type information
 
         Returns:
-            dict: Mapping of label name to {'Label': <bbox>, 'IconGroup': <roi bbox>}.
+            dict: {label_str: {"Label": label_data, "IconGroup": icon_group_data}}
         """
         # ensure we have a list of build dicts
         builds = build_info if isinstance(build_info, list) else [build_info]
@@ -815,26 +809,28 @@ class IconGroupLocator:
             bt = info.get("build_type", "Unknown")
             platform = info.get("platform", "Unknown")
 
-            # print(f"locating icon groups for build: {bt}")
-
             if bt not in ICON_GROUP_LOCATION_RULES:
                 logger.warning(f"Unsupported build type: {bt}")
                 continue
 
-            # get raw icon‐group boxes for this build
+            # get raw icon-group boxes for this build
             icon_boxes = self.compute_icon_groups(platform, bt, labels, contours)
 
             # convert each into your merged format
             for label, icon_group in icon_boxes.items():
                 label_box = labels[label]
-                merged[label] = {
-                    "Label": {key: [int(v[0]), int(v[1])] for key, v in label_box.items()},
+                
+                # Keep the original label box data including ROI data
+                label_data = {
+                    "Label": label_box,  # Keep all original label data
                     "IconGroup": {
-                        "top_left":     [int(icon_group["top_left"][0]),     int(icon_group["top_left"][1])],
+                        "top_left": [int(icon_group["top_left"][0]), int(icon_group["top_left"][1])],
                         "bottom_right": [int(icon_group["bottom_right"][0]), int(icon_group["bottom_right"][1])]
-                    },
+                    }
                 }
-
+                
+                merged[label] = label_data
+        
         #self._draw_debug_icon_groups(image, merged, f"output/icon_groups{bt}.png")
 
         return merged
@@ -886,9 +882,6 @@ class IconGroupLocator:
     ):
         """
         Evaluate an expression in the context of detected labels and icon groups.
-
-        The expression can be a string (resolved as a label or icon group property), a number (used as-is),
-        or a dictionary (with supported operations).
 
         Args:
             expr (str or dict): Expression to evaluate.

@@ -75,6 +75,9 @@ def on_stage_complete(stage, ctx, output):
     elif stage == 'classify_layout':
         tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
         return
+    elif stage == 'crop_label_regions':
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Cropped {sum(len(label) for label in ctx.labels_list)} labels")
+        return
     elif stage == 'locate_icon_slots':
         tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots") #
         return
@@ -260,7 +263,7 @@ def save_match_summary(output_dir, output_prefix, matches):
                     if prev is None or score > prev.get("score", 0.0):
                         deduped[name_str] = m
 
-                # If any remain, emit “Others:”
+                # If any remain, emit "Others:"
                 if deduped:
                     f.write("    Others:\n")
                     # sort the deduped runners by descending score
@@ -303,6 +306,10 @@ def main():
 
     args = p.parse_args()
 
+    # if args.output is not specifed, take the stem of the first screenshot
+    if args.output is None and args.screenshot and len(args.screenshot) > 0:
+        args.output = Path(args.screenshot[0]).stem
+
     config = {
         "debug": True,
         "log_level": args.log_level,
@@ -318,6 +325,11 @@ def main():
             "transformations_enabled_list": [
                 "BACKFILL_MATCHES_WITH_PREFILTERED" # If no matches are found for a given slot, this transformation will merge any prefiltered icons into the output
             ]
+        },
+
+        "crop_label_regions": {
+            "participate_learning_data_acquisition": False,
+            "label_output_dir": str(Path(args.output_dir) / "label_output" / args.output if args.output else Path(args.output_dir) / "label_output")
         },
 
         "engine": "phash",
@@ -342,9 +354,6 @@ def main():
         if args_dict[path_arg] != p.get_default(path_arg):
             config[path_arg] = args_dict[path_arg]
     
-    # if args.output is not specifed, take the stem of the first screenshot
-    if args.output is None and args.screenshot and len(args.screenshot) > 0:
-        args.output = Path(args.screenshot[0]).stem
 
     # bind args to on_pipeline_complete
     bound_on_pipeline_complete = partial(on_pipeline_complete, save_dir=args.output_dir, save_file=args.output)

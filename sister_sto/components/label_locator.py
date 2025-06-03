@@ -1,6 +1,6 @@
 import warnings
 
-# suppress the “pin_memory” UserWarning from torch.utils.data
+# suppress the "pin_memory" UserWarning from torch.utils.data
 warnings.filterwarnings(
     "ignore",
     message=".*pin_memory.*no accelerator is found.*",
@@ -8,7 +8,7 @@ warnings.filterwarnings(
     module="torch.utils.data.dataloader"
 )
 
-# suppress the “Unable to retrieve source for @torch.jit._overload function” warning
+# suppress the "Unable to retrieve source for @torch.jit._overload function" warning
 warnings.filterwarnings(
     "ignore",
     message=r".*Unable to retrieve source for @torch\.jit\._overload function.*",
@@ -316,15 +316,25 @@ class LabelLocator:
 
         return filtered
 
-    def locate_labels(self, image: np.ndarray, on_progress=None) -> Dict[str, Tuple[int, int, int, int]]:
+    def locate_labels(self, image: np.ndarray, on_progress=None) -> Dict[str, Dict]:
         """
         Locate allowed labels within an image array.
 
         Args:
             image: np.ndarray (BGR screenshot)
+            on_progress: Optional callback for progress reporting
 
         Returns:
-            dict: {label_str: (x1, y1, x2, y2)}
+            dict: {label_str: {
+                "top_left": [x1, y1],
+                "top_right": [x2, y1],
+                "bottom_left": [x1, y2],
+                "bottom_right": [x2, y2],
+                "roi_data": {
+                    "gray_roi": np.ndarray,  # Grayscale ROI
+                    "scale_x": float  # Scale factor used for OCR
+                }
+            }}
         """
         self.on_progress = on_progress
 
@@ -358,11 +368,19 @@ class LabelLocator:
         # Build formatted return structure
         label_dict = {}
         for (x1, y1, x2, y2), label in filtered.items():
+            # Extract the grayscale ROI
+            gray_roi = gray_upscaled[int(y1*1.0):int(y2*1.0), int(x1*self.scale_x):int(x2*self.scale_x)]
+            
+            # Store coordinates and ROI data in unified format
             label_dict[label] = {
                 "top_left": [int(x1), int(y1)],
                 "top_right": [int(x2), int(y1)],
                 "bottom_left": [int(x1), int(y2)],
                 "bottom_right": [int(x2), int(y2)],
+                "roi_data": {
+                    "gray_roi": gray_roi,
+                    "scale_x": self.scale_x
+                }
             }
 
         self.on_progress("Completed", 100.0)
