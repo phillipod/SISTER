@@ -14,6 +14,7 @@ import logging
 from .core import *
 from ..exceptions import *
 
+from ..utils.config import load_config
 from ..utils.hashindex import HashIndex
 from ..utils.persistent_executor import PersistentProcessPoolExecutor
 
@@ -77,6 +78,14 @@ class SISTER:
         self.on_pipeline_complete = on_pipeline_complete
 
         self._started = False
+
+        # Load configuration from files
+        config = load_config(self.config.get("config_file"))
+        
+        # Command line options override config file settings
+        self.config.update(config)
+        #self.config = config
+
 
         self.init_tasks: List[PipelineTask] = [
             AppInitTask(config, self.app_config),

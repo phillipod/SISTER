@@ -8,7 +8,6 @@ from pathlib import Path
 import logging
 
 from ..log_config import setup_logging
-from ..utils.config import load_config
 
 from ..pipeline.core import PipelineTask, TaskOutput, PipelineState
 from ..pipeline.progress_reporter import TaskProgressReporter
@@ -49,12 +48,6 @@ class AppInitTask(PipelineTask):
         return TaskOutput(ctx, None)
 
     def app_init(self, reporter: Callable[[str, float], None]) -> None:
-        # Load configuration from files
-        config = load_config(self.config.get("config_file"))
-        
-        # Command line options override config file settings
-        config.update(self.config)
-        self.config = config
                
         # Expand data directory path
         self.app_config["data_dir"] = Path(os.path.expanduser(self.config.get("data_dir", "~/.sister_sto")))
