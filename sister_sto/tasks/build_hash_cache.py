@@ -33,9 +33,9 @@ class BuildHashCacheTask(PipelineTask):
 
     def build_hash_cache(self, report: Callable[[str, str, float], None]):
 
-        icon_root = Path(self.app_config["icon_dir"])
+        cache_dir = Path(self.app_config["cache_dir"])
         
-        hash_index = HashIndex(icon_root, match_size=(16, 16), empty=True)
+        hash_index = HashIndex(cache_dir, match_size=(16, 16), empty=True)
         
         overlays = load_overlays(self.app_config["overlay_dir"])  # Must return dict of overlay -> RGBA overlay np.array
         
