@@ -7,7 +7,7 @@ from pathlib import Path
 
 import logging
 
-from ..log_config import setup_logging
+from ..log_config import setup_file_logging, set_log_level
 
 from ..pipeline.core import PipelineTask, TaskOutput, PipelineState
 from ..pipeline.progress_reporter import TaskProgressReporter
@@ -22,7 +22,6 @@ class AppInitTask(PipelineTask):
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
         super().__init__(opts, app_config)
-
         self.config = opts
         
     def execute(
@@ -48,18 +47,18 @@ class AppInitTask(PipelineTask):
 
         return TaskOutput(ctx, None)
 
-
     def app_init(self, reporter: Callable[[str, float], None]) -> None:
-        logger.info(f"Initializing SISTER with config: {self.config}")
+        # Expand data directory path
+        self.app_config["data_dir"] = Path(os.path.expanduser(self.config.get("data_dir", "~/.sister_sto")))
 
-        self.app_config["data_dir"] = Path(os.path.expanduser(self.config.get("data_dir")))
-
+        # Set up default paths relative to data_dir if not overridden
         default_paths = {
             "log_dir": "log",
             "icon_dir": "icons",
             "overlay_dir": "overlays",
             "cache_dir": "cache",
             "cargo_dir": "cargo",
+            "config_dir": "config",
         }
         
         for key, value in default_paths.items():
@@ -67,8 +66,18 @@ class AppInitTask(PipelineTask):
                 self.app_config[key] = Path(os.path.expanduser(self.config.get(key)))
             else:
                 self.app_config[key] = self.app_config["data_dir"] / value
-
+            
         self.validate_app_directory(reporter)
+
+        # Set up file logging
+        log_level = self.config.get("log_level", "INFO")
+        self.app_config["log_level"] = log_level
+        # set_log_level(log_level)
+
+        setup_file_logging(
+            log_file=self.app_config["log_dir"] / "sister.log",
+            log_level=log_level
+        )            
 
         reporter("Loading hash cache", 10.0)
         self.app_config["hash_match_size"] = self.config.get("hash_match_size", (16, 16))
@@ -79,9 +88,6 @@ class AppInitTask(PipelineTask):
         )
         reporter("Loaded hash cache", 95.0)
 
-        self.app_config["log_level"] = self.config.get("log_level", "INFO")
-        setup_logging(self.app_config.get("log_level"), log_file=self.app_config.get("log_dir") / "sister.log")
-        
         icon_root = Path(self.app_config.get("icon_dir"))
 
         self.app_config["icon_sets"] = {
@@ -177,7 +183,7 @@ class AppInitTask(PipelineTask):
             # If we got here, resources_root points inside the wheel/egg or source tree.
             src_dir = resources_root
         except (ModuleNotFoundError, FileNotFoundError, AttributeError):
-            # importlib.resources didn’t work (no package-data or running raw exe without it)
+            # importlib.resources didn't work (no package-data or running raw exe without it)
             if getattr(sys, "frozen", False):
                 bundle_dir = Path(sys.executable).parent
                 src_dir = bundle_dir / "resources"
@@ -186,8 +192,8 @@ class AppInitTask(PipelineTask):
                 bundle_dir = Path(sister_sto.__file__).resolve().parent.parent
                 src_dir = bundle_dir / "resources"
 
-
-        for directory in ["data_dir", "log_dir", "cache_dir", "cargo_dir", "icon_dir", "overlay_dir"]:
+        # Create required directories
+        for directory in ["data_dir", "log_dir", "cache_dir", "cargo_dir", "icon_dir", "overlay_dir", "config_dir"]:
             self.app_config[directory].mkdir(parents=True, exist_ok=True)
         
         # find all files under src_dir and copy them to the data directory, preserving the directory structure
@@ -195,7 +201,6 @@ class AppInitTask(PipelineTask):
             if src_path.is_file():
                 relative_path = src_path.relative_to(src_dir)
                 dest_path = self.app_config["data_dir"] / relative_path
-                # print(f"Copying {src_path} to {dest_path}") 
                 if dest_path.exists():
                     continue
                 dest_path.parent.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,17 @@
+# Example configuration for SISTER
+# This file is installed with the package and should not be modified. 
+#
+# Instead, copy this file to ~/.sister_sto/config/config.yaml and modify that file.
+
+# Logging settings
+log_level: "WARNING"
+
+# OCR settings
+locate_labels:
+  gpu: false
+
+# Output transformation settings
+output_transformation:
+  transformations_enabled_list:
+    - "BACKFILL_MATCHES_WITH_PREFILTERED"
+

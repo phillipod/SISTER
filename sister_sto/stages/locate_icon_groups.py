@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 class LocateIconGroupsStage(PipelineStage):
     name = "locate_icon_groups"
+    dependencies = ["locate_labels", "classify_layout"]
     interactive = True  # allow UI confirmation. Unimplemented.
 
     def __init__(self, opts: Dict[str, Any], app_config: Dict[str, Any]):
