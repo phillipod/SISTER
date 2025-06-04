@@ -7,7 +7,7 @@ from pathlib import Path
 
 import logging
 
-from ..log_config import setup_logging
+from ..log_config import setup_file_logging, set_log_level
 
 from ..pipeline.core import PipelineTask, TaskOutput, PipelineState
 from ..pipeline.progress_reporter import TaskProgressReporter
@@ -48,7 +48,6 @@ class AppInitTask(PipelineTask):
         return TaskOutput(ctx, None)
 
     def app_init(self, reporter: Callable[[str, float], None]) -> None:
-               
         # Expand data directory path
         self.app_config["data_dir"] = Path(os.path.expanduser(self.config.get("data_dir", "~/.sister_sto")))
 
@@ -62,7 +61,6 @@ class AppInitTask(PipelineTask):
             "config_dir": "config",
         }
         
-
         for key, value in default_paths.items():
             if self.config.get(key):
                 self.app_config[key] = Path(os.path.expanduser(self.config.get(key)))
@@ -70,6 +68,16 @@ class AppInitTask(PipelineTask):
                 self.app_config[key] = self.app_config["data_dir"] / value
             
         self.validate_app_directory(reporter)
+
+        # Set up file logging
+        log_level = self.config.get("log_level", "INFO")
+        self.app_config["log_level"] = log_level
+        # set_log_level(log_level)
+
+        setup_file_logging(
+            log_file=self.app_config["log_dir"] / "sister.log",
+            log_level=log_level
+        )            
 
         reporter("Loading hash cache", 10.0)
         self.app_config["hash_match_size"] = self.config.get("hash_match_size", (16, 16))
@@ -80,10 +88,6 @@ class AppInitTask(PipelineTask):
         )
         reporter("Loaded hash cache", 95.0)
 
-        self.app_config["log_level"] = self.config.get("log_level", "INFO")
-    
-        setup_logging(self.app_config.get("log_level"), log_file=self.app_config.get("log_dir") / "sister.log")
-        
         icon_root = Path(self.app_config.get("icon_dir"))
 
         self.app_config["icon_sets"] = {

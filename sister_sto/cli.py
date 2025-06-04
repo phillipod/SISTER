@@ -19,6 +19,7 @@ from logging import getLogger
 
 from sister_sto.pipeline.pipeline import build_default_pipeline, PipelineState
 from sister_sto.exceptions import SISTERError, PipelineError, StageError
+from sister_sto.log_config import setup_console_logging
 
 from sister_sto.utils.hashindex import HashIndex
 from sister_sto.utils.image import load_image, load_overlays
@@ -407,17 +408,17 @@ def main():
 
     args = p.parse_args()
 
+    # Set up console logging with the specified log level
+    setup_console_logging(args.log_level)
+
     # Base config with CLI-specific settings
     config = {
         "debug": True,
         "locate_labels": {
             "gpu": args.gpu
         },
-        "prefilter_icons": {
-            "method": "hash"
-        },
-        "engine": "phash",
         "data_dir": args.data_dir,
+        "log_level": args.log_level  # CLI log level will override config file if specified
     }
 
     # Add config file path if specified
