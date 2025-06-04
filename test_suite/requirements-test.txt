@@ -1,0 +1,8 @@
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+pytest-asyncio>=0.21.0
+coverage>=7.2.0
+Pillow>=9.0.0  # For image testing
+numpy>=1.21.0  # For array operations
+PyYAML>=6.0.0  # For config file handling 

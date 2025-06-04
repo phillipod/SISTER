@@ -79,13 +79,14 @@ class SISTER:
 
         self._started = False
 
+        # Persist parameters set on the command line
+        
         # Load configuration from files
         config = load_config(self.config.get("config_file"))
         
         # Command line options override config file settings
-        self.config.update(config)
-        #self.config = config
-
+        config.update(self.config)
+        self.config = config
 
         self.init_tasks: List[PipelineTask] = [
             AppInitTask(config, self.app_config),
