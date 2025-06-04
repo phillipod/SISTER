@@ -161,16 +161,20 @@ def on_stage_complete(stage, ctx, output, test_collector=None):
         tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Found {len(ctx.icon_groups)} icon groups")
         return
     elif stage == 'classify_layout':
-        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification["build_type"]}")   
+        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Detected build type: {ctx.classification['build_type']}")
         return
     elif stage == 'crop_label_regions':
         tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Cropped {sum(len(label) for label in ctx.labels_list)} labels")
         return
     elif stage == 'locate_icon_slots':
-        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots") #
+        tqdm.write(
+            f"[Callback] [on_stage_complete] [{stage}] Found {sum(len(icon_group) for icon_group in output.values())} icon slots"
+        )
         return
     elif stage == 'detect_icon_overlays':
-        tqdm.write(f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get("overlay") != "common")} icon overlays")
+        tqdm.write(
+            f"[Callback] [on_stage_complete] [{stage}] Matched {sum(1 for icon_group_dict in output.values() for slot_items in icon_group_dict.values() for item in slot_items if item.get('overlay') != 'common')} icon overlays"
+        )
         return
     elif stage == 'detect_icons':
         methods = {}
@@ -285,7 +289,9 @@ def on_metrics_complete(metrics):
     #print(f"[Callback] [on_metrics] {metrics}")
     for metric in metrics:
         if not metric['name'].endswith('_complete') and not metric['name'].endswith('_interactive'):
-            print(f"[Callback] [on_metrics] {"\t" if not metric['name'].startswith('pipeline') else ""}{metric['name']} took {metric['duration']:.2f} seconds")
+            print(
+                f"[Callback] [on_metrics] {chr(9) if not metric['name'].startswith('pipeline') else ''}{metric['name']} took {metric['duration']:.2f} seconds"
+            )
 
 def save_match_summary(output_dir, output_prefix, matches):
     """
