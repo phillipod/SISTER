@@ -81,9 +81,12 @@ Create `/etc/apache2/sites-available/sister.conf`:
 
     DocumentRoot /var/www/sister
 
-    WSGIDaemonProcess sister python-home=/var/www/sister/venv python-path=/var/www/sister
+    WSGIDaemonProcess sister python-home=/var/www/sister/venv python-path=/var/www/sister user=www-data group=www-data threads=5
     WSGIProcessGroup sister
     WSGIScriptAlias / /var/www/sister/wsgi.py
+
+    # Pass DOTENV_PATH to the application
+    SetEnv DOTENV_PATH /var/www/.sister.env
 
     <Directory /var/www/sister>
         Require all granted
@@ -172,6 +175,46 @@ MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
 SISTER_DATA_DIR = '/var/www/sister/data'
 LOG_LEVEL = 'WARNING'
 ```
+
+### MailerSend Configuration
+
+SISTER uses MailerSend for sending transactional emails (e.g., consent forms for training data submissions). You'll need to configure MailerSend and update the application settings.
+
+1.  **Create a MailerSend Account:**
+    *   Sign up at [mailersend.com](https://www.mailersend.com/).
+
+2.  **Verify Your Domain:**
+    *   Follow MailerSend's instructions to add and verify your sending domain. This is crucial for email deliverability.
+
+3.  **Get Your API Key:**
+    *   Navigate to your domain settings in MailerSend and generate an API token. Note this token securely.
+
+4.  **Configure Environment Variables:**
+    *   The application uses a `.env` file for configuration, which should be placed outside the web root for security. The path to this file is specified by the `DOTENV_PATH` environment variable, which you'll set in the Apache configuration.
+
+    Create the environment file at `/var/www/.sister.env`. The application will load this file based on the `DOTENV_PATH` environment variable set in the Apache configuration.
+
+    Contents for `/var/www/.sister.env`:
+    ```
+    MAILERSEND_API_KEY='your_mailersend_api_key_here'
+    MAILERSEND_FROM_EMAIL='your_verified_sender_email@yourdomain.com'
+    MAILERSEND_REPLY_TO='your_reply_to_address@yourdomain.com' # Optional, defaults to FROM_EMAIL
+    # Ensure SECRET_KEY is also set for token generation
+    SECRET_KEY='your_strong_secret_key_for_flask_and_tokens'
+    ```
+    *   Replace placeholders with your actual MailerSend API key and verified email addresses.
+
+5.  **Set Up Webhooks (for Email Replies):**
+    *   To process user replies for license acceptance, you need to set up an inbound webhook in MailerSend.
+    *   In MailerSend, go to "Inbound Routes" and create a new route.
+    *   Configure the route to forward emails sent to a specific address (e.g., `replies@yourdomain.com`) to your application's webhook endpoint: `https://sister.example.com/api/webhooks/email-reply` (replace `sister.example.com` with your actual domain).
+    *   MailerSend will provide a webhook signing secret. Add this to your `.env` file or `instance/config.py`:
+    ```
+    MAILERSEND_WEBHOOK_SECRET='your_mailersend_webhook_signing_secret'
+    ```
+    *   The `MAILERSEND_REPLY_TO` address in your `.env` file should ideally be the address you configure for the inbound route, or an address that MailerSend can process for replies if you are not using a dedicated inbound route for replies.
+
+    **Note:** The application's `app.py` is set up to handle these environment variables. The `MAILERSEND_FROM_EMAIL` must be an email address associated with a verified domain in your MailerSend account.
 
 ## Directory Structure
 
