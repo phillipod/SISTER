@@ -229,7 +229,7 @@ class HashIndex:
     def __init__(
         self,
         base_dir,
-        cache_file="hash_index.json",
+        cache_file="hash_cache.json",
         recursive=True,
         match_size=(32, 32),
         metadata_map: dict = None,

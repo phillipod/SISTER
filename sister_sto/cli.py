@@ -428,9 +428,7 @@ def main():
     # Base config with CLI-specific settings
     config = {
         "debug": True,
-        "locate_labels": {
-            "gpu": args.gpu
-        },
+
         "crop_label_regions": {
             "participate_learning_data_acquisition": True,
             "label_output_dir": str(Path(args.output_dir) / "label_output" / args.output if args.output else Path(args.output_dir) / "label_output")
@@ -438,6 +436,9 @@ def main():
         "data_dir": args.data_dir,
         "log_level": args.log_level  # CLI log level will override config file if specified
     }
+
+    if args.gpu:
+        config["locate_labels"] = {"gpu": True}
 
     # Add config file path if specified
     if args.config_file:
