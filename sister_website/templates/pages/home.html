@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <h2>Computer Vision for Star Trek Online Builds</h2>
+    <p class="lead">SISTER is a powerful computer vision pipeline designed to detect and match equipment and trait icons within Star Trek Online (STO) screenshots. It automates OCR-based label detection, layout classification, icon slot extraction, and icon matching using a combination of perceptual hashing and SSIM for robust performance.</p>
+</section>
+
+<section class="features-section">
+    <h2>🚀 Features</h2>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h3>OCR-based Label Detection</h3>
+            <p>Using EasyOCR with optional GPU acceleration for fast and accurate text recognition.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Icon Slot Extraction</h3>
+            <p>Advanced contour analysis and heuristic filters for precise icon detection.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Smart Icon Matching</h3>
+            <p>Perceptual Hash + BK-Tree prefilter for fast candidate selection, with SSIM matching for precision.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Quality Detection</h3>
+            <p>Automatic detection of quality overlays (Epic, Rare, etc.) on equipment icons.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Layout Classification</h3>
+            <p>Handles different screenshot formats including PC and Console builds, Ship & Ground.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Extensible Pipeline</h3>
+            <p>Modular stages and tasks for easy customization and extension.</p>
+        </div>
+    </div>
+</section>
+
+<section class="cta-section">
+    <h2>Get Started</h2>
+    <div class="cta-grid">
+        <a href="{{ url_for('download') }}" class="cta-card">
+            <h3>Download SISTER</h3>
+            <p>Get the latest version and start analyzing your builds today.</p>
+        </a>
+        <a href="{{ url_for('documentation') }}" class="cta-card">
+            <h3>Read the Docs</h3>
+            <p>Learn how to use SISTER with our comprehensive documentation.</p>
+        </a>
+        <a href="{{ url_for('training_submit') }}" class="cta-card">
+            <h3>Contribute Data</h3>
+            <p>Help improve SISTER by contributing your build screenshots.</p>
+        </a>
+    </div>
+</section>
+
+<section class="github-section">
+    <h2>Open Source</h2>
+    <p>SISTER is an open-source project available on GitHub. Join our community, report issues, or contribute to the development.</p>
+    <div class="github-buttons">
+        <a href="https://github.com/phillipod/SISTER" class="github-button" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+        <a href="https://github.com/phillipod/SISTER/releases/latest" class="github-button" target="_blank" rel="noopener noreferrer">Latest Release</a>
+    </div>
+</section>
+{% endblock %} 

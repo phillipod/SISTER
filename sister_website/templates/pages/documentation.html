@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Documentation{% endblock %}
+
+{% block content %}
+<section class="docs-section">
+    <h2>Documentation</h2>
+    <p class="lead">Learn how to use SISTER effectively with our comprehensive documentation.</p>
+
+    <div class="docs-nav">
+        <ul>
+            <li><a href="#getting-started">Getting Started</a></li>
+            <li><a href="#usage">Usage</a></li>
+            <li><a href="#configuration">Configuration</a></li>
+            <li><a href="#troubleshooting">Troubleshooting</a></li>
+            <li><a href="#api">API Reference</a></li>
+        </ul>
+    </div>
+
+    <section id="getting-started" class="docs-content">
+        <h3>Getting Started</h3>
+        <p>After installing SISTER, you can start using it immediately. Icons are downloaded automatically as needed.</p>
+
+        <div class="info-box">
+            <h4>Optional Setup</h4>
+            <p>If you want to pre-download all icons:</p>
+            <div class="code-block">
+                <code>sister-cli --download</code>
+            </div>
+            <p>If you've downloaded new icons and need to update the hash cache:</p>
+            <div class="code-block">
+                <code>sister-cli --build-hash-cache</code>
+            </div>
+            <p>Note: The --download command must be run before --build-hash-cache</p>
+        </div>
+    </section>
+
+    <section id="usage" class="docs-content">
+        <h3>Usage</h3>
+        <p>SISTER can be used both as a command-line tool and as a Python library.</p>
+
+        <h4>Command Line Usage</h4>
+        <div class="code-block">
+            <code># Process a single screenshot</code>
+            <code>sister-cli -s screenshot.jpg</code>
+            <code></code>
+            <code># Process multiple screenshots</code>
+            <code>sister-cli -s screenshot1.jpg screenshot2.jpg</code>
+            <code></code>
+            <code># Specify output prefix</code>
+            <code>sister-cli -s screenshot.jpg -o results</code>
+            <code></code>
+            <code># Enable GPU acceleration for OCR</code>
+            <code>sister-cli -s screenshot.jpg --gpu</code>
+            <code></code>
+            <code># Disable image downscaling</code>
+            <code>sister-cli -s screenshot.jpg --no-resize</code>
+        </div>
+
+        <h4>Python Library Usage</h4>
+        <div class="code-block">
+            <code>from sister_sto.pipeline.pipeline import build_default_pipeline</code>
+            <code></code>
+            <code>pipeline = build_default_pipeline()</code>
+            <code>pipeline.startup()</code>
+            <code>result = pipeline.run([image])</code>
+            <code>pipeline.shutdown()</code>
+        </div>
+    </section>
+
+    <section id="configuration" class="docs-content">
+        <h3>Configuration</h3>
+        <p>SISTER uses a configuration file located at <code>~/.sister_sto/config/config.yaml</code>.</p>
+
+        <h4>Configuration Options</h4>
+        <div class="code-block">
+            <code># Default paths can be overridden</code>
+            <code>data_dir: "~/.sister_sto"</code>
+            <code>log_dir: "log"</code>
+            <code>icon_dir: "icons"</code>
+            <code>overlay_dir: "overlays"</code>
+            <code>output_dir: "./"</code>
+            <code></code>
+            <code># General settings</code>
+            <code>log_level: "WARNING"</code>
+            <code>gpu: false</code>
+        </div>
+
+        <div class="info-box">
+            <h4>Custom Config</h4>
+            <p>You can specify a custom config file with the --config option:</p>
+            <code>sister-cli -s screenshot.jpg --config path/to/config.yaml</code>
+        </div>
+    </section>
+
+    <section id="troubleshooting" class="docs-content">
+        <h3>Troubleshooting</h3>
+        
+        <div class="troubleshooting-grid">
+            <div class="trouble-card">
+                <h4>Poor Recognition Results</h4>
+                <ul>
+                    <li>Ensure screenshots are high quality and not compressed</li>
+                    <li>Check that the UI scale in STO matches the expected size</li>
+                    <li>Verify that no UI elements are overlapping</li>
+                </ul>
+            </div>
+
+            <div class="trouble-card">
+                <h4>Performance Issues</h4>
+                <ul>
+                    <li>Enable GPU acceleration with --gpu if available</li>
+                    <li>Reduce logging level if not debugging</li>
+                    <li>Consider pre-downloading icons if processing many screenshots</li>
+                </ul>
+            </div>
+
+            <div class="trouble-card">
+                <h4>Installation Problems</h4>
+                <ul>
+                    <li>Verify Python 3.11+ is installed</li>
+                    <li>Check system requirements (8GB RAM minimum)</li>
+                    <li>Install required system libraries</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="api" class="docs-content">
+        <h3>API Reference</h3>
+        <p>SISTER provides a comprehensive Python API for integration into your own projects.</p>
+
+        <div class="api-grid">
+            <div class="api-card">
+                <h4>Pipeline</h4>
+                <p>The main processing pipeline class that orchestrates the recognition process.</p>
+                <a href="https://github.com/phillipod/SISTER/wiki/API-Reference#pipeline" class="api-link" target="_blank">View Documentation</a>
+            </div>
+
+            <div class="api-card">
+                <h4>Config</h4>
+                <p>Configuration management and validation for the SISTER pipeline.</p>
+                <a href="https://github.com/phillipod/SISTER/wiki/API-Reference#config" class="api-link" target="_blank">View Documentation</a>
+            </div>
+
+            <div class="api-card">
+                <h4>Matcher</h4>
+                <p>Icon matching and recognition algorithms implementation.</p>
+                <a href="https://github.com/phillipod/SISTER/wiki/API-Reference#matcher" class="api-link" target="_blank">View Documentation</a>
+            </div>
+        </div>
+    </section>
+</section>
+{% endblock %} 

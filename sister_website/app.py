@@ -25,68 +25,90 @@ db = SQLAlchemy(app)
 class Build(db.Model):
     id = db.Column(db.String(36), primary_key=True)
     email = db.Column(db.String(120), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     consent_ml_recognition = db.Column(db.Boolean, default=False)
     consent_ml_future = db.Column(db.Boolean, default=False)
     consent_test_suite = db.Column(db.Boolean, default=False)
-    consent_confirmed = db.Column(db.Boolean, default=False)
-    consent_confirmed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     screenshots = db.relationship('Screenshot', backref='build', lazy=True)
 
 class Screenshot(db.Model):
-    id = db.Column(db.String(36), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     build_id = db.Column(db.String(36), db.ForeignKey('build.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
-    original_filename = db.Column(db.String(255), nullable=False)
-    screenshot_type = db.Column(db.String(50), nullable=False)  # 'space' or 'ground'
-    uploaded_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    type = db.Column(db.String(10), nullable=False)  # 'space' or 'ground'
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_test_suite = db.Column(db.Boolean, default=False)  # New field to track test suite allocation
 
 class UploadForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
-    consent_ml_recognition = BooleanField('I understand my screenshots will be published in the ML training data repository on GitHub and used for ML training - label recognition')
-    consent_ml_future = BooleanField('I understand my screenshots will be published in the ML training data repository on GitHub and may be used for future ML training (limited to label recognition, build classification, icon group detection, or icon recognition)')
-    consent_test_suite = BooleanField('I understand my screenshots will be published in the core repository on GitHub and used in the core test suite')
+    consent_ml_recognition = BooleanField('I consent to my screenshots being used for machine learning recognition training')
+    consent_ml_future = BooleanField('I consent to my screenshots being used for future machine learning research')
+    consent_test_suite = BooleanField('I consent to my screenshots being used in the test suite')
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def save_screenshot(file, build_id, screenshot_type):
+def save_screenshot(file, build_id, build_type, is_test_suite=False):
     if file and allowed_file(file.filename):
-        screenshot_id = str(uuid.uuid4())
-        original_filename = secure_filename(file.filename)
-        filename = f"{screenshot_id}_{original_filename}"
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
+        filename = secure_filename(file.filename)
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        unique_filename = f"{build_id}_{timestamp}_{filename}"
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
         
         screenshot = Screenshot(
-            id=screenshot_id,
             build_id=build_id,
-            filename=filename,
-            original_filename=original_filename,
-            screenshot_type=screenshot_type
+            filename=unique_filename,
+            type=build_type,
+            is_test_suite=is_test_suite
         )
         return screenshot
     return None
 
+def determine_screenshot_usage(build):
+    """
+    Determine if screenshots should be used for test suite.
+    Only returns True if test suite is the only consent given.
+    """
+    return (build.consent_test_suite and 
+            not build.consent_ml_recognition and 
+            not build.consent_ml_future)
+
 def send_consent_email(email, builds, consents):
-    message = Mail(
-        from_email=os.getenv('FROM_EMAIL', 'noreply@example.com'),
-        to_emails=email,
-        subject='STO Build Screenshots Submission - Consent Form',
-        html_content=render_template('email_template.html',
-                                  builds=builds,
-                                  consents=consents)
-    )
     try:
         sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
+        
+        message = Mail(
+            from_email=os.getenv('SENDGRID_FROM_EMAIL'),
+            to_emails=email,
+            subject='SISTER - Build Screenshot Submission Confirmation',
+            html_content=render_template(
+                'email_template.html',
+                builds=builds,
+                consents=consents,
+                timestamp=datetime.utcnow()
+            )
+        )
+        
         response = sg.send(message)
         return response.status_code == 202
     except Exception as e:
-        print(f"Error sending email: {e}")
+        print(f"SendGrid error: {e}")
         return False
 
-@app.route('/', methods=['GET', 'POST'])
-def upload_build():
+@app.route('/')
+def home():
+    return render_template('pages/home.html', active_page='home')
+
+@app.route('/download')
+def download():
+    return render_template('pages/download.html', active_page='download')
+
+@app.route('/documentation')
+def documentation():
+    return render_template('pages/documentation.html', active_page='documentation')
+
+@app.route('/training/submit', methods=['GET', 'POST'])
+def training_submit():
     form = UploadForm()
     if form.validate_on_submit():
         builds = []
@@ -94,10 +116,10 @@ def upload_build():
         has_screenshots = False
         
         while True:
-            space_files = request.files.getlist(f'space_screenshots_{build_index}')
-            ground_files = request.files.getlist(f'ground_screenshots_{build_index}')
+            screenshots = request.files.getlist(f'screenshots_{build_index}')
+            build_type = request.form.get(f'build_type_{build_index}')
             
-            if not any(f.filename for f in space_files + ground_files):
+            if not any(f.filename for f in screenshots) or not build_type:
                 break
                 
             build_id = str(uuid.uuid4())
@@ -109,26 +131,18 @@ def upload_build():
                 consent_test_suite=form.consent_test_suite.data
             )
             
-            screenshots = []
+            saved_screenshots = []
+            is_test_suite_only = determine_screenshot_usage(build)
             
-            # Process space screenshots
-            for file in space_files:
+            for file in screenshots:
                 if file.filename:
-                    screenshot = save_screenshot(file, build_id, 'space')
+                    screenshot = save_screenshot(file, build_id, build_type, is_test_suite_only)
                     if screenshot:
-                        screenshots.append(screenshot)
+                        saved_screenshots.append(screenshot)
                         has_screenshots = True
             
-            # Process ground screenshots
-            for file in ground_files:
-                if file.filename:
-                    screenshot = save_screenshot(file, build_id, 'ground')
-                    if screenshot:
-                        screenshots.append(screenshot)
-                        has_screenshots = True
-            
-            if screenshots:
-                build.screenshots = screenshots
+            if saved_screenshots:
+                build.screenshots = saved_screenshots
                 builds.append(build)
             
             build_index += 1
@@ -158,9 +172,13 @@ def upload_build():
             flash('There was an error processing your submission. Please try again later.')
             print(f"Database error: {e}")
         
-        return redirect(url_for('upload_build'))
+        return redirect(url_for('training_submit'))
     
-    return render_template('index.html', form=form)
+    return render_template('pages/training_submit.html', form=form, active_page='training')
+
+@app.route('/contact')
+def contact():
+    return render_template('pages/contact.html', active_page='contact')
 
 if __name__ == '__main__':
     with app.app_context():

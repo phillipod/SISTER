@@ -1,124 +1,130 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <style>
         body {
             font-family: Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #2c3e50;
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
         }
         .header {
-            background-color: #2c3e50;
-            color: white;
-            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            max-width: 100px;
             margin-bottom: 20px;
-            border-radius: 4px;
+        }
+        h1 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 24px;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 16px;
+            margin-top: 5px;
         }
         .content {
-            background-color: #f8f9fa;
+            background: #f8f9fa;
             padding: 20px;
-            border-radius: 4px;
-            margin-bottom: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
         }
-        .build-section {
-            background-color: white;
+        .build-info {
+            background: white;
             padding: 15px;
-            margin-bottom: 15px;
             border-radius: 4px;
-            border: 1px solid #dee2e6;
+            margin: 10px 0;
         }
-        .consent-section {
-            background-color: #e9ecef;
-            padding: 20px;
+        .consent-info {
+            background: white;
+            padding: 15px;
             border-radius: 4px;
-            margin-bottom: 20px;
+            margin: 20px 0;
         }
-        .footer {
-            font-size: 0.9em;
-            color: #6c757d;
-            text-align: center;
-            margin-top: 20px;
-        }
-        ul {
-            list-style-type: none;
-            padding-left: 0;
-        }
-        li {
-            margin-bottom: 10px;
+        .consent-item {
+            margin: 10px 0;
             padding-left: 20px;
             position: relative;
         }
-        li:before {
-            content: "•";
+        .consent-item::before {
+            content: '✓';
             position: absolute;
             left: 0;
-            color: #3498db;
+            color: #27ae60;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #95a5a6;
+            text-align: right;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>STO Build Screenshots Submission</h1>
-        <p>Thank you for contributing to our project!</p>
+        <img src="https://github.com/phillipod/SISTER/raw/main/docs/icon.png" alt="SISTER Logo" class="logo">
+        <h1>SISTER</h1>
+        <div class="subtitle">Screenshot Interrogation System for Traits and Equipment Recognition</div>
     </div>
 
     <div class="content">
-        <p>We have received your build screenshots submission. Please review the details below and confirm your consent by replying to this email with "I CONFIRM".</p>
+        <h2>Thank You for Your Contribution!</h2>
+        <p>We have received your build screenshot submission. Here's a summary of what you've shared with us:</p>
 
-        <h2>Your Submission Details</h2>
         {% for build in builds %}
-        <div class="build-section">
+        <div class="build-info">
             <h3>Build #{{ loop.index }}</h3>
-            <h4>Space Screenshots:</h4>
             <ul>
                 {% for screenshot in build.screenshots %}
-                    {% if screenshot.screenshot_type == 'space' %}
-                        <li>{{ screenshot.original_filename }}</li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
-
-            <h4>Ground Screenshots:</h4>
-            <ul>
-                {% for screenshot in build.screenshots %}
-                    {% if screenshot.screenshot_type == 'ground' %}
-                        <li>{{ screenshot.original_filename }}</li>
-                    {% endif %}
+                <li>{{ screenshot.type|title }} build screenshot: {{ screenshot.filename }}</li>
                 {% endfor %}
             </ul>
         </div>
         {% endfor %}
 
-        <div class="consent-section">
-            <h3>Your Consent Choices</h3>
-            <ul>
-                {% if consents.ml_recognition %}
-                <li>Screenshots will be published in the ML training data repository and used for ML training - label recognition</li>
-                {% endif %}
-                {% if consents.ml_future %}
-                <li>Screenshots will be published in the ML training data repository and may be used for future ML training (limited to label recognition, build classification, icon group detection, or icon recognition)</li>
-                {% endif %}
-                {% if consents.test_suite %}
-                <li>Screenshots will be published in the core repository and used in the core test suite</li>
-                {% endif %}
-            </ul>
+        <div class="consent-info">
+            <h3>Your Consent Preferences</h3>
+            {% if consents.ml_recognition %}
+            <div class="consent-item">
+                Machine learning recognition training
+            </div>
+            {% endif %}
+            {% if consents.ml_future %}
+            <div class="consent-item">
+                Future machine learning research
+            </div>
+            {% endif %}
+            {% if consents.test_suite %}
+            <div class="consent-item">
+                Test suite inclusion
+            </div>
+            {% endif %}
         </div>
 
-        <h3>How to Confirm</h3>
-        <p>To confirm your consent and complete the submission:</p>
-        <ol>
-            <li>Review all the details above carefully</li>
-            <li>Reply to this email with the exact text: "I CONFIRM"</li>
-        </ol>
-        <p>Your screenshots will only be used after we receive your confirmation.</p>
+        <p>Your screenshots will be used in accordance with your consent preferences above. If you need to make any changes or have questions, please contact us through our <a href="https://github.com/phillipod/SISTER/issues">GitHub issues page</a>.</p>
+
+        <div class="timestamp">
+            Submission received: {{ timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+        </div>
     </div>
 
     <div class="footer">
-        <p>This is an automated message. Please do not reply with questions or comments.</p>
-        <p>If you need assistance, please create an issue on our GitHub repository.</p>
+        <p>This is an automated message from the SISTER project. Please do not reply to this email.</p>
+        <p>Visit our <a href="https://github.com/phillipod/SISTER">GitHub repository</a> for more information.</p>
     </div>
 </body>
 </html> 

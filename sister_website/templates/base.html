@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SISTER{% endblock %} - Screenshot Interrogation System</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/icon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <a href="{{ url_for('home') }}" class="github-link">
+                    <img src="{{ url_for('static', filename='img/icon.png') }}" alt="SISTER Logo" class="logo">
+                </a>
+                <h1>SISTER</h1>
+                <div class="subtitle">Screenshot Interrogation System for Traits and Equipment Recognition</div>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="{{ url_for('home') }}" {% if active_page == 'home' %}class="active"{% endif %}>Home</a></li>
+                    <li><a href="{{ url_for('download') }}" {% if active_page == 'download' %}class="active"{% endif %}>Download</a></li>
+                    <li><a href="{{ url_for('documentation') }}" {% if active_page == 'documentation' %}class="active"{% endif %}>Documentation</a></li>
+                    <li><a href="{{ url_for('training_submit') }}" {% if active_page == 'training' %}class="active"{% endif %}>Training Data</a></li>
+                    <li><a href="{{ url_for('contact') }}" {% if active_page == 'contact' %}class="active"{% endif %}>Contact</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer>
+            <p>This is a community project for Star Trek Online players. Not affiliated with Cryptic Studios, DECA Games, or Embracer Group.</p>
+            <p class="github-footer">
+                <a href="https://github.com/phillipod/SISTER" target="_blank" rel="noopener noreferrer">View on GitHub</a> | 
+                <a href="https://github.com/phillipod/SISTER/issues" target="_blank" rel="noopener noreferrer">Report Issues</a>
+            </p>
+        </footer>
+    </div>
+</body>
+</html> 

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Download{% endblock %}
+
+{% block content %}
+<section class="download-section">
+    <h2>Download SISTER</h2>
+    <p class="lead">Choose your preferred installation method below to get started with SISTER.</p>
+
+    <div class="download-options">
+        <div class="download-card windows">
+            <h3>Windows Installer (Recommended)</h3>
+            <p>Download our MSI installer for the easiest setup experience on Windows.</p>
+            <ul>
+                <li>Automatic path configuration</li>
+                <li>Pre-configured settings</li>
+                <li>Easy updates</li>
+            </ul>
+            <a href="https://github.com/phillipod/SISTER/releases/tag/v2025.05.31-release" class="download-button" target="_blank" rel="noopener noreferrer">
+                Download MSI Installer
+                <span class="version">v2025.05.31</span>
+            </a>
+        </div>
+
+        <div class="download-card pip">
+            <h3>Install via pip (Cross-platform)</h3>
+            <p>Install from source using pip for maximum flexibility and platform independence.</p>
+            
+            <div class="installation-steps">
+                <h4>Option 1: Clone and Install</h4>
+                <div class="code-block">
+                    <code>git clone https://github.com/phillipod/SISTER.git</code>
+                    <code>cd SISTER</code>
+                    <code>pip install .</code>
+                </div>
+
+                <h4>Option 2: Local Installation</h4>
+                <p>If you already have the codebase locally:</p>
+                <div class="code-block">
+                    <code>cd SISTER</code>
+                    <code>pip install .</code>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="post-install">
+    <h2>Next Steps</h2>
+    <div class="next-steps-grid">
+        <div class="step-card">
+            <h3>1. Download Icon Assets (Optional)</h3>
+            <p>Icons are downloaded automatically as needed, but you can pre-download all icons if desired:</p>
+            <div class="code-block">
+                <code>sister-cli --download</code>
+            </div>
+        </div>
+
+        <div class="step-card">
+            <h3>2. Build Hash Cache (Optional)</h3>
+            <p>A hash cache is included by default. Only build it if you've downloaded new icons:</p>
+            <div class="code-block">
+                <code>sister-cli --build-hash-cache</code>
+            </div>
+            <div class="info-box">
+                <p>Note: The --download command must be run before --build-hash-cache</p>
+            </div>
+        </div>
+
+        <div class="step-card">
+            <h3>3. Read the Documentation</h3>
+            <p>Learn how to use SISTER effectively with our comprehensive documentation.</p>
+            <a href="{{ url_for('documentation') }}" class="step-button">View Documentation</a>
+        </div>
+    </div>
+</section>
+
+<section class="system-requirements">
+    <h2>System Requirements</h2>
+    <div class="requirements-grid">
+        <div class="req-card">
+            <h3>Minimum Requirements</h3>
+            <ul>
+                <li>Python 3.11 or higher</li>
+                <li>8GB RAM</li>
+                <li>Storage:
+                    <ul>
+                        <li>Source install: 500MB</li>
+                        <li>MSI installer: 1.5GB</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        <div class="req-card">
+            <h3>Recommended</h3>
+            <ul>
+                <li>Python 3.11 or higher</li>
+                <li>16GB RAM</li>
+                <li>CUDA-capable GPU (for OCR acceleration)</li>
+            </ul>
+        </div>
+    </div>
+</section>
+{% endblock %} 
