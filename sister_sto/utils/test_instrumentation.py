@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from typing import List, Dict, Any
+import hashlib
 
 class TestInstrumentationCollector:
     """Collects and manages test instrumentation data during pipeline execution."""
@@ -9,6 +10,7 @@ class TestInstrumentationCollector:
         self.data = {
             "input": {
                 "screenshots": [],  # Will store screenshot names/paths only
+                "screenshot_hashes": [],  # MD5 hashes of screenshots
                 "config": {}  # Will store pipeline config
             },
             "locate_labels": {
@@ -43,8 +45,25 @@ class TestInstrumentationCollector:
         }
     
     def record_input(self, screenshot_paths: List[str], config: Dict[str, Any]):
-        """Record input screenshot paths and config, but not the actual image data"""
+        """
+        Record input screenshot paths, their MD5 hashes, and config.
+        
+        Args:
+            screenshot_paths: List of paths to screenshot files
+            config: Pipeline configuration
+        """
         self.data["input"]["screenshots"] = [str(Path(p).name) for p in screenshot_paths]
+        self.data["input"]["screenshot_hashes"] = []
+        
+        # Calculate MD5 hash for each screenshot
+        for path in screenshot_paths:
+            try:
+                with open(path, 'rb') as f:
+                    file_hash = hashlib.md5(f.read()).hexdigest()
+                    self.data["input"]["screenshot_hashes"].append(file_hash)
+            except Exception as e:
+                self.data["input"]["screenshot_hashes"].append(None)
+        
         self.data["input"]["config"] = config
     
     def record_labels(self, labels: List[str], positions: List[Dict[str, int]]):

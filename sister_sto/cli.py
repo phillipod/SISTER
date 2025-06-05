@@ -226,9 +226,26 @@ def on_interactive(stage, ctx): return ctx  # no-op
 
 
 def handle_test_instrumentation_complete(ctx, output, all_results, save_dir, save_file, collector):
-    """Handle test instrumentation data saving at pipeline completion."""
+    """
+    Handle test instrumentation data saving at pipeline completion.
+    
+    Args:
+        ctx: Pipeline context
+        output: Pipeline output
+        all_results: All pipeline results
+        save_dir: Directory to save the test data
+        save_file: Base filename for the test data
+        collector: TestInstrumentationCollector instance
+    """
     if collector:
-        output_file = Path(save_dir) / f"{save_file}_test_data.json"
+        # Get the first screenshot hash if available
+        screenshot_hash = ""
+        if hasattr(collector, 'data') and 'input' in collector.data:
+            hashes = collector.data['input'].get('screenshot_hashes', [])
+            if hashes and hashes[0]:
+                screenshot_hash = f"_{hashes[0]}"
+        
+        output_file = Path(save_dir) / f"{save_file}{screenshot_hash}_test_data.json"
         print(f"Saving test instrumentation data to {output_file}")
         collector.save(output_file)
 
