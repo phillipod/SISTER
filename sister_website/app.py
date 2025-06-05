@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 import uuid
 
-load_dotenv()
+load_dotenv(dotenv_path=os.getenv('DOTENV_PATH', '.env')) # Load .env file from DOTENV_PATH or local .env
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-please-change')
