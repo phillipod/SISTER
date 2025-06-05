@@ -636,6 +636,7 @@ footer {
 }
 
 .hero-section h2 {
+    color: white;
     font-size: 2.5rem;
     margin-bottom: 1.5rem;
     border: none;
