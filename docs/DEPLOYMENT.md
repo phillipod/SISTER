@@ -164,8 +164,8 @@ Create `/var/www/sister/instance/config.py`:
 ```python
 # Flask application configuration
 SECRET_KEY = 'your-secure-secret-key'  # Change this!
-SQLALCHEMY_DATABASE_URI = 'sqlite:///sister.db'
-UPLOAD_FOLDER = '/var/www/sister/uploads'
+SQLALCHEMY_DATABASE_URI = 'sqlite:////var/www/sister/instance/sister.db'
+UPLOAD_FOLDER = '/var/www/sister/instance/uploads'
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
 
 # SISTER configuration
@@ -180,13 +180,13 @@ After deployment, your directory structure should look like this:
 ```
 /var/www/sister/
 ├── instance/
-│   └── config.py
+│   ├── config.py
+│   └── uploads/
 ├── static/
 │   ├── css/
 │   ├── js/
 │   └── img/
 ├── templates/
-├── uploads/
 ├── venv/
 ├── wsgi.py
 └── sister.py
@@ -256,6 +256,4 @@ sudo systemctl restart apache2
 ### Backup
 
 Regularly backup these locations:
-- `/var/www/sister/instance/`
-- `/var/www/sister/uploads/`
-- Application database 
+- `/var/www/sister/instance/` (includes uploads and the database)
