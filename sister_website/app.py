@@ -107,9 +107,18 @@ def download():
 def documentation():
     return render_template('pages/documentation.html', active_page='documentation')
 
+
+@app.route('/training')
+def training():
+    form = UploadForm()
+    return render_template('pages/training.html', form=form, active_page='training')
+
 @app.route('/training/submit', methods=['GET', 'POST'])
 def training_submit():
     form = UploadForm()
+    if request.method == 'GET':
+        return redirect(url_for('training'))
+
     if form.validate_on_submit():
         builds = []
         build_index = 0
@@ -172,9 +181,9 @@ def training_submit():
             flash('There was an error processing your submission. Please try again later.')
             print(f"Database error: {e}")
         
-        return redirect(url_for('training_submit'))
-    
-    return render_template('pages/training_submit.html', form=form, active_page='training')
+        return redirect(url_for('training'))
+
+    return render_template('pages/training.html', form=form, active_page='training')
 
 @app.route('/contact')
 def contact():

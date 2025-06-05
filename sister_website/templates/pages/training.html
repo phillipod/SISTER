@@ -33,7 +33,7 @@
         <div class="tip">💡 Tip: You can add multiple builds using the "Add Another Build" button below.</div>
     </div>
 
-    <form method="post" enctype="multipart/form-data" class="upload-form" id="uploadForm">
+    <form action="{{ url_for('training_submit') }}" method="post" enctype="multipart/form-data" class="upload-form" id="uploadForm">
         {{ form.csrf_token }}
         
         <div class="form-section">
