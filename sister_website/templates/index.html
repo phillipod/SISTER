@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTER - Build Screenshot Collection</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/icon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="https://github.com/phillipod/SISTER" class="github-link" target="_blank" rel="noopener noreferrer">
+                <img src="{{ url_for('static', filename='img/icon.png') }}" alt="SISTER Logo" class="logo">
+            </a>
+            <h1>SISTER</h1>
+            <div class="subtitle">Screenshot Interrogation System for Traits and Equipment Recognition</div>
+            <div class="subheader">Build Screenshot Collection</div>
+        </header>
+
+        <main>
+            <section class="info-section">
+                <h2>About This Project</h2>
+                <p>We're collecting Star Trek Online build screenshots to improve our build analysis tools. Your contribution will help make better tools for the STO community.</p>
+                
+                <div class="github-info">
+                    <p>SISTER is an open-source project. Visit our <a href="https://github.com/phillipod/SISTER" target="_blank" rel="noopener noreferrer">GitHub repository</a> to learn more about the project, download the latest release, or contribute.</p>
+                    <p>Current release: <a href="https://github.com/phillipod/SISTER/releases/tag/v2025.05.31-release" target="_blank" rel="noopener noreferrer">v2025.05.31</a></p>
+                </div>
+                
+                <h3>How It Works</h3>
+                <ol>
+                    <li>Upload screenshots for your builds (space and/or ground)</li>
+                    <li>Provide your email address</li>
+                    <li>Select which uses you consent to</li>
+                    <li>Receive a detailed consent form via email</li>
+                    <li>Reply to confirm your consent</li>
+                </ol>
+
+                <div class="screenshot-guide">
+                    <h3>Screenshot Guide</h3>
+                    <p>For each build, please include as many of these screenshots as possible:</p>
+                    
+                    <h4>Space Build</h4>
+                    <ul>
+                        <li>Ship equipment and stats screen</li>
+                        <li>Active space traits</li>
+                        <li>Space skill tree</li>
+                    </ul>
+
+                    <h4>Ground Build</h4>
+                    <ul>
+                        <li>Character equipment and stats screen</li>
+                        <li>Active ground traits</li>
+                        <li>Ground skills</li>
+                    </ul>
+
+                    <p class="tip">💡 Tip: You can add multiple builds using the "Add Another Build" button below.</p>
+                </div>
+            </section>
+
+            <section class="upload-section">
+                <h2>Upload Your Build Screenshots</h2>
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="messages">
+                            {% for message in messages %}
+                                <div class="message">{{ message }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
+                    {{ form.csrf_token }}
+                    <div class="form-group">
+                        {{ form.email.label }}
+                        {{ form.email(class="form-control") }}
+                    </div>
+                    
+                    <div id="builds-container">
+                        <div class="build-section" data-build-index="0">
+                            <div class="build-header">
+                                <h3>Build #1</h3>
+                                <button type="button" class="remove-build-btn" onclick="removeBuild(this)" style="display: none;">Remove Build</button>
+                            </div>
+                            <div class="screenshots-section">
+                                <h4>Space Build Screenshots</h4>
+                                <div class="form-group">
+                                    <div class="input-help">Select one or more screenshots showing your space build details</div>
+                                    <input type="file" class="form-control" name="space_screenshots_0" multiple accept=".png,.jpg,.jpeg">
+                                </div>
+
+                                <h4>Ground Build Screenshots</h4>
+                                <div class="form-group">
+                                    <div class="input-help">Select one or more screenshots showing your ground build details</div>
+                                    <input type="file" class="form-control" name="ground_screenshots_0" multiple accept=".png,.jpg,.jpeg">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="add-build-btn" onclick="addBuild()">Add Another Build</button>
+
+                    <div class="consent-group">
+                        <h3>Consent Options</h3>
+                        <div class="consent-option">
+                            {{ form.consent_ml_recognition(class="consent-checkbox") }}
+                            {{ form.consent_ml_recognition.label }}
+                        </div>
+                        <div class="consent-option">
+                            {{ form.consent_ml_future(class="consent-checkbox") }}
+                            {{ form.consent_ml_future.label }}
+                        </div>
+                        <div class="consent-option">
+                            {{ form.consent_test_suite(class="consent-checkbox") }}
+                            {{ form.consent_test_suite.label }}
+                        </div>
+                    </div>
+                    <button type="submit" class="submit-btn">Submit All Builds</button>
+                </form>
+            </section>
+
+            <section class="privacy-section">
+                <h2>Privacy & Data Usage</h2>
+                <p>Your privacy is important to us. Here's how we handle your data:</p>
+                <ul>
+                    <li>Screenshots are stored securely and only used for the purposes you consent to</li>
+                    <li>Screenshots will be published in public GitHub repositories as specified in the consent options</li>
+                    <li>Your email is only used for sending the consent form and will not be shared</li>
+                    <li>You can withdraw consent at any time by <a href="https://github.com/phillipod/SISTER/issues" target="_blank" rel="noopener noreferrer">creating an issue on GitHub</a></li>
+                    <li>Data usage is strictly limited to improving STO build analysis tools</li>
+                </ul>
+                <p>By submitting your screenshots, you'll receive an email with a detailed consent form. Your data will only be used after you reply to confirm your consent.</p>
+            </section>
+        </main>
+
+        <footer>
+            <p>This is a community project for Star Trek Online players. Not affiliated with Cryptic Studios or Perfect World Entertainment.</p>
+            <p class="github-footer">
+                <a href="https://github.com/phillipod/SISTER" target="_blank" rel="noopener noreferrer">View on GitHub</a> | 
+                <a href="https://github.com/phillipod/SISTER/issues" target="_blank" rel="noopener noreferrer">Report Issues</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        let buildCount = 1;
+
+        function addBuild() {
+            buildCount++;
+            const buildsContainer = document.getElementById('builds-container');
+            const newBuildIndex = buildsContainer.children.length;
+
+            const buildSection = document.createElement('div');
+            buildSection.className = 'build-section';
+            buildSection.dataset.buildIndex = newBuildIndex;
+
+            buildSection.innerHTML = `
+                <div class="build-header">
+                    <h3>Build #${buildCount}</h3>
+                    <button type="button" class="remove-build-btn" onclick="removeBuild(this)">Remove Build</button>
+                </div>
+                <div class="screenshots-section">
+                    <h4>Space Build Screenshots</h4>
+                    <div class="form-group">
+                        <div class="input-help">Select one or more screenshots showing your space build details</div>
+                        <input type="file" class="form-control" name="space_screenshots_${newBuildIndex}" multiple accept=".png,.jpg,.jpeg">
+                    </div>
+
+                    <h4>Ground Build Screenshots</h4>
+                    <div class="form-group">
+                        <div class="input-help">Select one or more screenshots showing your ground build details</div>
+                        <input type="file" class="form-control" name="ground_screenshots_${newBuildIndex}" multiple accept=".png,.jpg,.jpeg">
+                    </div>
+                </div>
+            `;
+
+            buildsContainer.appendChild(buildSection);
+            updateRemoveButtons();
+        }
+
+        function removeBuild(button) {
+            const buildSection = button.closest('.build-section');
+            buildSection.remove();
+            updateBuildNumbers();
+            updateRemoveButtons();
+        }
+
+        function updateBuildNumbers() {
+            const buildSections = document.querySelectorAll('.build-section');
+            buildCount = buildSections.length;
+            
+            buildSections.forEach((section, index) => {
+                const header = section.querySelector('h3');
+                header.textContent = `Build #${index + 1}`;
+                
+                // Update file input names
+                const spaceInput = section.querySelector('input[name^="space_screenshots_"]');
+                const groundInput = section.querySelector('input[name^="ground_screenshots_"]');
+                
+                spaceInput.name = `space_screenshots_${index}`;
+                groundInput.name = `ground_screenshots_${index}`;
+                
+                section.dataset.buildIndex = index;
+            });
+        }
+
+        function updateRemoveButtons() {
+            const removeButtons = document.querySelectorAll('.remove-build-btn');
+            removeButtons.forEach(button => {
+                button.style.display = buildCount > 1 ? 'block' : 'none';
+            });
+        }
+    </script>
+</body>
+</html> 
