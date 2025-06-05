@@ -43,6 +43,9 @@ The application will be available at `http://localhost:5000`
 - Make sure to change the SECRET_KEY in production
 - Use HTTPS in production
 - Configure proper file upload limits
+- Uploaded files and the database are stored in the Flask instance folder
+- Validate uploaded file types using python-magic
+  - Requires the libmagic system package
 - Set up proper email verification
 - Implement rate limiting for production use
 
