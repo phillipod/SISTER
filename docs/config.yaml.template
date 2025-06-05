@@ -1,0 +1,59 @@
+# SISTER Configuration Template
+# Copy this file to ~/.sister_sto/config/config.yaml and modify as needed
+
+# Base directory for all SISTER data
+data_dir: "~/.sister_sto"
+
+# Directory for log files
+log_dir: "log"
+
+# Directory for downloaded icon assets
+icon_dir: "icons"
+
+# Directory for icon overlay images
+overlay_dir: "overlays"
+
+# Directory for output files
+output_dir: "./"
+
+# Log level: DEBUG, VERBOSE, INFO, WARNING, ERROR
+log_level: "WARNING"
+
+# Enable GPU acceleration for OCR (requires CUDA)
+gpu: false
+
+# Image processing settings
+image:
+  # Disable automatic downscaling to 1920x1080
+  # Set to true if you want to process images at their original resolution
+  no_resize: false
+
+# Pipeline configuration
+pipeline:
+  # Number of worker processes for parallel processing
+  # Defaults to number of CPU cores - 1
+  workers: null
+
+  # Stages configuration
+  stages:
+    locate_labels:
+      # OCR confidence threshold (0.0 - 1.0)
+      confidence_threshold: 0.5
+      
+    detect_icons:
+      # Minimum similarity score for icon matching (0.0 - 1.0)
+      match_threshold: 0.85
+      
+    detect_icon_overlays:
+      # Minimum similarity score for overlay detection (0.0 - 1.0)
+      overlay_threshold: 0.75
+
+# Cache settings
+cache:
+  # Directory for hash cache and other cached data
+  dir: "cache"
+  
+  # Whether to use the hash cache for icon matching
+  # The hash cache is included by default and only needs to be rebuilt
+  # when new icons are downloaded
+  use_hash_cache: true 
