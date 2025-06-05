@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify
+import magic
 from werkzeug.utils import secure_filename
 from flask_wtf import FlaskForm
 from wtforms import StringField, BooleanField
@@ -15,12 +16,14 @@ import uuid
 
 load_dotenv(dotenv_path=os.getenv('DOTENV_PATH', '.env')) # Load .env file from DOTENV_PATH or local .env
 
-app = Flask(__name__)
+# Store data in the instance folder so it is kept outside the web root
+app = Flask(__name__, instance_relative_config=True)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-please-change')
-app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['UPLOAD_FOLDER'] = os.path.join(app.instance_path, 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB max file size
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///submissions.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'submissions.db')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+ALLOWED_MIME_TYPES = {'image/png', 'image/jpeg'}
 
 db = SQLAlchemy(app)
 
@@ -52,8 +55,16 @@ class UploadForm(FlaskForm):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def allowed_mime(file_storage):
+    try:
+        sample = file_storage.read(2048)
+        mime_type = magic.from_buffer(sample, mime=True)
+    finally:
+        file_storage.seek(0)
+    return mime_type in ALLOWED_MIME_TYPES
+
 def save_screenshot(file, build_id, build_type, is_test_suite=False):
-    if file and allowed_file(file.filename):
+    if file and allowed_file(file.filename) and allowed_mime(file):
         filename = secure_filename(file.filename)
         timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
         unique_filename = f"{build_id}_{timestamp}_{filename}"
@@ -292,5 +303,7 @@ def handle_email_reply():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+    # Ensure the instance and upload directories exist
+    os.makedirs(app.instance_path, exist_ok=True)
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     app.run(debug=True)
