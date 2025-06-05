@@ -1,12 +1,14 @@
 import os
 from datetime import datetime
-from flask import Flask, render_template, request, flash, redirect, url_for, session
+from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify
 from werkzeug.utils import secure_filename
 from flask_wtf import FlaskForm
 from wtforms import StringField, BooleanField
 from wtforms.validators import DataRequired, Email
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+from mailersend import emails
+import hashlib
+import hmac
+import json
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 import uuid
@@ -28,6 +30,8 @@ class Build(db.Model):
     consent_ml_recognition = db.Column(db.Boolean, default=False)
     consent_ml_future = db.Column(db.Boolean, default=False)
     consent_test_suite = db.Column(db.Boolean, default=False)
+    is_accepted = db.Column(db.Boolean, default=False)
+    acceptance_token = db.Column(db.String(64), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     screenshots = db.relationship('Screenshot', backref='build', lazy=True)
 
@@ -73,26 +77,60 @@ def determine_screenshot_usage(build):
             not build.consent_ml_recognition and 
             not build.consent_ml_future)
 
+def generate_acceptance_token(build_id, email):
+    """Generate a secure token for email acceptance"""
+    secret = os.getenv('SECRET_KEY', 'dev-key-please-change')
+    message = f"{build_id}:{email}".encode('utf-8')
+    return hmac.new(secret.encode('utf-8'), message, hashlib.sha256).hexdigest()
+
 def send_consent_email(email, builds, consents):
     try:
-        sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
+        mailer = emails.NewEmail(os.getenv('MAILERSEND_API_KEY'))
         
-        message = Mail(
-            from_email=os.getenv('SENDGRID_FROM_EMAIL'),
-            to_emails=email,
-            subject='SISTER - Build Screenshot Submission Confirmation',
-            html_content=render_template(
-                'email_template.html',
-                builds=builds,
-                consents=consents,
-                timestamp=datetime.utcnow()
-            )
+        # Create acceptance tokens for each build
+        for build in builds:
+            build.acceptance_token = generate_acceptance_token(build.id, email)
+        
+        db.session.commit()
+        
+        # Prepare email content
+        mail_body = {}
+        
+        mail_from = {
+            "name": "SISTER Team",
+            "email": os.getenv('MAILERSEND_FROM_EMAIL')
+        }
+        
+        reply_to = {
+            "name": "SISTER Support",
+            "email": os.getenv('MAILERSEND_REPLY_TO', os.getenv('MAILERSEND_FROM_EMAIL'))
+        }
+        
+        # Generate the acceptance URL for the first build (we'll use the first one for simplicity)
+        acceptance_url = url_for('accept_license', token=builds[0].acceptance_token, _external=True)
+        
+        # Send the email
+        mailer.set_mail_from(mail_from, mail_body)
+        mailer.set_mail_to([{"email": email}], mail_body)
+        mailer.set_subject("SISTER - Build Screenshot Submission Confirmation", mail_body)
+        
+        # Render the email template with acceptance link
+        html_content = render_template(
+            'email_template.html',
+            builds=builds,
+            consents=consents,
+            acceptance_url=acceptance_url,
+            timestamp=datetime.utcnow()
         )
         
-        response = sg.send(message)
+        mailer.set_html_content(html_content, mail_body)
+        mailer.set_reply_to(reply_to, mail_body)
+        
+        # Send the email
+        response = mailer.send(mail_body)
         return response.status_code == 202
     except Exception as e:
-        print(f"SendGrid error: {e}")
+        print(f"MailerSend error: {e}")
         return False
 
 @app.route('/')
@@ -106,7 +144,6 @@ def download():
 @app.route('/documentation')
 def documentation():
     return render_template('pages/documentation.html', active_page='documentation')
-
 
 @app.route('/training')
 def training():
@@ -189,8 +226,71 @@ def training_submit():
 def contact():
     return render_template('pages/contact.html', active_page='contact')
 
+@app.route('/api/accept-license/<token>', methods=['GET', 'POST'])
+def accept_license(token):
+    """Handle license acceptance via email link"""
+    if request.method == 'POST':
+        # Handle form submission if needed
+        data = request.get_json()
+        token = data.get('token')
+    
+    # Find the build by acceptance token
+    build = Build.query.filter_by(acceptance_token=token, is_accepted=False).first()
+    
+    if not build:
+        return jsonify({"status": "error", "message": "Invalid or expired token"}), 400
+    
+    # Update the build to mark as accepted
+    build.is_accepted = True
+    build.accepted_at = datetime.utcnow()
+    
+    try:
+        db.session.commit()
+        return jsonify({"status": "success", "message": "Thank you for accepting the license!"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "An error occurred. Please try again later."}), 500
+
+# Webhook endpoint for handling email replies
+@app.route('/api/webhooks/email-reply', methods=['POST'])
+def handle_email_reply():
+    """Handle email replies from MailerSend"""
+    # Verify the webhook signature
+    signature = request.headers.get('X-Message-Id')  # Adjust based on MailerSend's webhook format
+    
+    # In a production environment, you should verify the webhook signature here
+    # This is a simplified example
+    
+    try:
+        data = request.get_json()
+        
+        # Extract the email content and metadata
+        email_data = data.get('data', {})
+        email_from = email_data.get('from', {})
+        email_to = email_data.get('to', [{}])[0].get('email', '')
+        subject = email_data.get('subject', '')
+        text = email_data.get('text', '').lower()
+        
+        # Check if this is a reply to a consent email
+        if any(phrase in text for phrase in ['i accept', 'i agree', 'accept', 'agreed']):
+            # Find the user's most recent build that hasn't been accepted yet
+            build = Build.query.filter_by(
+                email=email_from.get('email', ''),
+                is_accepted=False
+            ).order_by(Build.created_at.desc()).first()
+            
+            if build:
+                build.is_accepted = True
+                build.accepted_at = datetime.utcnow()
+                db.session.commit()
+        
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        print(f"Error processing email reply: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    app.run(debug=True) 
+    app.run(debug=True)

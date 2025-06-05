@@ -115,7 +115,22 @@
             {% endif %}
         </div>
 
-        <p>Your screenshots will be used in accordance with your consent preferences above. If you need to make any changes or have questions, please contact us through our <a href="https://github.com/phillipod/SISTER/issues">GitHub issues page</a>.</p>
+        <div class="acceptance-section" style="background: #e8f4fd; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #3498db;">
+            <h3 style="margin-top: 0; color: #2c3e50;">✅ Accept License Terms</h3>
+            <p>To complete your submission and confirm your consent, please accept the license terms by either:</p>
+            <ol>
+                <li>Clicking the button below:</li>
+                <div style="text-align: center; margin: 20px 0;">
+                    <a href="{{ acceptance_url }}" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Accept License</a>
+                </div>
+                <li>Or reply to this email with "I accept" or "I agree" in the message body.</li>
+            </ol>
+            <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 0;">
+                <strong>Note:</strong> Your screenshots will only be used after you accept the license terms.
+            </p>
+        </div>
+
+        <p>If you need to make any changes or have questions, please contact us through our <a href="https://github.com/phillipod/SISTER/issues">GitHub issues page</a>.</p>
 
         <div class="timestamp">
             Submission received: {{ timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}

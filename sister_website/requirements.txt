@@ -1,9 +1,9 @@
 Flask==3.0.0
 python-dotenv==1.0.0
-sendgrid==6.10.0
+mailersend>=1.0.0
 Pillow==10.0.0
 werkzeug==3.0.0
 flask-wtf==1.2.1
 email-validator==2.1.0.post1
 Flask-SQLAlchemy==3.1.1
-SQLAlchemy==2.0.23 
+SQLAlchemy==2.0.23
