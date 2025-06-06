@@ -255,12 +255,14 @@ def training_submit():
                 break
                 
             build_id = str(uuid.uuid4())
+            token = generate_acceptance_token(build_id, form.email.data)
             build = Build(
                 id=build_id,
                 email=form.email.data,
                 consent_ml_recognition=form.consent_ml_recognition.data,
                 consent_ml_future=form.consent_ml_future.data,
-                consent_test_suite=form.consent_test_suite.data
+                consent_test_suite=form.consent_test_suite.data,
+                acceptance_token=token
             )
             
             saved_screenshots = []
