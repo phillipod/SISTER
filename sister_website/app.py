@@ -49,7 +49,7 @@ class Screenshot(db.Model):
 # Create the Flask application
 def create_app():
     # Load environment variables first
-    env_path = os.getenv('DOTENV_PATH', '/var/www/.env')
+    env_path = os.getenv('DOTENV_PATH', '/var/www/.sister.env')
     logger.info(f"Loading environment from: {env_path}")
     load_dotenv(dotenv_path=env_path, override=True)
 
