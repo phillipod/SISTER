@@ -2,6 +2,7 @@ import os
 import sys
 from datetime import datetime
 from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify
+from flask_migrate import Migrate
 import magic
 import re
 from werkzeug.utils import secure_filename
@@ -99,23 +100,15 @@ def create_app():
 
     # Initialize extensions
     db.init_app(app)
+    migrate = Migrate(app, db) # Initialize Flask-Migrate
 
     # Ensure upload directory exists
     os.makedirs(upload_folder, exist_ok=True)
     logger.info(f"Using upload folder: {upload_folder}")
     logger.info(f"Using database: {db_uri}")
 
-    # Create database tables
-    with app.app_context():
-        try:
-            db.create_all()
-            logger.info("Database tables created/verified")
-            # Verify tables exist
-            inspector = inspect(db.engine)
-            logger.info(f"Existing tables: {inspector.get_table_names()}")
-        except Exception as e:
-            logger.error(f"Error initializing database: {e}", exc_info=True)
-            raise
+    # Database creation/migration is now handled by Flask-Migrate
+    # The db.create_all() call has been removed.
 
     return app
 
