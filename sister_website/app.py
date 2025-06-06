@@ -322,7 +322,7 @@ def training_submit():
             flash('There was an error processing your submission. Please try again later.')
             logger.error(f"Database error in training_submit: {e}", exc_info=True)
         
-        return redirect(url_for('training'))
+        return redirect(url_for('acceptance_thank_you'))
 
     return render_template('pages/training.html', form=form, active_page='training')
 
@@ -431,6 +431,10 @@ def extract_reply_text(email_body_text):
         reply_lines.append(line)
     
     return "\n".join(reply_lines).strip()
+
+@app.route('/acceptance-thank-you')
+def acceptance_thank_you():
+    return render_template('acceptance_thank_you.html', active_page='acceptance_thank_you')
 
 # Webhook endpoint for handling email replies
 @app.route('/api/email-webhook', methods=['GET', 'POST'])
