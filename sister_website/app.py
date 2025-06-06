@@ -3,6 +3,7 @@ import sys
 from datetime import datetime
 from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify
 from flask_migrate import Migrate
+import uuid # Ensure uuid is imported for new models
 import magic
 import re
 from werkzeug.utils import secure_filename
@@ -38,6 +39,10 @@ class Submission(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     # Relationship to Builds
     builds = db.relationship('Build', backref='submission', lazy=True)
+    # Relationship to EmailLogs
+    email_logs = db.relationship('EmailLog', backref='submission', lazy=True, order_by=EmailLog.received_at)
+    # Relationship to LinkLogs
+    link_logs = db.relationship('LinkLog', backref='submission', lazy=True, order_by=LinkLog.clicked_at)
 
 class Build(db.Model):
     __tablename__ = 'build'
@@ -60,6 +65,30 @@ class Screenshot(db.Model):
     type = db.Column(db.String(10), nullable=False)  # 'space' or 'ground'
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_test_suite = db.Column(db.Boolean, default=False)
+
+class EmailLog(db.Model):
+    __tablename__ = 'email_log'
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    submission_id = db.Column(db.String(36), db.ForeignKey('submission.id'), nullable=False)
+    subject = db.Column(db.String(512), nullable=True)
+    body_text = db.Column(db.Text, nullable=True)
+    body_html = db.Column(db.Text, nullable=True)
+    received_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<EmailLog {self.id} for Submission {self.submission_id}>'
+
+class LinkLog(db.Model):
+    __tablename__ = 'link_log'
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    submission_id = db.Column(db.String(36), db.ForeignKey('submission.id'), nullable=False)
+    ip_address = db.Column(db.String(45), nullable=True)  # IPv4 and IPv6
+    user_agent = db.Column(db.Text, nullable=True)
+    clicked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    token_used = db.Column(db.String(64), nullable=False)
+
+    def __repr__(self):
+        return f'<LinkLog {self.id} for Submission {self.submission_id} from {self.ip_address}>'
 
 # Create the Flask application
 def create_app():
@@ -366,6 +395,21 @@ def accept_license(token):
     submission.accepted_at = datetime.utcnow()
     submission.acceptance_method = 'link'
 
+    # Log the link click event
+    try:
+        new_link_log = LinkLog(
+            submission_id=submission.id,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+            token_used=token,
+            clicked_at=submission.accepted_at # Use the same timestamp as acceptance
+        )
+        db.session.add(new_link_log)
+        logger.info(f"Logged link acceptance for submission {submission.id} from IP {request.remote_addr}")
+    except Exception as e_link_log:
+        # Log error but don't fail the acceptance if link logging fails
+        logger.error(f"Failed to create LinkLog for submission {submission.id}: {e_link_log}", exc_info=True)
+
     # Mark all associated Builds as accepted
     for build_item in submission.builds:
         build_item.is_accepted = True
@@ -509,6 +553,23 @@ def handle_email_reply():
             if not submission:
                 logger.warning(f"Email webhook: Submission with ID '{submission_id}' not found.")
                 return jsonify({"status": "error", "message": f"Submission {submission_id} not found."}), 404
+
+            # Log the received email now that we have a valid submission
+            try:
+                email_html_content = data.get('html', '') # Get HTML content if available
+                new_email_log = EmailLog(
+                    submission_id=submission.id,
+                    subject=email_subject, # Already extracted
+                    body_text=email_text_content, # Already extracted
+                    body_html=email_html_content
+                )
+                db.session.add(new_email_log)
+                db.session.commit()
+                logger.info(f"Email webhook: Logged email reply for submission_id='{submission.id}' to EmailLog ID {new_email_log.id}.")
+            except Exception as e_log:
+                db.session.rollback()
+                logger.error(f"Email webhook: Failed to log email for submission_id='{submission.id}': {e_log}", exc_info=True)
+                # Continue processing acceptance even if logging failed for now.
 
             if submission.is_accepted:
                 logger.info(f"Email webhook: Submission '{submission_id}' already accepted on {submission.accepted_at} by {submission.acceptance_method}.")
