@@ -172,7 +172,10 @@ def allowed_mime(file_storage):
         original_position = file_storage.tell()
         mime_type = magic.from_buffer(file_storage.read(2048), mime=True)
         file_storage.seek(original_position) # Reset stream to original position
-        return mime_type in ALLOWED_MIME_TYPES
+        current_app.logger.info(f"Detected MIME type: {mime_type} for file: {file_storage.filename}")
+        is_allowed = mime_type in ALLOWED_MIME_TYPES
+        current_app.logger.info(f"MIME type {mime_type} is_allowed: {is_allowed}")
+        return is_allowed
     except Exception as e:
         current_app.logger.error(f"Error checking MIME type: {e}")
         # Be cautious: if python-magic is not installed or fails, this could block uploads.
@@ -181,7 +184,30 @@ def allowed_mime(file_storage):
 
 def save_screenshot(file, build_id, build_type):
     """Saves a screenshot file, calculates its MD5, and creates a Screenshot record."""
-    if file and allowed_file(file.filename) and allowed_mime(file):
+    filename_for_log = file.filename if file else "No file provided"
+    current_app.logger.info(f"save_screenshot called for: {filename_for_log}")
+    
+    if not file:
+        current_app.logger.warning(f"save_screenshot: No file object provided.")
+        return None
+
+    is_file_allowed = allowed_file(file.filename)
+    current_app.logger.info(f"save_screenshot: allowed_file({file.filename}) result: {is_file_allowed}")
+
+    if not is_file_allowed:
+        current_app.logger.warning(f"save_screenshot: File extension not allowed for {file.filename}.")
+        return None
+
+    # Now check MIME type only if file extension is okay
+    is_mime_allowed = allowed_mime(file)
+    current_app.logger.info(f"save_screenshot: allowed_mime({file.filename}) result: {is_mime_allowed}")
+
+    if not is_mime_allowed:
+        current_app.logger.warning(f"save_screenshot: MIME type not allowed for {file.filename}.")
+        return None
+
+    # Proceed with saving if both checks passed
+    if is_file_allowed and is_mime_allowed:
         filename = secure_filename(file.filename)
         upload_path_obj = Path(current_app.config['UPLOAD_FOLDER'])
         upload_path_obj.mkdir(parents=True, exist_ok=True)
@@ -212,6 +238,8 @@ def save_screenshot(file, build_id, build_type):
         except Exception as e:
             current_app.logger.error(f"Error saving screenshot {filename}: {e}")
             return None
+    # This part is reached if the initial checks (is_file_allowed and is_mime_allowed) failed earlier
+    current_app.logger.warning(f"save_screenshot: Returning None for {filename_for_log} due to failed pre-checks (extension or MIME).")
     return None
 
 def generate_acceptance_token(submission_id, email):
@@ -286,7 +314,13 @@ def training_submit():
     if request.method == 'GET':
         return redirect(url_for('training'))
 
-    if form.validate_on_submit():
+    current_app.logger.info(f"training_submit: form.validate_on_submit() called.")
+    validation_result = form.validate_on_submit()
+    current_app.logger.info(f"training_submit: form.validate_on_submit() result: {validation_result}")
+    if not validation_result:
+        current_app.logger.warning(f"training_submit: Form validation failed. Errors: {form.errors}")
+
+    if validation_result:
         submission_id = str(uuid.uuid4()) 
         submission_email = form.email.data
         submission_acceptance_token = generate_acceptance_token(submission_id, submission_email)
@@ -329,8 +363,10 @@ def training_submit():
             
             build_index += 1
         
+        current_app.logger.info(f"training_submit: has_screenshots = {has_screenshots}")
         if not has_screenshots:
             flash('Please upload at least one screenshot for any build type.')
+            current_app.logger.warning("training_submit: No valid screenshots processed. Redirecting back to form.")
             return redirect(request.url)
         
         try:
