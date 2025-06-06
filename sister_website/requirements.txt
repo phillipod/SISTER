@@ -1,6 +1,6 @@
 Flask==3.0.0
 python-dotenv==1.0.0
-mailersend>=1.0.0
+-e ../forwardemail  # Install local forwardemail package in development mode
 Pillow==10.0.0
 werkzeug==3.0.0
 flask-wtf==1.2.1

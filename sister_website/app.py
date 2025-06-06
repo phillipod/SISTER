@@ -6,7 +6,7 @@ from werkzeug.utils import secure_filename
 from flask_wtf import FlaskForm
 from wtforms import StringField, BooleanField
 from wtforms.validators import DataRequired, Email
-from mailersend import emails
+from forwardemail import ForwardEmailClient, EmailMessage, EmailAddress
 import hashlib
 import hmac
 import json
@@ -96,7 +96,8 @@ def generate_acceptance_token(build_id, email):
 
 def send_consent_email(email, builds, consents):
     try:
-        mailer = emails.NewEmail(os.getenv('MAILERSEND_API_KEY'))
+        # Initialize the ForwardEmail client
+        client = ForwardEmailClient(api_key=os.getenv('FORWARD_EMAIL_API_KEY'))
         
         # Create acceptance tokens for each build
         for build in builds:
@@ -104,26 +105,20 @@ def send_consent_email(email, builds, consents):
         
         db.session.commit()
         
-        # Prepare email content
-        mail_body = {}
-        
-        mail_from = {
-            "name": "SISTER Team",
-            "email": os.getenv('MAILERSEND_FROM_EMAIL')
-        }
-        
-        reply_to = {
-            "name": "SISTER Support",
-            "email": os.getenv('MAILERSEND_REPLY_TO', os.getenv('MAILERSEND_FROM_EMAIL'))
-        }
-        
-        # Generate the acceptance URL for the first build (we'll use the first one for simplicity)
+        # Generate the acceptance URL for the first build
         acceptance_url = url_for('accept_license', token=builds[0].acceptance_token, _external=True)
         
-        # Send the email
-        mailer.set_mail_from(mail_from, mail_body)
-        mailer.set_mail_to([{"email": email}], mail_body)
-        mailer.set_subject("SISTER - Build Screenshot Submission Confirmation", mail_body)
+        # Prepare email content
+        from_email = EmailAddress(
+            email=os.getenv('FORWARD_EMAIL_FROM_EMAIL'),
+            name="SISTER Team"
+        )
+        
+        # Create a reply-to address that includes the build ID
+        # Format: training-data-submission-{build_id}@domain
+        domain = os.getenv('FORWARD_EMAIL_DOMAIN', 'adhd.geek.nz')
+        build_id = str(builds[0].id)
+        reply_to_local = f"training-data-submission-{build_id}@{domain}"
         
         # Render the email template with acceptance link
         html_content = render_template(
@@ -131,17 +126,31 @@ def send_consent_email(email, builds, consents):
             builds=builds,
             consents=consents,
             acceptance_url=acceptance_url,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
+            reply_to=reply_to_local  # Pass to template if needed
         )
         
-        mailer.set_html_content(html_content, mail_body)
-        mailer.set_reply_to(reply_to, mail_body)
+        # Create and send the email
+        message = EmailMessage(
+            from_email=from_email,
+            to=[email],
+            subject="SISTER - Build Screenshot Submission Confirmation",
+            html=html_content,
+            reply_to=[reply_to_local],  # Use the build-specific reply-to address
+            headers={
+                'X-SISTER-Build-ID': build_id,
+                'Reply-To': reply_to_local  # Ensure it's in headers too
+            }
+        )
         
         # Send the email
-        response = mailer.send(mail_body)
-        return response.status_code == 202
+        response = client.send_email(message)
+        print(f"Sent email with reply-to: {reply_to_local}")
+        return True
     except Exception as e:
-        print(f"MailerSend error: {e}")
+        print(f"Email sending error: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 @app.route('/')
@@ -263,42 +272,113 @@ def accept_license(token):
         return jsonify({"status": "error", "message": "An error occurred. Please try again later."}), 500
 
 # Webhook endpoint for handling email replies
-@app.route('/api/webhooks/email-reply', methods=['POST'])
+@app.route('/api/email-webhook', methods=['GET', 'POST'])
 def handle_email_reply():
-    """Handle email replies from MailerSend"""
-    # Verify the webhook signature
-    signature = request.headers.get('X-Message-Id')  # Adjust based on MailerSend's webhook format
-    
-    # In a production environment, you should verify the webhook signature here
-    # This is a simplified example
+    """Handle email replies from ForwardEmail"""
+    # ForwardEmail webhook verification
+    if request.method == 'GET':
+        return jsonify({"status": "ok"})
     
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "No JSON data received"}), 400
         
-        # Extract the email content and metadata
-        email_data = data.get('data', {})
-        email_from = email_data.get('from', {})
-        email_to = email_data.get('to', [{}])[0].get('email', '')
-        subject = email_data.get('subject', '')
-        text = email_data.get('text', '').lower()
+        # Log the incoming request for debugging
+        print(f"Received webhook with data: {json.dumps(data, indent=2)}")
         
-        # Check if this is a reply to a consent email
-        if any(phrase in text for phrase in ['i accept', 'i agree', 'accept', 'agreed']):
-            # Find the user's most recent build that hasn't been accepted yet
-            build = Build.query.filter_by(
-                email=email_from.get('email', ''),
-                is_accepted=False
-            ).order_by(Build.created_at.desc()).first()
+        # Get the username from query parameters (extracted by ForwardEmail)
+        username = request.args.get('username', '')
+        print(f"Extracted username from query params: {username}")
+        
+        # Extract build ID from username (format: training-data-submission-{build_id})
+        build_id = None
+        if username.startswith('training-data-submission-'):
+            try:
+                build_id = username.split('-')[-1]  # Get the last part after the last dash
+                print(f"Extracted build ID from username: {build_id}")
+            except (IndexError, ValueError) as e:
+                print(f"Error extracting build ID from username: {e}")
+        
+        # Extract email information from the webhook payload
+        from_email = None
+        email_text = ''
+        subject = ''
+        
+        # Handle different possible structures in the webhook payload
+        if 'from' in data:
+            # Handle the main 'from' field which could be an object or array
+            if isinstance(data['from'], dict) and 'address' in data['from']:
+                from_email = data['from']['address']
+            elif isinstance(data['from'], list) and len(data['from']) > 0:
+                if 'address' in data['from'][0]:
+                    from_email = data['from'][0]['address']
+        
+        # Extract email content
+        if 'text' in data:
+            email_text = data['text'].lower()
+        if 'subject' in data:
+            subject = data['subject']
+        
+        # Log the received email details
+        print(f"Received email from: {from_email}")
+        print(f"Subject: {subject}")
+        print(f"Build ID from email address: {build_id}")
+        
+        if not from_email:
+            return jsonify({"status": "error", "message": "No valid from email found"}), 400
+        
+        # Check if this is a reply to one of our emails
+        # Look for acceptance keywords in the email content or subject
+        acceptance_keywords = ['accept', 'confirm', 'yes', 'agreed', 'agreement']
+        is_acceptance = any(keyword in email_text for keyword in acceptance_keywords) or \
+                       any(keyword in subject.lower() for keyword in acceptance_keywords)
+        
+        if is_acceptance:
+            build = None
+            
+            # First try to find build by the ID from the email address
+            if build_id:
+                build = Build.query.get(build_id)
+                print(f"Found build by ID {build_id} from email address: {build}")
+            
+            # Fallback: check headers (for backward compatibility)
+            if not build and 'headers' in data:
+                headers = {}
+                if isinstance(data['headers'], list):
+                    headers = {h.get('key', '').lower(): h.get('value', '') for h in data['headers']}
+                elif isinstance(data['headers'], dict):
+                    headers = {k.lower(): v for k, v in data['headers'].items()}
+                
+                build_id_from_header = headers.get('x-sister-build-id')
+                if build_id_from_header:
+                    build = Build.query.get(build_id_from_header)
+                    print(f"Found build by header ID {build_id_from_header}: {build}")
+            
+            # Last resort: find most recent unaccepted build for this email
+            if not build:
+                build = Build.query.filter_by(
+                    email=from_email,
+                    is_accepted=False
+                ).order_by(Build.created_at.desc()).first()
+                print(f"Found most recent unaccepted build for {from_email}: {build}")
             
             if build:
                 build.is_accepted = True
                 build.accepted_at = datetime.utcnow()
                 db.session.commit()
+                print(f"Accepted license for build {build.id}")
+                return jsonify({"status": "success", "message": "License accepted"})
         
-        return jsonify({"status": "success"}), 200
+        print(f"No action taken for email from {from_email}")
+        return jsonify({"status": "ignored", "message": "No action taken"})
+    
     except Exception as e:
-        print(f"Error processing email reply: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        error_msg = f"Error processing email reply: {str(e)}"
+        print(error_msg)
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": error_msg}), 500
 
 if __name__ == '__main__':
     with app.app_context():
