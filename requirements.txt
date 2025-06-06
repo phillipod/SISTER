@@ -15,11 +15,3 @@ requests
 
 # CLI progress bars
 tqdm
-
-# Flask and related extensions
-Flask
-Flask-SQLAlchemy
-Flask-WTF
-Flask-Migrate
-python-dotenv
-email_validator
