@@ -18,9 +18,8 @@ import hashlib
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
-import uuid
-import logging
-import magic
+import logging # Keep this one for current_app.logger
+# import magic # Removed, will use the one below with other Flask imports
 
 # Set up basic logging
 logging.basicConfig(level=logging.INFO)
@@ -166,21 +165,25 @@ def allowed_file(filename):
 
 def allowed_mime(file_storage):
     """Checks if the file's MIME type is allowed."""
+    mime_type = None
+    is_allowed = False
     try:
-        # Read a small chunk to determine MIME type
-        # Ensure the stream position is reset after reading, as it will be read again
-        original_position = file_storage.tell()
-        mime_type = magic.from_buffer(file_storage.read(2048), mime=True)
-        file_storage.seek(original_position) # Reset stream to original position
+        sample = file_storage.read(2048) # Read a chunk for MIME detection
+        mime_type = magic.from_buffer(sample, mime=True)
         current_app.logger.info(f"Detected MIME type: {mime_type} for file: {file_storage.filename}")
         is_allowed = mime_type in ALLOWED_MIME_TYPES
         current_app.logger.info(f"MIME type {mime_type} is_allowed: {is_allowed}")
-        return is_allowed
+    except ImportError as ie:
+        current_app.logger.error(f"ImportError in allowed_mime (python-magic likely not installed/found): {ie}", exc_info=True)
+        # Fallback: If python-magic is not available, you might choose to skip MIME check or deny all.
+        # For security, denying is safer if MIME check is critical.
+        is_allowed = False # Or True if you want to allow uploads if magic fails
     except Exception as e:
-        current_app.logger.error(f"Error checking MIME type: {e}")
-        # Be cautious: if python-magic is not installed or fails, this could block uploads.
-        # Depending on strictness, might return False or True (if MIME check is optional on error)
-        return False # Default to not allowed if there's an error in checking
+        current_app.logger.error(f"Exception in allowed_mime during MIME type check for {file_storage.filename}: {e}", exc_info=True)
+        is_allowed = False # Default to not allowed if there's an error in checking
+    finally:
+        file_storage.seek(0) # IMPORTANT: Reset stream for subsequent reads
+    return is_allowed
 
 def save_screenshot(file, build_id, build_type):
     """Saves a screenshot file, calculates its MD5, and creates a Screenshot record."""
