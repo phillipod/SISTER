@@ -14,11 +14,13 @@ from forwardemail import ForwardEmailClient, EmailMessage, EmailAddress
 import hashlib
 import hmac
 import json
+import hashlib
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
 import uuid
 import logging
+import magic
 
 # Set up basic logging
 logging.basicConfig(level=logging.INFO)
@@ -48,9 +50,7 @@ class Build(db.Model):
     __tablename__ = 'build'
     id = db.Column(db.String(36), primary_key=True)
     submission_id = db.Column(db.String(36), db.ForeignKey('submission.id'), nullable=False)
-    consent_ml_recognition = db.Column(db.Boolean, default=False)
-    consent_ml_future = db.Column(db.Boolean, default=False)
-    consent_test_suite = db.Column(db.Boolean, default=False)
+    # Individual consent flags removed as per single license agreement
     is_accepted = db.Column(db.Boolean, default=False) # Will be set when Submission is accepted
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     accepted_at = db.Column(db.DateTime, nullable=True) # Will be set when Submission is accepted
@@ -63,8 +63,8 @@ class Screenshot(db.Model):
     build_id = db.Column(db.String(36), db.ForeignKey('build.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     type = db.Column(db.String(10), nullable=False)  # 'space' or 'ground'
+    md5sum = db.Column(db.String(32), nullable=False, index=True)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
-    is_test_suite = db.Column(db.Boolean, default=False)
 
 class EmailLog(db.Model):
     __tablename__ = 'email_log'
@@ -165,37 +165,54 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def allowed_mime(file_storage):
+    """Checks if the file's MIME type is allowed."""
     try:
-        sample = file_storage.read(2048)
-        mime_type = magic.from_buffer(sample, mime=True)
-    finally:
-        file_storage.seek(0)
-    return mime_type in ALLOWED_MIME_TYPES
+        # Read a small chunk to determine MIME type
+        # Ensure the stream position is reset after reading, as it will be read again
+        original_position = file_storage.tell()
+        mime_type = magic.from_buffer(file_storage.read(2048), mime=True)
+        file_storage.seek(original_position) # Reset stream to original position
+        return mime_type in ALLOWED_MIME_TYPES
+    except Exception as e:
+        current_app.logger.error(f"Error checking MIME type: {e}")
+        # Be cautious: if python-magic is not installed or fails, this could block uploads.
+        # Depending on strictness, might return False or True (if MIME check is optional on error)
+        return False # Default to not allowed if there's an error in checking
 
-def save_screenshot(file, build_id, build_type, is_test_suite=False):
+def save_screenshot(file, build_id, build_type):
+    """Saves a screenshot file, calculates its MD5, and creates a Screenshot record."""
     if file and allowed_file(file.filename) and allowed_mime(file):
         filename = secure_filename(file.filename)
-        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-        unique_filename = f"{build_id}_{timestamp}_{filename}"
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
+        upload_path_obj = Path(current_app.config['UPLOAD_FOLDER'])
+        upload_path_obj.mkdir(parents=True, exist_ok=True)
         
-        screenshot = Screenshot(
-            build_id=build_id,
-            filename=unique_filename,
-            type=build_type,
-            is_test_suite=is_test_suite
-        )
-        return screenshot
+        file_path = upload_path_obj / filename
+        counter = 1
+        original_filename = filename
+        while file_path.exists():
+            name, ext = os.path.splitext(original_filename)
+            filename = f"{name}_{counter}{ext}"
+            file_path = upload_path_obj / filename
+            counter += 1
+            
+        try:
+            file_content = file.read() # Read the content
+            file.seek(0) # Reset stream position if file.save() needs to read it again
+            file.save(file_path)
+            
+            md5_hash = hashlib.md5(file_content).hexdigest()
+            
+            new_screenshot = Screenshot(
+                build_id=build_id,
+                filename=filename,
+                type=build_type,
+                md5sum=md5_hash
+            )
+            return new_screenshot
+        except Exception as e:
+            current_app.logger.error(f"Error saving screenshot {filename}: {e}")
+            return None
     return None
-
-def determine_screenshot_usage(build):
-    """
-    Determine if screenshots should be used for test suite.
-    Only returns True if test suite is the only consent given.
-    """
-    return (build.consent_test_suite and 
-            not build.consent_ml_recognition and 
-            not build.consent_ml_future)
 
 def generate_acceptance_token(submission_id, email):
     """Generate a secure token for email acceptance for a Submission"""
@@ -207,9 +224,6 @@ def send_consent_email(email, builds, consents, submission_acceptance_token, sub
     try:
         client = ForwardEmailClient(api_key=os.getenv('FORWARD_EMAIL_API_KEY'))
         
-        # Acceptance token is now for the submission and passed as a parameter.
-        # No need to generate tokens for individual builds here.
-        
         acceptance_url = url_for('accept_license', token=submission_acceptance_token, _external=True)
         
         from_email = EmailAddress(
@@ -218,13 +232,12 @@ def send_consent_email(email, builds, consents, submission_acceptance_token, sub
         )
         
         domain = os.getenv('FORWARD_EMAIL_DOMAIN', 'adhd.geek.nz')
-        # Use the passed submission_id for reply-to and headers
         reply_to_local_part = f"training-data-submission-{submission_id}"
         reply_to_address = f"{reply_to_local_part}@{domain}"
         
         html_content = render_template(
             'email_template.html',
-            builds=builds, # These are the builds associated with the submission
+            builds=builds, 
             consents=consents,
             acceptance_url=acceptance_url,
             timestamp=datetime.utcnow(),
@@ -238,7 +251,7 @@ def send_consent_email(email, builds, consents, submission_acceptance_token, sub
             html=html_content,
             reply_to=[reply_to_address], 
             headers={
-                'X-SISTER-Submission-ID': str(submission_id), # Use submission_id and new header key
+                'X-SISTER-Submission-ID': str(submission_id), 
                 'Reply-To': reply_to_address 
             }
         )
@@ -274,10 +287,8 @@ def training_submit():
         return redirect(url_for('training'))
 
     if form.validate_on_submit():
-        # Create a single Submission record for this batch
-        submission_id = str(uuid.uuid4()) # Generate ID for the submission
+        submission_id = str(uuid.uuid4()) 
         submission_email = form.email.data
-        # Generate acceptance token for the Submission
         submission_acceptance_token = generate_acceptance_token(submission_id, submission_email)
 
         new_submission = Submission(
@@ -286,35 +297,28 @@ def training_submit():
             acceptance_token=submission_acceptance_token
         )
 
-        build_objects_for_submission = []
         build_index = 0
+        build_objects_for_submission = []
         has_screenshots = False
-        
-        all_consents_given = form.agree_to_license.data # Get this once
 
-        while True:
-            screenshots = request.files.getlist(f'screenshots_{build_index}')
-            build_type = request.form.get(f'build_type_{build_index}')
-            
-            if not any(f.filename for f in screenshots) or not build_type:
-                break
-                
-            build_id = str(uuid.uuid4()) # Each Build still gets its own unique ID
+        for build_type_key, build_label in [('build_space', 'space'), ('build_ground', 'ground')]:
+            screenshots = request.files.getlist(f'{build_type_key}_screenshots')
+            if not screenshots or all(not s.filename for s in screenshots):
+                build_index +=1 
+                continue
+
+            build_id = f"{new_submission.id}_build_{build_index}"
 
             build = Build(
                 id=build_id,
-                submission_id=new_submission.id, # Link to the parent Submission
-                consent_ml_recognition=all_consents_given,
-                consent_ml_future=all_consents_given,
-                consent_test_suite=all_consents_given
-            )    
+                submission_id=new_submission.id
+            )
             
             saved_screenshots = []
-            is_test_suite_only = determine_screenshot_usage(build) 
             
-            for file in screenshots:
-                if file.filename:
-                    screenshot = save_screenshot(file, build_id, build_type, is_test_suite_only)
+            for file_in_request in screenshots:
+                if file_in_request.filename:
+                    screenshot = save_screenshot(file_in_request, build_id, build_label)
                     if screenshot:
                         saved_screenshots.append(screenshot)
                         has_screenshots = True
@@ -326,7 +330,7 @@ def training_submit():
             build_index += 1
         
         if not has_screenshots:
-            flash('Please upload at least one screenshot')
+            flash('Please upload at least one screenshot for any build type.')
             return redirect(request.url)
         
         try:
@@ -335,17 +339,16 @@ def training_submit():
                 db.session.add(build_item)
             db.session.commit()
             
+            # Prepare consents for email (simplified due to single license)
+            # The email template should reflect the single CC BY-NC-SA 4.0 license.
+            # The 'consents_for_email' dict might not even be needed if the email template is static regarding license info.
+            # For now, we'll keep a simplified version for agreed_to_license if send_consent_email expects it.
             consents_for_email = {
-                'ml_recognition': all_consents_given,
-                'ml_future': all_consents_given,
-                'test_suite': all_consents_given,
-                'agreed_to_license': all_consents_given
+                'agreed_to_license': form.agree_to_license.data 
             }
             
-            # Pass new_submission.builds (which are the build_objects_for_submission after commit)
-            # and the submission_acceptance_token to send_consent_email.
-            # The signature of send_consent_email will need to be updated.
-            if send_consent_email(new_submission.email, new_submission.builds, consents_for_email, new_submission.acceptance_token, new_submission.id): # Added new_submission.id
+            # Send consent email
+            if send_consent_email(new_submission.email, new_submission.builds, consents_for_email, new_submission.acceptance_token, new_submission.id):
                 flash('Thank you for your submission! Please check your email for the consent form.')
             else:
                 flash('There was an error sending the consent email. Please try again later.')
