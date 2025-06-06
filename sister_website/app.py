@@ -1,4 +1,5 @@
 import os
+import sys
 from datetime import datetime
 from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify
 import magic
@@ -12,43 +13,20 @@ import hmac
 import json
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect
 import uuid
+import logging
 
-load_dotenv(dotenv_path=os.getenv('DOTENV_PATH', '.env')) # Load .env file from DOTENV_PATH or local .env
+# Set up basic logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Store data in the instance folder so it is kept outside the web root
-app = Flask(__name__, instance_relative_config=True)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-please-change')
+# Initialize extensions
+db = SQLAlchemy()
 
-# Use UPLOAD_FOLDER from environment or fall back to instance_path/uploads
-upload_folder = os.getenv('UPLOAD_FOLDER', os.path.join(app.instance_path, 'uploads'))
-app.config['UPLOAD_FOLDER'] = upload_folder
-app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB max file size
-
-# Configure database URI from environment or use default
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', f'sqlite:///{os.path.join(app.instance_path, "submissions.db")}')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-# Ensure upload directory exists
-os.makedirs(upload_folder, exist_ok=True)
-print(f"Using upload folder: {upload_folder}")
-print(f"Using database: {app.config['SQLALCHEMY_DATABASE_URI']}")
-
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-ALLOWED_MIME_TYPES = {'image/png', 'image/jpeg'}
-
-# Initialize SQLAlchemy
-db = SQLAlchemy(app)
-
-# Create all database tables if they don't exist
-with app.app_context():
-    try:
-        db.create_all()
-        print("Database tables created/verified")
-    except Exception as e:
-        print(f"Error creating database tables: {e}")
-
+# Define models before creating the app to avoid circular imports
 class Build(db.Model):
+    __tablename__ = 'build'
     id = db.Column(db.String(36), primary_key=True)
     email = db.Column(db.String(120), nullable=False)
     consent_ml_recognition = db.Column(db.Boolean, default=False)
@@ -60,12 +38,79 @@ class Build(db.Model):
     screenshots = db.relationship('Screenshot', backref='build', lazy=True)
 
 class Screenshot(db.Model):
+    __tablename__ = 'screenshot'
     id = db.Column(db.Integer, primary_key=True)
     build_id = db.Column(db.String(36), db.ForeignKey('build.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     type = db.Column(db.String(10), nullable=False)  # 'space' or 'ground'
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
-    is_test_suite = db.Column(db.Boolean, default=False)  # New field to track test suite allocation
+    is_test_suite = db.Column(db.Boolean, default=False)
+
+# Create the Flask application
+def create_app():
+    # Load environment variables first
+    env_path = os.getenv('DOTENV_PATH', '/var/www/.env')
+    logger.info(f"Loading environment from: {env_path}")
+    load_dotenv(dotenv_path=env_path, override=True)
+
+    # Print all relevant environment variables for debugging
+    logger.info("Environment variables:")
+    for var in ['UPLOAD_FOLDER', 'DATABASE_URL', 'DOTENV_PATH']:
+        logger.info(f"{var} = {os.getenv(var)}")
+
+    # Initialize Flask app
+    app = Flask(__name__, instance_relative_config=True)
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-please-change')
+
+    # Configure upload folder from environment or use default
+    upload_folder = os.getenv('UPLOAD_FOLDER', os.path.join(app.instance_path, 'uploads'))
+    app.config['UPLOAD_FOLDER'] = upload_folder
+    app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB max file size
+
+    # Configure database
+    db_uri = os.getenv('DATABASE_URL')
+    if not db_uri:
+        db_uri = f'sqlite:///{os.path.join(app.instance_path, "submissions.db")}'
+
+    # Ensure the database directory exists
+    if db_uri.startswith('sqlite:'):
+        db_path = db_uri.split('sqlite:///')[-1]
+        if db_path != ':memory:':  # Skip directory creation for in-memory DB
+            db_dir = os.path.dirname(db_path)
+            if db_dir:  # Only create directory if path is not in current directory
+                os.makedirs(db_dir, exist_ok=True)
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # Initialize extensions
+    db.init_app(app)
+
+    # Ensure upload directory exists
+    os.makedirs(upload_folder, exist_ok=True)
+    logger.info(f"Using upload folder: {upload_folder}")
+    logger.info(f"Using database: {db_uri}")
+
+    # Create database tables
+    with app.app_context():
+        try:
+            db.create_all()
+            logger.info("Database tables created/verified")
+            # Verify tables exist
+            inspector = inspect(db.engine)
+            logger.info(f"Existing tables: {inspector.get_table_names()}")
+        except Exception as e:
+            logger.error(f"Error initializing database: {e}", exc_info=True)
+            raise
+
+    return app
+
+# Create the application
+app = create_app()
+
+# Global variables
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+ALLOWED_MIME_TYPES = {'image/png', 'image/jpeg'}
 
 class UploadForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
