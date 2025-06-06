@@ -70,9 +70,13 @@ class EmailLog(db.Model):
     __tablename__ = 'email_log'
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     submission_id = db.Column(db.String(36), db.ForeignKey('submission.id'), nullable=False)
+    message_id_header = db.Column(db.String(512), nullable=True, index=True)  # Message-ID header can be long and is good to index
+    from_address = db.Column(db.String(255), nullable=True)
+    to_address = db.Column(db.String(255), nullable=True) # The address the email was sent to (e.g., reply-to address)
     subject = db.Column(db.String(512), nullable=True)
     body_text = db.Column(db.Text, nullable=True)
     body_html = db.Column(db.Text, nullable=True)
+    headers_json = db.Column(db.Text, nullable=True)  # Store all headers as a JSON string
     received_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
@@ -499,11 +503,46 @@ def handle_email_reply():
             return jsonify({"status": "error", "message": "No JSON data received"}), 400
         
         logger.info(f"Email webhook: Received data: {json.dumps(data, indent=2)}")
+
+        # --- START: Enhanced Header and Email Info Extraction ---
+        all_headers_raw = data.get('headers', []) 
+        headers_json_str = json.dumps(all_headers_raw) if all_headers_raw else None
+        
+        headers_dict = {}
+        if isinstance(all_headers_raw, list):
+            headers_dict = {h.get('key', '').lower(): h.get('value', '') for h in all_headers_raw if isinstance(h, dict) and h.get('key')}
+        elif isinstance(all_headers_raw, dict): 
+            headers_dict = {k.lower(): v for k, v in all_headers_raw.items()}
+
+        message_id_value = headers_dict.get('message-id')
+
+        from_email_data = data.get('from', []) 
+        from_email_address = None
+        if isinstance(from_email_data, list) and from_email_data:
+            sender_obj = from_email_data[0]
+            if isinstance(sender_obj, dict):
+                from_email_address = sender_obj.get('address', '').lower() or sender_obj.get('email', '').lower()
+        elif isinstance(from_email_data, dict): 
+            from_email_address = from_email_data.get('address', '').lower() or from_email_data.get('email', '').lower()
+
+        to_email_address = None
+        envelope_recipients = data.get('envelopeRecipients', []) 
+        if isinstance(envelope_recipients, list) and envelope_recipients:
+            if isinstance(envelope_recipients[0], str):
+                to_email_address = envelope_recipients[0].lower()
+        
+        if not to_email_address:
+            to_data_field = data.get('to', []) 
+            if isinstance(to_data_field, list) and to_data_field:
+                recipient_obj = to_data_field[0]
+                if isinstance(recipient_obj, dict):
+                    to_email_address = recipient_obj.get('address', '').lower() or recipient_obj.get('email', '').lower()
+            elif isinstance(to_data_field, dict): 
+                to_email_address = to_data_field.get('address', '').lower() or to_data_field.get('email', '').lower()
+        # --- END: Enhanced Header and Email Info Extraction ---
         
         submission_id = None
         
-        # 1. Try to get submission_id from 'username' in query params (from reply-to address)
-        #    Format: training-data-submission-{submission_id}
         username_param = request.args.get('username', '')
         logger.info(f"Email webhook: Extracted username from query params: '{username_param}'")
         if username_param.startswith('training-data-submission-'):
@@ -512,34 +551,22 @@ def handle_email_reply():
                 logger.info(f"Email webhook: Extracted submission_id from username: '{submission_id}'")
             except (IndexError, ValueError) as e:
                 logger.warning(f"Email webhook: Error extracting submission_id from username '{username_param}': {e}")
-                submission_id = None # Ensure it's None if parsing fails
+                submission_id = None
 
-        # 2. If not found, try to get submission_id from 'X-SISTER-Submission-ID' header
-        if not submission_id and 'headers' in data:
-            headers_dict = {}
-            if isinstance(data['headers'], list): # As per ForwardEmail typical structure
-                headers_dict = {h.get('key', '').lower(): h.get('value', '') for h in data['headers']}
-            elif isinstance(data['headers'], dict): # More generic handling
-                headers_dict = {k.lower(): v for k, v in data['headers'].items()}
-            
+        if not submission_id:
             submission_id_from_header = headers_dict.get('x-sister-submission-id')
             if submission_id_from_header:
                 submission_id = submission_id_from_header
                 logger.info(f"Email webhook: Extracted submission_id from header 'X-SISTER-Submission-ID': '{submission_id}'")
 
         if not submission_id:
-            logger.warning("Email webhook: Could not determine submission_id from reply-to address or headers.")
+            logger.warning("Email webhook: Could not determine submission_id. From/To/Subject/MsgID: {from_email_address}/{to_email_address}/{data.get('subject')}/{message_id_value}")
             return jsonify({"status": "error", "message": "Could not identify submission from email reply."}), 400
-
-        # Extract email content
-        from_email_address = data.get('from', [{}])[0].get('address', '').lower() if isinstance(data.get('from'), list) and data.get('from') else None
-        if not from_email_address and isinstance(data.get('from'), dict): # Alternative 'from' structure
-             from_email_address = data.get('from', {}).get('address','').lower()
 
         email_text_content = data.get('text', '')
         email_subject = data.get('subject', '')
         
-        logger.info(f"Email webhook: Processing reply for submission_id='{submission_id}', from='{from_email_address}', subject='{email_subject}'")
+        logger.info(f"Email webhook: Processing reply for submission_id='{submission_id}', from='{from_email_address}', to='{to_email_address}', subject='{email_subject}', msg_id='{message_id_value}'")
 
         reply_only_text = extract_reply_text(email_text_content)
         logger.info(f"Email webhook: Extracted reply-only text (first 200 chars): '{reply_only_text[:200]}...' (length: {len(reply_only_text)})")
@@ -563,13 +590,17 @@ def handle_email_reply():
                 email_html_content = data.get('html', '') # Get HTML content if available
                 new_email_log = EmailLog(
                     submission_id=submission.id,
-                    subject=email_subject, # Already extracted
-                    body_text=email_text_content, # Already extracted
-                    body_html=email_html_content
+                    message_id_header=message_id_value,
+                    from_address=from_email_address,
+                    to_address=to_email_address,
+                    subject=email_subject,
+                    body_text=email_text_content,
+                    body_html=email_html_content,
+                    headers_json=headers_json_str
                 )
                 db.session.add(new_email_log)
                 db.session.commit()
-                logger.info(f"Email webhook: Logged email reply for submission_id='{submission.id}' to EmailLog ID {new_email_log.id}.")
+                logger.info(f"Email webhook: Email log created for submission_id='{submission.id}', message_id='{message_id_value}' to EmailLog ID {new_email_log.id}.")
             except Exception as e_log:
                 db.session.rollback()
                 logger.error(f"Email webhook: Failed to log email for submission_id='{submission.id}': {e_log}", exc_info=True)
