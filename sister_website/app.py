@@ -40,9 +40,9 @@ class Submission(db.Model):
     # Relationship to Builds
     builds = db.relationship('Build', backref='submission', lazy=True)
     # Relationship to EmailLogs
-    email_logs = db.relationship('EmailLog', backref='submission', lazy=True, order_by='received_at')
+    email_logs = db.relationship('EmailLog', backref='submission', lazy=True, order_by='EmailLog.received_at')
     # Relationship to LinkLogs
-    link_logs = db.relationship('LinkLog', backref='submission', lazy=True, order_by='clicked_at')
+    link_logs = db.relationship('LinkLog', backref='submission', lazy=True, order_by='LinkLog.clicked_at')
 
 class Build(db.Model):
     __tablename__ = 'build'
@@ -351,9 +351,13 @@ def training_submit():
             flash('There was an error processing your submission. Please try again later.')
             logger.error(f"Database error in training_submit: {e}", exc_info=True)
         
-        return redirect(url_for('acceptance_thank_you'))
+        return redirect(url_for('submission_received'))
 
     return render_template('pages/training.html', form=form, active_page='training')
+
+@app.route('/submission-received')
+def submission_received():
+    return render_template('submission_received.html', active_page='submission_received')
 
 @app.route('/contact')
 def contact():
