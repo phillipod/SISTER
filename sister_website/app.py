@@ -24,16 +24,29 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-please-change')
 upload_folder = os.getenv('UPLOAD_FOLDER', os.path.join(app.instance_path, 'uploads'))
 app.config['UPLOAD_FOLDER'] = upload_folder
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB max file size
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'submissions.db')
+
+# Configure database URI from environment or use default
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', f'sqlite:///{os.path.join(app.instance_path, "submissions.db")}')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Ensure upload directory exists
 os.makedirs(upload_folder, exist_ok=True)
 print(f"Using upload folder: {upload_folder}")
+print(f"Using database: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 ALLOWED_MIME_TYPES = {'image/png', 'image/jpeg'}
 
+# Initialize SQLAlchemy
 db = SQLAlchemy(app)
+
+# Create all database tables if they don't exist
+with app.app_context():
+    try:
+        db.create_all()
+        print("Database tables created/verified")
+    except Exception as e:
+        print(f"Error creating database tables: {e}")
 
 class Build(db.Model):
     id = db.Column(db.String(36), primary_key=True)
@@ -389,9 +402,7 @@ def handle_email_reply():
         return jsonify({"status": "error", "message": error_msg}), 500
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     # Ensure the instance directory exists
     os.makedirs(app.instance_path, exist_ok=True)
-    # The upload folder is already created during app initialization
+    # The upload folder and database are already initialized
     app.run(debug=True, host='0.0.0.0', port=5000)
