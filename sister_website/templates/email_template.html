@@ -97,21 +97,19 @@
         {% endfor %}
 
         <div class="consent-info">
-            <h3>Your Consent Preferences</h3>
-            {% if consents.ml_recognition %}
-            <div class="consent-item">
-                Machine learning recognition training
-            </div>
-            {% endif %}
-            {% if consents.ml_future %}
-            <div class="consent-item">
-                Future machine learning research
-            </div>
-            {% endif %}
-            {% if consents.test_suite %}
-            <div class="consent-item">
-                Test suite inclusion
-            </div>
+            <h3>License Agreement Confirmation</h3>
+            {% if consents.agreed_to_license %}
+            <p>You have agreed to license your submitted screenshots under the <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license</a>.</p>
+            <p>This license permits the SISTER project to use your screenshots for the following purposes:</p>
+            <ul>
+                <li>Training machine learning models for recognizing elements in Star Trek Online screenshots.</li>
+                <li>Future machine learning research and development related to STO build analysis.</li>
+                <li>Inclusion in the SISTER project's test suite to ensure software quality.</li>
+            </ul>
+            <p><strong>Important:</strong> The CC BY-NC-SA 4.0 license is irrevocable for any data already distributed under these terms. This means that once your data is part of a dataset released under this license, the license terms for that data cannot be revoked.</p>
+            <p>Please confirm your understanding and acceptance of these terms.</p>
+            {% else %}
+            <p style="color: red;">There was an issue recording your license agreement. Please try submitting again or contact support.</p>
             {% endif %}
         </div>
 
@@ -126,7 +124,7 @@
                 <li>Or reply to this email with "I accept" or "I agree" in the message body.</li>
             </ol>
             <p style="font-size: 13px; color: #7f8c8d; margin-bottom: 0;">
-                <strong>Note:</strong> Your screenshots will only be used after you accept the license terms.
+                <strong>Note:</strong> Your screenshots will be processed under the CC BY-NC-SA 4.0 license terms upon your confirmation.
             </p>
         </div>
 
@@ -138,8 +136,8 @@
     </div>
 
     <div class="footer">
-        <p>This is an automated message from the SISTER project. Please do not reply to this email.</p>
-        <p>Visit our <a href="https://github.com/phillipod/SISTER">GitHub repository</a> for more information.</p>
+        <p>This is an automated message from the SISTER project. You can reply to this email to accept the license terms, or use the button above.</p>
+        <p>If you have questions, please contact us by raising an issue on our <a href="https://github.com/phillipod/SISTER/issues" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
     </div>
 </body>
-</html> 
+</html>

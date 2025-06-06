@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Acceptance Confirmed - SISTER{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h2 class="card-title mb-0">Thank You!</h2>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Your acceptance has been successfully recorded.</p>
+                    <p>Thank you for contributing to the SISTER project. Your data helps us improve our tools and research.</p>
+                    <p>The SISTER team appreciates your support.</p>
+                    <hr>
+                    <p class="text-muted">If you have any questions, please feel free to <a href="{{ url_for('contact') }}">contact us</a>.</p>
+                    <a href="{{ url_for('home') }}" class="btn btn-primary mt-3">Return to Homepage</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

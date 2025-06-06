@@ -16,7 +16,7 @@
     <ol>
         <li>Upload screenshots for your builds (space and/or ground)</li>
         <li>Provide your email address</li>
-        <li>Select which uses you consent to</li>
+        <li>Review and agree to the CC BY-NC-SA 4.0 license terms for your submission</li>
         <li>Receive a detailed consent form via email</li>
         <li>Reply to confirm your consent</li>
     </ol>
@@ -53,21 +53,27 @@
         </div>
 
         <div class="form-section">
-            <h3>Consent Options</h3>
-            <p class="consent-intro">You can select any combination of the following options, including none or all:</p>
+            <h3>License Agreement</h3>
+            <p class="consent-intro">To contribute your screenshots, you must agree to license them under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license. This license allows the SISTER project to use your contributions for specific purposes while ensuring they remain freely available under similar terms.</p>
             <div class="consent-group">
                 <div class="consent-option">
-                    {{ form.consent_ml_recognition(class="consent-checkbox") }}
-                    <label class="consent-label">I consent to my screenshots being used to train SISTER's label recognition CNN (Convolutional Neural Network) for identifying labels (e.g, "Universal Consoles", "Fore Weapons", etc.)</label>
+                    {{ form.agree_to_license(class="consent-checkbox") }}
+                    <label class="consent-label" for="agree_to_license">{{ form.agree_to_license.label.text }} <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">(Learn more about CC BY-NC-SA 4.0)</a></label>
+                    {% if form.agree_to_license.errors %}
+                        <div class="errors">
+                            {% for error in form.agree_to_license.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                 </div>
-                <div class="consent-option">
-                    {{ form.consent_ml_future(class="consent-checkbox") }}
-                    <label class="consent-label">I consent to my screenshots being used in future machine learning research and development beyond the current recognition system (e.g, build classification, icon recognition, etc.)</label>
-                </div>
-                <div class="consent-option">
-                    {{ form.consent_test_suite(class="consent-checkbox") }}
-                    <label class="consent-label">I consent to my screenshots being used as control samples in the pytest test suite. Note: Screenshots used in the test suite will NOT be used for ML training to maintain test integrity. Screenshots consented for both ML and test suite are allocated to either ML training or test suite depending on data set requirements.</label>
-                </div>
+                <p class="consent-details">Specifically, your agreement allows us to use your screenshots for:</p>
+                <ul>
+                    <li>Training machine learning models for recognizing elements in Star Trek Online screenshots.</li>
+                    <li>Future machine learning research and development related to STO build analysis.</li>
+                    <li>Inclusion in the SISTER project's test suite to ensure software quality.</li>
+                </ul>
+                <p>The CC BY-NC-SA 4.0 license is irrevocable for data that has been shared or distributed. This means that once your data is part of a dataset released under this license, the license terms for that data cannot be revoked.</p>
             </div>
         </div>
 
@@ -108,16 +114,17 @@
     </form>
 
     <div class="privacy-section">
-        <h3>Privacy &amp; Data Usage</h3>
-        <p>Your privacy is important to us. Here's how we handle your data:</p>
+        <h3>License, Privacy &amp; Data Usage</h3>
+        <p>Your contributions are valuable to the SISTER project. Here's how we handle your data and licensing:</p>
         <ul>
-            <li>Screenshots are only used for the purposes you consent to</li>
-            <li>Screenshots will be published in public GitHub repositories</li>
-            <li>Your email is only used for sending the consent form and will not be shared</li>
-            <li>You can withdraw consent at any time by <a href="https://github.com/phillipod/SISTER/issues" target="_blank" rel="noopener noreferrer">creating an issue on GitHub</a></li>
-            <li>Data usage is strictly limited to improving STO build analysis tools</li>
+            <li><strong>Licensing:</strong> By submitting screenshots, you agree to license them under the <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license</a>. This means your contributions can be used, shared, and adapted by the SISTER project and others, provided they adhere to the terms of this license (attribution, non-commercial use, and share-alike).</li>
+            <li><strong>Permitted Uses:</strong> As per the license agreement, your screenshots will be used for training machine learning models, future machine learning research, and inclusion in our test suite.</li>
+            <li><strong>Public Availability:</strong> Screenshots and derived data may be published in public GitHub repositories or other accessible forms as part of open research and open data efforts, consistent with the CC BY-NC-SA 4.0 license.</li>
+            <li><strong>Irrevocability:</strong> The CC BY-NC-SA 4.0 license is irrevocable. This means that once your data is distributed under this license, the permissions you've granted cannot be withdrawn for those copies. This is standard for Creative Commons licenses to ensure stability for downstream users.</li>
+            <li><strong>Email Usage:</strong> Your email address is collected solely for the purpose of sending you a confirmation and consent verification for your submission. It will not be published or shared with third parties.</li>
+            <li><strong>Data Usage Scope:</strong> All data usage is strictly limited to activities that improve Star Trek Online build analysis tools and related research within the SISTER project.</li>
         </ul>
-        <p>By submitting your screenshots, you'll receive an email with a detailed consent form. Your data will only be used after you reply to confirm your consent.</p>
+        <p>After submitting your screenshots and agreeing to the license, you'll receive an email to confirm your submission. Your data will be processed according to these terms upon your confirmation.</p>
     </div>
 </main>
 
