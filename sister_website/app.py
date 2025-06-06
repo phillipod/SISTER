@@ -40,9 +40,9 @@ class Submission(db.Model):
     # Relationship to Builds
     builds = db.relationship('Build', backref='submission', lazy=True)
     # Relationship to EmailLogs
-    email_logs = db.relationship('EmailLog', backref='submission', lazy=True, order_by=EmailLog.received_at)
+    email_logs = db.relationship('EmailLog', backref='submission', lazy=True, order_by='received_at')
     # Relationship to LinkLogs
-    link_logs = db.relationship('LinkLog', backref='submission', lazy=True, order_by=LinkLog.clicked_at)
+    link_logs = db.relationship('LinkLog', backref='submission', lazy=True, order_by='clicked_at')
 
 class Build(db.Model):
     __tablename__ = 'build'
