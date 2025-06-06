@@ -1,7 +1,7 @@
 import os
 import sys
 from datetime import datetime
-from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify, current_app
 from flask_migrate import Migrate
 import uuid # Ensure uuid is imported for new models
 import magic
