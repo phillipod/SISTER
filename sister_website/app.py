@@ -19,9 +19,17 @@ load_dotenv(dotenv_path=os.getenv('DOTENV_PATH', '.env')) # Load .env file from 
 # Store data in the instance folder so it is kept outside the web root
 app = Flask(__name__, instance_relative_config=True)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-please-change')
-app.config['UPLOAD_FOLDER'] = os.path.join(app.instance_path, 'uploads')
+
+# Use UPLOAD_FOLDER from environment or fall back to instance_path/uploads
+upload_folder = os.getenv('UPLOAD_FOLDER', os.path.join(app.instance_path, 'uploads'))
+app.config['UPLOAD_FOLDER'] = upload_folder
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB max file size
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.instance_path, 'submissions.db')
+
+# Ensure upload directory exists
+os.makedirs(upload_folder, exist_ok=True)
+print(f"Using upload folder: {upload_folder}")
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 ALLOWED_MIME_TYPES = {'image/png', 'image/jpeg'}
 
@@ -383,7 +391,7 @@ def handle_email_reply():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    # Ensure the instance and upload directories exist
+    # Ensure the instance directory exists
     os.makedirs(app.instance_path, exist_ok=True)
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    app.run(debug=True)
+    # The upload folder is already created during app initialization
+    app.run(debug=True, host='0.0.0.0', port=5000)
