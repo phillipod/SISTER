@@ -509,6 +509,8 @@ def accept_license(token):
     if submission.is_accepted:
         message = "This submission has already been accepted."
         if request.method == 'GET':
+            # Clear any existing messages before setting the info message
+            session.pop('_flashes', None)
             flash(message, 'info')
             # Pass submission to thank you page to potentially show details
             return render_template('acceptance_thank_you.html', submission=submission)
@@ -545,6 +547,8 @@ def accept_license(token):
         db.session.commit()
         success_message = "Thank you for accepting the license for your submission!"
         if request.method == 'GET':
+            # Clear any existing messages before setting the success message
+            session.pop('_flashes', None)
             flash(success_message, 'success')
             return render_template('acceptance_thank_you.html', submission=submission)
         else: # For POST requests or other API uses
@@ -554,11 +558,12 @@ def accept_license(token):
         logger.error(f"Error in accept_license for submission {submission.id if submission else 'unknown'}: {e}", exc_info=True)
         error_message = 'An error occurred while processing your acceptance. Please try again or contact support.'
         if request.method == 'GET':
+            # Clear any existing messages before setting the error message
+            session.pop('_flashes', None)
             flash(error_message, 'danger')
             return redirect(url_for('training_data')) # Or a generic error page
         else:
             return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
-
 def extract_reply_text(email_body_text):
     """Attempts to extract the new reply text from an email, stripping quoted original messages."""
     guard_string = "Screenshot Interrogation System for Traits and Equipment Recognition"
