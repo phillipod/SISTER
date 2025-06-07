@@ -630,8 +630,12 @@ def training_data_stats():
         'total_submissions': 0,
         'total_accepted': 0,
         'total_screenshots': 0,
-        'by_type': defaultdict(lambda: {'total': 0, 'accepted': 0}),
-        'target_per_type': 50  # Target number of each type
+        'by_type': {
+            'space': {'total': 0, 'accepted': 0},
+            'ground': {'total': 0, 'accepted': 0}
+        },
+        'target_per_type': 75,  # Target number of each type,
+        'target_per_label': 50, # Target number of each label
     }
     
     # Process submissions
@@ -648,8 +652,8 @@ def training_data_stats():
                 if submission.is_accepted:
                     stats['by_type'][screenshot.type]['accepted'] += 1
     
-    # Convert defaultdict to dict for template
-    stats['by_type'] = dict(stats['by_type'])
+    # Ensure by_type is a standard dict for the template, which it already is now
+    # No conversion needed if initialized as a dict with predefined keys
     
     return render_template('training_data_stats.html', 
                          stats=stats, 
