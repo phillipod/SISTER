@@ -346,19 +346,19 @@ def training_redirect():
 @app.route('/training-data')
 def training_data():
     form = UploadForm()
-    return render_template('pages/training_data.html', form=form, active_page='training')
+    return render_template('pages/training_data.html', form=form, active_page='training_data')
 
 @app.route('/training-data/submit', methods=['GET', 'POST'])
-def training_submit():
+def training_data_submit():
     form = UploadForm()
     if request.method == 'GET':
-        return redirect(url_for('training'))
+        return redirect(url_for('training_data'))
 
-    current_app.logger.info(f"training_submit: form.validate_on_submit() called.")
+    current_app.logger.info(f"training_data_submit: form.validate_on_submit() called.")
     validation_result = form.validate_on_submit()
-    current_app.logger.info(f"training_submit: form.validate_on_submit() result: {validation_result}")
+    current_app.logger.info(f"training_data_submit: form.validate_on_submit() result: {validation_result}")
     if not validation_result:
-        current_app.logger.warning(f"training_submit: Form validation failed. Errors: {form.errors}")
+        current_app.logger.warning(f"training_data_submit: Form validation failed. Errors: {form.errors}")
 
     if validation_result:
         submission_id = str(uuid.uuid4()) 
@@ -437,10 +437,10 @@ def training_submit():
 
             build_index += 1
         
-        current_app.logger.info(f"training_submit: has_screenshots = {has_screenshots}")
+        current_app.logger.info(f"training_data_submit: has_screenshots = {has_screenshots}")
         if not has_screenshots:
             flash('Please upload at least one screenshot for any build type.')
-            current_app.logger.warning("training_submit: No valid screenshots processed. Redirecting back to form.")
+            current_app.logger.warning("training_data_submit: No valid screenshots processed. Redirecting back to form.")
             return redirect(request.url)
         
         try:
@@ -466,10 +466,10 @@ def training_submit():
         except Exception as e:
             db.session.rollback()
             flash('There was an error processing your submission. Please try again later.')
-            logger.error(f"Database error in training_submit: {e}", exc_info=True)
+            logger.error(f"Database error in training_data_submit: {e}", exc_info=True)
             return redirect(url_for('submission_received'))
 
-    return render_template('pages/training_data.html', form=form, active_page='training')
+    return render_template('pages/training_data.html', form=form, active_page='training_data')
 
 @app.route('/submission-received')
 def submission_received():
@@ -550,7 +550,7 @@ def accept_license(token):
         error_message = 'An error occurred while processing your acceptance. Please try again or contact support.'
         if request.method == 'GET':
             flash(error_message, 'danger')
-            return redirect(url_for('training')) # Or a generic error page
+            return redirect(url_for('training_data')) # Or a generic error page
         else:
             return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
 
