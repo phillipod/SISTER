@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SISTER - Reply Processed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50; /* Matched from email_template.html */
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            max-width: 100px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 24px;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+        .content {
+            background: #f8f9fa; /* Matched from email_template.html */
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 14px;
+            color: #7f8c8d; /* Matched from email_template.html */
+        }
+        .timestamp {
+            font-size: 12px;
+            color: #95a5a6; /* Matched from email_template.html */
+            text-align: right; /* Adjusted for consistency */
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="https://github.com/phillipod/SISTER/raw/web-website/docs/icon.png" alt="SISTER Logo" class="logo">
+        <h1>SISTER</h1>
+        <div class="subtitle">Screenshot Interrogation System for Traits and Equipment Recognition</div>
+    </div>
+
+    <div class="content">
+        <h2 style="margin-top:0;">Reply Processed</h2> <!-- Added a title for this section -->
+        <p>Dear User,</p>
+        <p>Thank you for your email regarding SISTER submission ID: <strong>{{ submission_id }}</strong>.</p>
+        <p>We have processed your reply. The outcome based on your email is: <strong>{{ decision_text }}</strong>.</p>
+        
+        {% if decision_text == "License Agreement Accepted" %}
+        <p>Your agreement to the license terms has been successfully recorded. Thank you for your contribution!</p>
+        {% elif decision_text == "License Agreement Declined (based on your reply)" %}
+        <p>Your decision not to accept the license terms at this time has been noted. No data from this submission will be used under the license.</p>
+        {% else %}
+        <p>Your email has been received and noted, however no clear decision could be made based on your reply. Please reply to this email with 'agree' or 'disagree' to accept or decline the license terms, or contact us through our <a href="https://github.com/phillipod/SISTER/issues" target="_blank" rel="noopener noreferrer">GitHub issues page</a>.</p>
+        {% endif %}
+
+        <p>If you have any questions, or if you believe this is incorrect, please reply to this email or contact us through our <a href="https://github.com/phillipod/SISTER/issues" target="_blank" rel="noopener noreferrer">GitHub issues page</a>.</p>
+        
+        <p>Regards,<br>The SISTER Team</p>
+
+        <div class="timestamp">
+            Reply processed at: {{ timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>This is an automated message from the SISTER project.</p>
+        <p>If you have questions, please contact us by raising an issue on our <a href="https://github.com/phillipod/SISTER/issues" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
+    </div>
+</body>
+</html>
