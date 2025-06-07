@@ -579,7 +579,7 @@ def handle_email_reply():
             logger.warning("Email webhook: No JSON data received.")
             return jsonify({"status": "error", "message": "No JSON data received"}), 400
         
-        logger.info(f"Email webhook: Received data: {json.dumps(data, indent=2)}")
+        #logger.info(f"Email webhook: Received data: {json.dumps(data, indent=2)}")
 
         # --- START: Enhanced Header and Email Info Extraction ---
         all_headers_raw = data.get('headers', []) 
