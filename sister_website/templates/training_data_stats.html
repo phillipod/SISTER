@@ -3,155 +3,110 @@
 {% block title %}Training Data Statistics - SISTER{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="stats-page-container">
     <h1>Training Data Statistics</h1>
-    <p class="text-muted">Last updated: {{ now.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    <p class="stats-updated-time">Last updated: {{ now.strftime('%Y-%m-%d %H:%M:%S') }}</p>
     
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2>Overview</h2>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="card text-white bg-primary mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Total Submissions</h5>
-                            <p class="display-4">{{ stats.total_submissions }}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card text-white bg-success mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Accepted Submissions</h5>
-                            <p class="display-4">{{ stats.total_accepted }}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card text-white bg-info mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Total Screenshots</h5>
-                            <p class="display-4">{{ stats.total_screenshots }}</p>
-                        </div>
-                    </div>
-                </div>
+    <section>
+        <h2>Overview</h2>
+        <div class="overview-grid">
+            <div class="stat-card">
+                <h3>Total Submissions</h3>
+                <p class="count">{{ stats.total_submissions }}</p>
+            </div>
+            <div class="stat-card">
+                <h3>Accepted Submissions</h3>
+                <p class="count">{{ stats.total_accepted }}</p>
+            </div>
+            <div class="stat-card">
+                <h3>Total Screenshots</h3>
+                <p class="count">{{ stats.total_screenshots }}</p>
             </div>
         </div>
-    </div>
+    </section>
 
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h3>By Build Type</h3>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Type</th>
-                                    <th>Total</th>
-                                    <th>Accepted</th>
-                                    <th>Progress</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for type, data in stats.by_type.items() %}
-                                <tr>
-                                    <td>{{ type|title }}</td>
-                                    <td>{{ data.total }}</td>
-                                    <td>{{ data.accepted }}</td>
-                                    <td>
-                                        <div class="progress">
-                                            {% set progress = (data.accepted / stats.target_per_type * 100)|round|int %}
-                                            <div class="progress-bar {% if progress >= 100 %}bg-success{% endif %}" 
-                                                 role="progressbar" 
-                                                 style="width: {{ progress }}%" 
-                                                 aria-valuenow="{{ progress }}" 
-                                                 aria-valuemin="0" 
-                                                 aria-valuemax="100">
-                                                {{ progress }}%
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h3>By Platform</h3>
-                </div>
-                <div class="card-body">
-                    <ul class="nav nav-tabs" id="platformTabs" role="tablist">
-                        <li class="nav-item">
-                            <a class="nav-link active" id="pc-tab" data-toggle="tab" href="#pc" role="tab">PC</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="console-tab" data-toggle="tab" href="#console" role="tab">Console</a>
-                        </li>
-                    </ul>
-                    <div class="tab-content mt-3" id="platformTabsContent">
-                        {% for platform in ['pc', 'console'] %}
-                        <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ platform }}" role="tabpanel">
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>Type</th>
-                                            <th>Total</th>
-                                            <th>Accepted</th>
-                                            <th>Progress</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for type, data in stats.by_platform[platform].by_type.items() %}
-                                        <tr>
-                                            <td>{{ type|title }}</td>
-                                            <td>{{ data.total }}</td>
-                                            <td>{{ data.accepted }}</td>
-                                            <td>
-                                                <div class="progress" style="height: 20px;">
-                                                    {% set progress = (data.accepted / stats.target_per_type * 100)|round|int %}
-                                                    <div class="progress-bar {% if progress >= 100 %}bg-success{% endif %}" 
-                                                         role="progressbar" 
-                                                         style="width: {{ progress }}%" 
-                                                         aria-valuenow="{{ progress }}" 
-                                                         aria-valuemin="0" 
-                                                         aria-valuemax="100">
-                                                        {{ progress }}%
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+    <div class="detail-sections-grid">
+        <section class="detail-section">
+            <h3>By Build Type</h3>
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Total</th>
+                        <th>Accepted</th>
+                        <th>Progress (Target: {{ stats.target_per_type }})</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for type, data in stats.by_type.items() %}
+                    <tr>
+                        <td>{{ type|title }}</td>
+                        <td>{{ data.total }}</td>
+                        <td>{{ data.accepted }}</td>
+                        <td>
+                            <div class="custom-progress-container">
+                                {% set progress = (data.accepted / stats.target_per_type * 100)|round|int %}
+                                <div class="custom-progress-bar {% if progress >= 100 %}complete{% endif %}" 
+                                     style="width: {{ progress }}%;">
+                                    {{ progress }}%
+                                </div>
                             </div>
-                        </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4">No data by type.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section class="detail-section">
+            <h3>By Platform</h3>
+            {% for platform_name, platform_data in stats.by_platform.items() %}
+                <h4>{{ platform_name|title }}</h4>
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Total</th>
+                            <th>Accepted</th>
+                            <th>Progress (Target: {{ stats.target_per_type }})</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for type, data in platform_data.by_type.items() %}
+                        <tr>
+                            <td>{{ type|title }}</td>
+                            <td>{{ data.total }}</td>
+                            <td>{{ data.accepted }}</td>
+                            <td>
+                                <div class="custom-progress-container">
+                                    {% set progress = (data.accepted / stats.target_per_type * 100)|round|int %}
+                                    <div class="custom-progress-bar {% if progress >= 100 %}complete{% endif %}"
+                                         style="width: {{ progress }}%;">
+                                        {{ progress }}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4">No {{ platform_name|title }} data by type.</td></tr>
                         {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No platform data available.</p>
+            {% endfor %}
+        </section>
     </div>
 
-    <div class="alert alert-info">
+    <div class="info-box">
         <h4>Target: {{ stats.target_per_type }} samples per label</h4>
         <p>We're aiming to collect at least {{ stats.target_per_type }} samples for each label to ensure good model performance.</p>
         <p>Special notes:
             <ul>
-                <li>PC Ship builds have an additional "Secondary Deflector" slot</li>
-                <li>Both PC and Console Ship builds have "Experimental Weapon" and "Hangar" slots</li>
+                <li>PC Ship builds have an additional "Secondary Deflector" label not always present</li>
+                <li>Ship builds have additional "Experimental Weapon" and "Hangar" labels not always present</li>
             </ul>
         </p>
     </div>
@@ -160,18 +115,5 @@
 
 {% block scripts %}
 {{ super() }}
-<script>
-    // Enable Bootstrap tabs
-    $(function () {
-        $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-            localStorage.setItem('lastTab', $(this).attr('href'));
-        });
-        
-        // Go to the last selected tab if there is one
-        var lastTab = localStorage.getItem('lastTab');
-        if (lastTab) {
-            $('[href="' + lastTab + '"]').tab('show');
-        }
-    });
-</script>
+{# Removed JavaScript for Bootstrap tabs as they are no longer used #}
 {% endblock %}
