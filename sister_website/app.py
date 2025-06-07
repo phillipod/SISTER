@@ -788,7 +788,7 @@ def handle_email_reply():
         reply_only_text = extract_reply_text(email_text_content)
         logger.info(f"Email webhook: Extracted reply-only text (first 200 chars): '{reply_only_text[:200]}...' (length: {len(reply_only_text)})")
 
-        acceptance_keywords = ['accept', 'confirm', 'yes', 'agreed', 'agreement', 'consent']
+        acceptance_keywords = ['accept', 'confirm', 'yes', 'agree', 'consent']
         disagreement_keywords = ['disagree', 'decline']
 
         reply_lower = reply_only_text.lower()
