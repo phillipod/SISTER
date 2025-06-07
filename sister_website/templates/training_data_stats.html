@@ -29,7 +29,7 @@
         <section class="detail-section">
             <h2>Builds by Platform</h2>
             {% for platform_name, platform_data in stats.by_platform_type.items() %}
-                <h4>{{ platform_name|title }}</h4>
+                <h4>{% if platform_name == 'PC' %}PC{% else %}{{ platform_name|title }}{% endif %}</h4>
                 <p>Target: {{ stats.target_per_platform_type }} accepted builds per type below.</p>
                 <table class="stats-table">
                     <thead>
@@ -60,7 +60,7 @@
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="4">No {{ platform_name|title }} data by type.</td></tr>
+                        <tr><td colspan="4">No {% if platform_name == 'PC' %}PC{% else %}{{ platform_name|title }}{% endif %} data by type.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
