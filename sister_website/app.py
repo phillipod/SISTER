@@ -663,7 +663,9 @@ def training_data_stats():
     stats['by_platform']['pc']['by_type'] = dict(stats['by_platform']['pc']['by_type'])
     stats['by_platform']['console']['by_type'] = dict(stats['by_platform']['console']['by_type'])
     
-    return render_template('training_data_stats.html', stats=stats)
+    return render_template('training_data_stats.html', 
+                         stats=stats, 
+                         now=datetime.utcnow())
 
 @app.route('/acceptance-thank-you')
 def acceptance_thank_you():
