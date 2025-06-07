@@ -58,6 +58,8 @@ class Build(db.Model):
     __tablename__ = 'build'
     id = db.Column(db.String(36), primary_key=True)
     submission_id = db.Column(db.String(36), db.ForeignKey('submission.id'), nullable=False)
+    platform = db.Column(db.String(10), nullable=False)  # 'PC' or 'Console'
+    type = db.Column(db.String(10), nullable=False)      # 'Ground' or 'Space'
     # Individual consent flags removed as per single license agreement
     is_accepted = db.Column(db.Boolean, default=False) # Will be set when Submission is accepted
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -70,7 +72,6 @@ class Screenshot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     build_id = db.Column(db.String(36), db.ForeignKey('build.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
-    type = db.Column(db.String(10), nullable=False)  # 'space' or 'ground'
     md5sum = db.Column(db.String(32), nullable=False, index=True)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -227,7 +228,7 @@ def allowed_mime(file_storage):
         file_storage.seek(0) # IMPORTANT: Reset stream for subsequent reads
     return is_allowed
 
-def save_screenshot(file, build_id, build_type):
+def save_screenshot(file, build_id):
     """Saves a screenshot file, calculates its MD5, and creates a Screenshot record."""
     filename_for_log = file.filename if file else "No file provided"
     current_app.logger.info(f"save_screenshot called for: {filename_for_log}")
@@ -276,7 +277,6 @@ def save_screenshot(file, build_id, build_type):
             new_screenshot = Screenshot(
                 build_id=build_id,
                 filename=filename,
-                type=build_type,
                 md5sum=md5_hash
             )
             return new_screenshot
@@ -392,23 +392,26 @@ def training_data_submit():
         while True:
             screenshots_key = f'screenshots_{build_index}'
             build_type_key = f'build_type_{build_index}'
+            build_platform_key = f'build_platform_{build_index}'
 
             # Check if the form even contains these keys. If not, we're past the submitted builds.
-            # A more robust check: if neither key is present in their respective dictionaries.
-            if screenshots_key not in request.files and build_type_key not in request.form:
-                current_app.logger.info(f"No form data (files or build_type) found for build_index {build_index}. Assuming end of builds.")
+            if (screenshots_key not in request.files and 
+                build_type_key not in request.form and 
+                build_platform_key not in request.form):
+                current_app.logger.info(f"No form data (files, build_type, or build_platform) found for build_index {build_index}. Assuming end of builds.")
                 break
 
             screenshots_files_list = request.files.getlist(screenshots_key)
             build_type_value = request.form.get(build_type_key) # This will be 'space' or 'ground'
+            build_platform_value = request.form.get(build_platform_key) # This will be 'PC' or 'Console'
 
-            # If no build type is selected for this index, it's an incomplete section or end of data.
-            if not build_type_value:
-                current_app.logger.info(f"No build_type specified for build_index {build_index}. Moving to next or finishing.")
+            # If no build type or platform is selected for this index, it's an incomplete section or end of data.
+            if not build_type_value or not build_platform_value:
+                current_app.logger.info(f"No build_type ('{build_type_value}') or build_platform ('{build_platform_value}') specified for build_index {build_index}. Moving to next or finishing.")
                 # If there were also no files for this key, it's definitely the end or an empty section.
                 if not screenshots_files_list or all(not s.filename for s in screenshots_files_list):
                     current_app.logger.info(f"Also no files for build_index {build_index}. Definitely end of relevant build sections.")
-                    break # Break if no build_type and no files for this index
+                    break # Break if no build_type/platform and no files for this index
                 build_index += 1
                 continue
             
@@ -420,21 +423,21 @@ def training_data_submit():
                 build_index += 1
                 continue
             
-            current_app.logger.info(f"Processing build_index {build_index}, type: {build_type_value}, {len(actual_screenshots_files)} file(s) submitted.")
+            current_app.logger.info(f"Processing build_index {build_index}, platform: {build_platform_value}, type: {build_type_value}, {len(actual_screenshots_files)} file(s) submitted.")
 
             # Use a consistent build_id format, incorporating the original submission_id and the current build_index
             build_id = f"{new_submission.id}_build_{build_index}"
             
             current_build = Build(
                 id=build_id,
-                submission_id=new_submission.id
-                # Potentially add: build_type=build_type_value, if your Build model stores this
+                submission_id=new_submission.id,
+                platform=build_platform_value,
+                type=build_type_value
             )
             
             saved_screenshots_for_this_build = []
             for file_in_request in actual_screenshots_files:
-                # The 'build_type_value' ('space' or 'ground') is the correct 'build_type' for save_screenshot
-                screenshot = save_screenshot(file_in_request, build_id, build_type_value) 
+                screenshot = save_screenshot(file_in_request, build_id) 
                 if screenshot:
                     saved_screenshots_for_this_build.append(screenshot)
                     has_screenshots = True # Set to True if at least one screenshot is saved across all builds
@@ -443,7 +446,7 @@ def training_data_submit():
                 current_build.screenshots = saved_screenshots_for_this_build
                 build_objects_for_submission.append(current_build)
             else:
-                current_app.logger.warning(f"Build {build_id} (type: {build_type_value}) had {len(actual_screenshots_files)} file(s) submitted, but none were saved by save_screenshot. MIME type or other issue likely.")
+                current_app.logger.warning(f"Build {build_id} (platform: {build_platform_value}, type: {build_type_value}) had {len(actual_screenshots_files)} file(s) submitted, but none were saved by save_screenshot. MIME type or other issue likely.")
 
             build_index += 1
         
@@ -630,12 +633,22 @@ def training_data_stats():
         'total_submissions': 0,
         'total_accepted': 0,
         'total_screenshots': 0,
-        'by_type': {
+        'by_screenshot_type': {  # Renamed for clarity
             'space': {'total': 0, 'accepted': 0},
             'ground': {'total': 0, 'accepted': 0}
         },
-        'target_per_type': 75,  # Target number of each type,
-        'target_per_label': 50, # Target number of each label
+        'by_platform_type': {
+            'PC': {
+                'space': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0},
+                'ground': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0}
+            },
+            'Console': {
+                'space': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0},
+                'ground': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0}
+            }
+        },
+        'target_per_platform_type': 75, # Target number of builds for each platform/type combo
+        'target_per_label': 50,         # Target number of screenshots for each label (space/ground)
     }
     
     # Process submissions
@@ -645,12 +658,30 @@ def training_data_stats():
             stats['total_accepted'] += 1
         
         for build in submission.builds:
+            # Ensure platform and type are valid keys
+            platform_key = build.platform if build.platform in stats['by_platform_type'] else None
+            type_key = build.type if platform_key and build.type in stats['by_platform_type'][platform_key] else None
+
+            if platform_key and type_key:
+                stats['by_platform_type'][platform_key][type_key]['total_builds'] += 1
+                if submission.is_accepted:
+                    stats['by_platform_type'][platform_key][type_key]['accepted_builds'] += 1
+
             for screenshot in build.screenshots:
                 stats['total_screenshots'] += 1
-                stats['by_type'][screenshot.type]['total'] += 1
+                # Stats for screenshot types (labels), derived from build
+                # Ensure build relationship is loaded. The query in training_data_stats should handle this.
+                # Submission.query.options(db.joinedload(Submission.builds).joinedload(Build.screenshots))
+                if screenshot.build and screenshot.build.type in stats['by_screenshot_type']:
+                    stats['by_screenshot_type'][screenshot.build.type]['total'] += 1
+                    if submission.is_accepted:
+                        stats['by_screenshot_type'][screenshot.build.type]['accepted'] += 1
                 
-                if submission.is_accepted:
-                    stats['by_type'][screenshot.type]['accepted'] += 1
+                # Aggregate screenshot counts within platform/type as well
+                if platform_key and type_key:
+                    stats['by_platform_type'][platform_key][type_key]['total_screenshots'] += 1
+                    if submission.is_accepted:
+                        stats['by_platform_type'][platform_key][type_key]['accepted_screenshots'] += 1
     
     # Ensure by_type is a standard dict for the template, which it already is now
     # No conversion needed if initialized as a dict with predefined keys

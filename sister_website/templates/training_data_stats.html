@@ -27,25 +27,65 @@
 
     <div class="detail-sections-grid">
         <section class="detail-section">
-            <h3>By Build Type</h3>
+            <h3>By Platform & Build Type (Builds)</h3>
             <table class="stats-table">
                 <thead>
                     <tr>
+                        <th>Platform</th>
                         <th>Type</th>
-                        <th>Total</th>
-                        <th>Accepted</th>
-                        <th>Progress (Target: {{ stats.target_per_type }})</th>
+                        <th>Total Builds</th>
+                        <th>Accepted Builds</th>
+                        <th>Screenshots (Accepted)</th>
+                        <th>Progress (Target: {{ stats.target_per_platform_type }} builds)</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for type, data in stats.by_type.items() %}
+                    {% for platform, types in stats.by_platform_type.items() %}
+                        {% for type, data in types.items() %}
+                        <tr>
+                            <td>{{ platform|title }}</td>
+                            <td>{{ type|title }}</td>
+                            <td>{{ data.total_builds }}</td>
+                            <td>{{ data.accepted_builds }}</td>
+                            <td>{{ data.accepted_screenshots }} ({{ data.total_screenshots }} total)</td>
+                            <td>
+                                <div class="custom-progress-container">
+                                    {% set progress = (data.accepted_builds / stats.target_per_platform_type * 100)|round|int %}
+                                    <div class="custom-progress-bar {% if progress >= 100 %}complete{% endif %}"
+                                         style="width: {{ progress }}%;">
+                                        {{ progress }}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                    <tr><td colspan="6">No data by platform and type.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section class="detail-section">
+            <h3>By Screenshot Type (Labels)</h3>
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Screenshot Type</th>
+                        <th>Total Screenshots</th>
+                        <th>Accepted Screenshots</th>
+                        <th>Progress (Target: {{ stats.target_per_label }} screenshots)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for type, data in stats.by_screenshot_type.items() %}
                     <tr>
                         <td>{{ type|title }}</td>
                         <td>{{ data.total }}</td>
                         <td>{{ data.accepted }}</td>
                         <td>
                             <div class="custom-progress-container">
-                                {% set progress = (data.accepted / stats.target_per_type * 100)|round|int %}
+                                {% set progress = (data.accepted / stats.target_per_label * 100)|round|int %}
                                 <div class="custom-progress-bar {% if progress >= 100 %}complete{% endif %}" 
                                      style="width: {{ progress }}%;">
                                     {{ progress }}%
@@ -54,24 +94,26 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="4">No data by type.</td></tr>
+                    <tr><td colspan="4">No data by screenshot type.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </section>
-
     </div>
 
     <div class="info-box">
-        <h4>Target: {{ stats.target_per_label }} samples per label</h4>
-        <p>We're aiming to collect at least {{ stats.target_per_label }} samples for each label to ensure good model performance.</p>
-        <p>Special notes:
+        <h4>Collection Targets:</h4>
+        <ul>
+            <li><strong>Builds:</strong> {{ stats.target_per_platform_type }} accepted builds for each Platform/Type combination (e.g., PC/Space, Console/Ground).</li>
+            <li><strong>Screenshots (Labels):</strong> {{ stats.target_per_label }} accepted screenshots for each overall type (Space, Ground) to ensure sufficient data for individual UI element recognition.</li>
+        </ul>
+        <p>Special notes for screenshot labels:
             <ul>
                 <li>PC Ship builds have an additional "Secondary Deflector" label not always present.</li>
                 <li>Ship builds have additional "Experimental Weapon" and "Hangar" labels not always present.</li>
             </ul>
         </p>
-        <p><small>Once we have a reasonable collection of screenshots, this page will be updated with stats reflecting per-label per-platform counts, which we will run periodically.</small></p>
+        <p><small>The "Screenshots (Labels)" target helps ensure we have enough examples of each UI element across all platforms. The "Builds" target helps ensure a good distribution of complete build examples from different platforms and types.</small></p>
     </div>
 </div>
 {% endblock %}

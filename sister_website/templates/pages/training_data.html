@@ -84,6 +84,19 @@
                     <h3>Build Screenshots</h3>
                 </div>
                 <div class="screenshots-section">
+                    <div class="build-platform-selection">
+                        <h4>Build Platform</h4>
+                        <div class="radio-group">
+                            <label class="radio-option">
+                                <input type="radio" name="build_platform_0" value="PC" checked>
+                                PC
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="build_platform_0" value="Console">
+                                Console
+                            </label>
+                        </div>
+                    </div>
                     <div class="build-type-selection">
                         <h4>Build Type</h4>
                         <div class="radio-group">
@@ -186,6 +199,19 @@ document.getElementById('addBuildBtn').addEventListener('click', function() {
             <button type="button" class="remove-build-btn">Remove Build</button>
         </div>
         <div class="screenshots-section">
+            <div class="build-platform-selection">
+                <h4>Build Platform</h4>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="build_platform_${buildIndex}" value="PC" checked>
+                        PC
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="build_platform_${buildIndex}" value="Console">
+                        Console
+                    </label>
+                </div>
+            </div>
             <div class="build-type-selection">
                 <h4>Build Type</h4>
                 <div class="radio-group">
