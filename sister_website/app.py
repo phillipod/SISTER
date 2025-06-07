@@ -339,11 +339,16 @@ def documentation():
     return render_template('pages/documentation.html', active_page='documentation')
 
 @app.route('/training')
-def training():
-    form = UploadForm()
-    return render_template('pages/training.html', form=form, active_page='training')
+def training_redirect():
+    # Permanent redirect from /training to /training-data
+    return redirect(url_for('training_data'), code=301)
 
-@app.route('/training/submit', methods=['GET', 'POST'])
+@app.route('/training-data')
+def training_data():
+    form = UploadForm()
+    return render_template('pages/training_data.html', form=form, active_page='training')
+
+@app.route('/training-data/submit', methods=['GET', 'POST'])
 def training_submit():
     form = UploadForm()
     if request.method == 'GET':
@@ -462,10 +467,9 @@ def training_submit():
             db.session.rollback()
             flash('There was an error processing your submission. Please try again later.')
             logger.error(f"Database error in training_submit: {e}", exc_info=True)
-        
-        return redirect(url_for('submission_received'))
+            return redirect(url_for('submission_received'))
 
-    return render_template('pages/training.html', form=form, active_page='training')
+    return render_template('pages/training_data.html', form=form, active_page='training')
 
 @app.route('/submission-received')
 def submission_received():
