@@ -1,5 +1,8 @@
 import os
 import sys
+import hmac
+import hashlib
+import json
 from datetime import datetime
 from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify, current_app
 from flask_migrate import Migrate
@@ -144,6 +147,34 @@ def create_app():
     # The db.create_all() call has been removed.
 
     return app
+
+def verify_webhook_signature(request_data, signature_header, secret_key):
+    """
+    Verify the webhook signature from ForwardEmail.
+    
+    Args:
+        request_data: The raw request data (bytes or string)
+        signature_header: The value of the X-Webhook-Signature header
+        secret_key: The webhook secret key from ForwardEmail settings
+        
+    Returns:
+        bool: True if signature is valid, False otherwise
+    """
+    if not all([request_data, signature_header, secret_key]):
+        return False
+        
+    if isinstance(request_data, str):
+        request_data = request_data.encode('utf-8')
+    
+    # Create HMAC signature
+    expected_signature = hmac.new(
+        key=secret_key.encode('utf-8'),
+        msg=request_data,
+        digestmod=hashlib.sha256
+    ).hexdigest()
+    
+    # Use constant-time comparison to prevent timing attacks
+    return hmac.compare_digest(expected_signature, signature_header)
 
 # Create the application
 app = create_app()
@@ -572,8 +603,44 @@ def handle_email_reply():
     if request.method == 'GET':
         # ForwardEmail webhook verification often uses GET for initial setup
         return jsonify({"status": "ok, webhook alive"})
+    
+    # Get the webhook secret key from environment
+    webhook_secret = os.getenv('FORWARD_EMAIL_WEBHOOK_SECRET')
+    if not webhook_secret:
+        logger.error("Email webhook: FORWARD_EMAIL_WEBHOOK_SECRET not configured")
+        return jsonify({"status": "error", "message": "Server configuration error"}), 500
+    
+    # Verify the request is from ForwardEmail using reverse DNS
+    try:
+        client_ip = request.remote_addr
+        import socket
+        hostname, _, _ = socket.gethostbyaddr(client_ip)
+        
+        allowed_domains = ['mx1.forwardemail.net', 'mx2.forwardemail.net']
+        if not any(hostname.endswith(domain) for domain in allowed_domains):
+            logger.warning(f"Email webhook: Rejected request from unauthorized hostname '{hostname}' (IP: {client_ip})")
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
+    except (socket.herror, socket.gaierror) as e:
+        logger.warning(f"Email webhook: Reverse DNS lookup failed for {client_ip}: {e}")
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+    except Exception as e:
+        logger.error(f"Email webhook: Error during reverse DNS verification: {e}")
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
+    
+    # Verify webhook signature
+    signature_header = request.headers.get('X-Webhook-Signature')
+    if not signature_header:
+        logger.warning("Email webhook: Missing X-Webhook-Signature header")
+        return jsonify({"status": "error", "message": "Missing signature"}), 400
+    
+    # Get raw request data for signature verification
+    request_data = request.get_data()
+    if not verify_webhook_signature(request_data, signature_header, webhook_secret):
+        logger.warning("Email webhook: Invalid webhook signature")
+        return jsonify({"status": "error", "message": "Invalid signature"}), 401
 
     try:
+        # Parse JSON data (already verified the signature)
         data = request.get_json()
         if not data:
             logger.warning("Email webhook: No JSON data received.")
