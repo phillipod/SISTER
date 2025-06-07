@@ -1126,6 +1126,44 @@ footer {
     margin: 0 auto;
 }
 
+/* Flash Messages */
+.flash-messages {
+    margin: 1rem 0;
+    width: 100%;
+}
+
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.alert-success {
+    color: #0f5132;
+    background-color: #d1e7dd;
+    border-color: #badbcc;
+}
+
+.alert-warning {
+    color: #664d03;
+    background-color: #fff3cd;
+    border-color: #ffecb5;
+}
+
+.alert-danger {
+    color: #842029;
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+}
+
+.alert-info {
+    color: #055160;
+    background-color: #cff4fc;
+    border-color: #b6effb;
+}
+
 .contact-options {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));

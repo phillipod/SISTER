@@ -458,18 +458,23 @@ def training_data_submit():
             }
             
             # Send consent email
-            if send_consent_email(new_submission.email, new_submission.builds, consents_for_email, new_submission.acceptance_token, new_submission.id):
-                flash('Thank you for your submission! Please check your email for the consent form.')
+            email_sent = send_consent_email(new_submission.email, new_submission.builds, consents_for_email, new_submission.acceptance_token, new_submission.id)
+            db.session.commit()  # Ensure everything is committed before redirecting
+            
+            if email_sent:
+                flash('Thank you for your submission! Please check your email for the consent form.', 'success')
             else:
-                flash('There was an error sending the consent email. Please try again later.')
+                flash('Your submission was received, but there was an error sending the confirmation email. We have your data and will process it shortly.', 'warning')
+            
+            return redirect(url_for('submission_received'))
             
         except Exception as e:
             db.session.rollback()
-            flash('There was an error processing your submission. Please try again later.')
-            logger.error(f"Database error in training_data_submit: {e}", exc_info=True)
-            return redirect(url_for('submission_received'))
+            logger.error(f"Error in training_data_submit: {e}", exc_info=True)
+            flash('There was an error processing your submission. Please try again later.', 'danger')
+            return redirect(url_for('training_data'))
 
-    return render_template('pages/training_data.html', form=form, active_page='training_data')
+    return redirect(url_for('training_data'))
 
 @app.route('/submission-received')
 def submission_received():
