@@ -338,32 +338,66 @@ def training_submit():
         build_objects_for_submission = []
         has_screenshots = False
 
-        for build_type_key, build_label in [('build_space', 'space'), ('build_ground', 'ground')]:
-            screenshots = request.files.getlist(f'{build_type_key}_screenshots')
-            if not screenshots or all(not s.filename for s in screenshots):
-                build_index +=1 
+        build_index = 0 # Start with the first build section
+        # build_objects_for_submission is already initialized
+        # has_screenshots is already initialized
+
+        while True:
+            screenshots_key = f'screenshots_{build_index}'
+            build_type_key = f'build_type_{build_index}'
+
+            # Check if the form even contains these keys. If not, we're past the submitted builds.
+            # A more robust check: if neither key is present in their respective dictionaries.
+            if screenshots_key not in request.files and build_type_key not in request.form:
+                current_app.logger.info(f"No form data (files or build_type) found for build_index {build_index}. Assuming end of builds.")
+                break
+
+            screenshots_files_list = request.files.getlist(screenshots_key)
+            build_type_value = request.form.get(build_type_key) # This will be 'space' or 'ground'
+
+            # If no build type is selected for this index, it's an incomplete section or end of data.
+            if not build_type_value:
+                current_app.logger.info(f"No build_type specified for build_index {build_index}. Moving to next or finishing.")
+                # If there were also no files for this key, it's definitely the end or an empty section.
+                if not screenshots_files_list or all(not s.filename for s in screenshots_files_list):
+                    current_app.logger.info(f"Also no files for build_index {build_index}. Definitely end of relevant build sections.")
+                    break # Break if no build_type and no files for this index
+                build_index += 1
                 continue
+            
+            # Filter out FileStorage objects that don't have a filename (i.e., no file was actually selected)
+            actual_screenshots_files = [s for s in screenshots_files_list if s and s.filename]
 
+            if not actual_screenshots_files:
+                current_app.logger.info(f"Build section {build_index} (type: {build_type_value}) had form keys but no actual files uploaded. Skipping.")
+                build_index += 1
+                continue
+            
+            current_app.logger.info(f"Processing build_index {build_index}, type: {build_type_value}, {len(actual_screenshots_files)} file(s) submitted.")
+
+            # Use a consistent build_id format, incorporating the original submission_id and the current build_index
             build_id = f"{new_submission.id}_build_{build_index}"
-
-            build = Build(
+            
+            current_build = Build(
                 id=build_id,
                 submission_id=new_submission.id
+                # Potentially add: build_type=build_type_value, if your Build model stores this
             )
             
-            saved_screenshots = []
+            saved_screenshots_for_this_build = []
+            for file_in_request in actual_screenshots_files:
+                # The 'build_type_value' ('space' or 'ground') is the correct 'build_type' for save_screenshot
+                screenshot = save_screenshot(file_in_request, build_id, build_type_value) 
+                if screenshot:
+                    saved_screenshots_for_this_build.append(screenshot)
+                    has_screenshots = True # Set to True if at least one screenshot is saved across all builds
             
-            for file_in_request in screenshots:
-                if file_in_request.filename:
-                    screenshot = save_screenshot(file_in_request, build_id, build_label)
-                    if screenshot:
-                        saved_screenshots.append(screenshot)
-                        has_screenshots = True
-            
-            if saved_screenshots:
-                build.screenshots = saved_screenshots
-                build_objects_for_submission.append(build)
-            
+            if saved_screenshots_for_this_build:
+                current_build.screenshots = saved_screenshots_for_this_build
+                build_objects_for_submission.append(current_build)
+            else:
+                current_app.logger.warning(f"Build {build_id} (type: {build_type_value}) had {len(actual_screenshots_files)} file(s) submitted, but none were saved by save_screenshot. MIME type or other issue likely.")
+
             build_index += 1
         
         current_app.logger.info(f"training_submit: has_screenshots = {has_screenshots}")
