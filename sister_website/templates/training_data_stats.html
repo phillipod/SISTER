@@ -27,30 +27,31 @@
 
     <div class="detail-sections-grid">
         <section class="detail-section">
-            <h3>By Platform & Build Type (Builds)</h3>
-            <table class="stats-table">
-                <thead>
-                    <tr>
-                        <th>Platform</th>
-                        <th>Type</th>
-                        <th>Total Builds</th>
-                        <th>Accepted Builds</th>
-                        <th>Screenshots (Accepted)</th>
-                        <th>Progress (Target: {{ stats.target_per_platform_type }} builds)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for platform, types in stats.by_platform_type.items() %}
-                        {% for type, data in types.items() %}
+            <h2>Builds by Platform</h2>
+            {% for platform_name, platform_data in stats.by_platform_type.items() %}
+                <h4>{{ platform_name|title }}</h4>
+                <p>Target: {{ stats.target_per_platform_type }} accepted builds per type below.</p>
+                <table class="stats-table">
+                    <thead>
                         <tr>
-                            <td>{{ platform|title }}</td>
+                            <th>Build Type</th>
+                            <th>Total Builds</th>
+                            <th>Accepted Builds</th>
+                            <th>Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for type, data in platform_data.items() %}
+                        <tr>
                             <td>{{ type|title }}</td>
                             <td>{{ data.total_builds }}</td>
                             <td>{{ data.accepted_builds }}</td>
-                            <td>{{ data.accepted_screenshots }} ({{ data.total_screenshots }} total)</td>
                             <td>
                                 <div class="custom-progress-container">
-                                    {% set progress = (data.accepted_builds / stats.target_per_platform_type * 100)|round|int %}
+                                    {% set progress = 0 %}
+                                    {% if stats.target_per_platform_type > 0 %}
+                                        {% set progress = (data.accepted_builds / stats.target_per_platform_type * 100)|round|int %}
+                                    {% endif %}
                                     <div class="custom-progress-bar {% if progress >= 100 %}complete{% endif %}"
                                          style="width: {{ progress }}%;">
                                         {{ progress }}%
@@ -58,12 +59,14 @@
                                 </div>
                             </td>
                         </tr>
+                        {% else %}
+                        <tr><td colspan="4">No {{ platform_name|title }} data by type.</td></tr>
                         {% endfor %}
-                    {% else %}
-                    <tr><td colspan="6">No data by platform and type.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            {% else %}
+                <p>No platform data available.</p>
+            {% endfor %}
         </section>
 
         <section class="detail-section">
