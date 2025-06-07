@@ -612,25 +612,21 @@ def acceptance_thank_you():
     return render_template('pages/acceptance_thank_you.html', active_page='acceptance_thank_you')
 
 def send_reply_confirmation_email(original_sender_email, submission_id, decision_text, reply_channel_address):
-    """
-    Sends a confirmation email back to the user after their email reply has been processed.
+    if not original_sender_email or not submission_id or not reply_channel_address:
+        logger.warning(f"Cannot attempt to send confirmation for {decision_text.lower()} for submission '{submission_id}' due to missing critical details (sender: {'present' if original_sender_email else 'MISSING'}, reply_to_channel: {'present' if reply_channel_address else 'MISSING'}).")
+        return False
 
-    Args:
-        original_sender_email (str): The user's email address (who sent the reply).
-        submission_id (str): The ID of the submission.
-        decision_text (str): A short text describing the decision detected (e.g., "License Accepted").
-        reply_channel_address (str): The email address the user replied to (e.g., training-data-submission-xxx@domain.com),
-                                     which will be used as the 'From' and 'Reply-To' for this confirmation.
-    """
     try:
         client = ForwardEmailClient(api_key=os.getenv('FORWARD_EMAIL_API_KEY'))
         
         from_email_obj = EmailAddress(
             email=reply_channel_address, 
-            name="SISTER Submissions"
+            name="SISTER Team - Reply Channel"
         )
         
-        subject = f"SISTER - Reply Processed for Submission {submission_id}"
+        to_email_recipient = EmailAddress(email=original_sender_email)
+
+        subject = f"SISTER - Reply Processed for Submission {submission_id}: {decision_text}"
 
         html_content = render_template(
             'reply_email_template.html',
@@ -641,10 +637,10 @@ def send_reply_confirmation_email(original_sender_email, submission_id, decision
         
         message = EmailMessage(
             from_email=from_email_obj,
-            to=[original_sender_email],
+            to=[to_email_recipient],
             subject=subject,
-            html=html_content, # Use html content
-            reply_to=[reply_channel_address],
+            html=html_content,
+            reply_to=[EmailAddress(email=reply_channel_address)],
             headers={
                 'X-SISTER-Submission-ID': str(submission_id),
                 'Auto-Submitted': 'auto-replied',
@@ -652,8 +648,8 @@ def send_reply_confirmation_email(original_sender_email, submission_id, decision
             }
         )
         
-        response = client.send_email(message)
-        logger.info(f"Sent reply confirmation email to '{original_sender_email}' for submission ID '{submission_id}'. From: '{reply_channel_address}', Decision: '{decision_text}'. Response: {response}")
+        client.send_email(message)
+        logger.info(f"Successfully sent reply confirmation email to '{original_sender_email}' for submission ID '{submission_id}'. From: '{reply_channel_address}', Decision: '{decision_text}'.")
         return True
     except Exception as e:
         logger.error(f"Error sending reply confirmation email for submission ID '{submission_id}' to '{original_sender_email}': {e}", exc_info=True)
@@ -710,6 +706,12 @@ def handle_email_reply():
             return jsonify({"status": "error", "message": "No JSON data received"}), 400
         
         #logger.info(f"Email webhook: Received data: {json.dumps(data, indent=2)}")
+
+        # --- START: Debugging Email Parsing --- 
+        logger.info(f"Email webhook: Debug - Raw 'from' field: {data.get('from')}")
+        logger.info(f"Email webhook: Debug - Raw 'to' field: {data.get('to')}")
+        logger.info(f"Email webhook: Debug - Raw 'envelopeRecipients' field: {data.get('envelopeRecipients')}")
+        # --- END: Debugging Email Parsing ---
 
         # --- START: Enhanced Header and Email Info Extraction ---
         all_headers_raw = data.get('headers', []) 
@@ -818,13 +820,13 @@ def handle_email_reply():
                 db.session.rollback()
                 logger.error(f"Email webhook: Failed to log disagreement email for submission_id='{submission_id}': {e_log_disagree}", exc_info=True)
             
-            send_reply_confirmation_email(
-                original_sender_email=from_email_address,
-                submission_id=submission_id,
-                decision_text=decision_for_email,
-                reply_channel_address=to_email_address
-            )
-            return jsonify({"status": "info", "message": f"Disagreement processed for submission {submission_id}. License not accepted."}), 200
+            email_sent_successfully = send_reply_confirmation_email(submission_id, from_email_address, decision_for_email, to_email_address)
+            response_message = f"Disagreement processed for submission {submission_id}. License not accepted."
+            if email_sent_successfully:
+                response_message += " Confirmation email sent."
+            else:
+                response_message += " Confirmation email FAILED to send (check logs)."
+            return jsonify({"status": "info", "message": response_message}), 200
 
         elif is_acceptance_in_reply: # Only if not disagreement
             submission = Submission.query.get(submission_id)
@@ -871,13 +873,13 @@ def handle_email_reply():
                 db.session.commit()
                 logger.info(f"Email webhook: Successfully accepted Submission '{submission_id}' and its builds via email reply.")
                 decision_for_email = "License Agreement Accepted"
-                send_reply_confirmation_email(
-                    original_sender_email=from_email_address, 
-                    submission_id=submission_id,
-                    decision_text=decision_for_email,
-                    reply_channel_address=to_email_address
-                )
-                return jsonify({"status": "success", "message": f"Submission {submission_id} accepted via email."})
+                email_sent_successfully = send_reply_confirmation_email(submission_id, from_email_address, decision_for_email, to_email_address)
+                response_message = f"Submission {submission_id} accepted via email."
+                if email_sent_successfully:
+                    response_message += " Acceptance confirmation email sent."
+                else:
+                    response_message += " Acceptance confirmation email FAILED to send (check logs)."
+                return jsonify({"status": "success", "message": response_message}), 200
             except Exception as e_commit:
                 db.session.rollback()
                 logger.error(f"Email webhook: Database error committing acceptance for submission_id '{submission_id}': {e_commit}", exc_info=True)
@@ -887,22 +889,17 @@ def handle_email_reply():
         else:
             logger.info(f"Email webhook: No acceptance or disagreement keywords found in email body for submission_id='{submission_id}'. No action taken on submission status.")
             # decision_for_email is already defaulted to "Reply Received - No explicit decision keywords detected"
-            if from_email_address and to_email_address and submission_id: # Ensure we have the necessary info
-                 send_reply_confirmation_email(
-                    original_sender_email=from_email_address,
-                    submission_id=submission_id,
-                    decision_text=decision_for_email, # Uses the default from above
-                    reply_channel_address=to_email_address
-                )
+            email_sent_successfully = send_reply_confirmation_email(submission_id, from_email_address, decision_for_email, to_email_address)
+            response_message = "No decision keywords found. Reply logged."
+            if email_sent_successfully:
+                response_message += " Neutral confirmation email sent."
             else:
-                logger.warning(f"Email webhook: Cannot send confirmation for neutral reply for submission '{submission_id}' due to missing email/submission_id details.")
-            return jsonify({"status": "info", "message": "No explicit decision keywords found in email body. Reply noted."})
+                response_message += " Neutral confirmation email FAILED to send (check logs)."
+            return jsonify({"status": "info" if email_sent_successfully else "warning", "message": response_message}), 200
 
     except Exception as e:
         logger.error(f"Email webhook: General error: {e}", exc_info=True)
         return jsonify({"status": "error", "message": "An internal error occurred."}), 500
-
-if __name__ == '__main__':
     # Ensure the instance directory exists
     os.makedirs(app.instance_path, exist_ok=True)
     # The upload folder and database are already initialized
