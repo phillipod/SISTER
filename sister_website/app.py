@@ -777,8 +777,14 @@ def handle_email_reply():
                 logger.info(f"Email webhook: Extracted submission_id from header 'X-SISTER-Submission-ID': '{submission_id}'")
 
         if not submission_id:
-            logger.warning("Email webhook: Could not determine submission_id. From/To/Subject/MsgID: {from_email_address}/{to_email_address}/{data.get('subject')}/{message_id_value}")
+            logger.warning(f"Email webhook: Could not determine submission_id. From/To/Subject/MsgID: {from_email_address}/{to_email_address}/{data.get('subject')}/{message_id_value}")
             return jsonify({"status": "error", "message": "Could not identify submission from email reply."}), 400
+            
+        # Check if submission exists in database
+        submission = Submission.query.get(submission_id)
+        if not submission:
+            logger.warning(f"Email webhook: Submission with ID '{submission_id}' not found in database.")
+            return jsonify({"status": "error", "message": f"Submission {submission_id} not found."}), 404
 
         email_text_content = data.get('text', '')
         email_subject = data.get('subject', '')
