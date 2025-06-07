@@ -69,46 +69,13 @@
             {% endfor %}
         </section>
 
-        <section class="detail-section">
-            <h3>By Screenshot Type (Labels)</h3>
-            <table class="stats-table">
-                <thead>
-                    <tr>
-                        <th>Screenshot Type</th>
-                        <th>Total Screenshots</th>
-                        <th>Accepted Screenshots</th>
-                        <th>Progress (Target: {{ stats.target_per_label }} screenshots)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for type, data in stats.by_screenshot_type.items() %}
-                    <tr>
-                        <td>{{ type|title }}</td>
-                        <td>{{ data.total }}</td>
-                        <td>{{ data.accepted }}</td>
-                        <td>
-                            <div class="custom-progress-container">
-                                {% set progress = (data.accepted / stats.target_per_label * 100)|round|int %}
-                                <div class="custom-progress-bar {% if progress >= 100 %}complete{% endif %}" 
-                                     style="width: {{ progress }}%;">
-                                    {{ progress }}%
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="4">No data by screenshot type.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </section>
     </div>
 
     <div class="info-box">
         <h4>Collection Targets:</h4>
         <ul>
             <li><strong>Builds:</strong> {{ stats.target_per_platform_type }} accepted builds for each Platform/Type combination (e.g., PC/Space, Console/Ground).</li>
-            <li><strong>Screenshots (Labels):</strong> {{ stats.target_per_label }} accepted screenshots for each overall type (Space, Ground) to ensure sufficient data for individual UI element recognition.</li>
+            <li><strong>Labels:</strong> {{ stats.target_per_label }} of every label type to ensure sufficient data for individual UI element recognition.</li>
         </ul>
         <p>Special notes for screenshot labels:
             <ul>
@@ -116,7 +83,8 @@
                 <li>Ship builds have additional "Experimental Weapon" and "Hangar" labels not always present.</li>
             </ul>
         </p>
-        <p><small>The "Screenshots (Labels)" target helps ensure we have enough examples of each UI element across all platforms. The "Builds" target helps ensure a good distribution of complete build examples from different platforms and types.</small></p>
+        <p>Once sufficient data has been collected, this page will be updated to display per label, per platform, per build type progress.</p>
+        <p><small>The "Builds" target helps ensure a good distribution of complete build examples from different platforms and types.</small></p>
     </div>
 </div>
 {% endblock %}
