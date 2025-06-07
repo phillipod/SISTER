@@ -650,12 +650,10 @@ def handle_email_reply():
 
         acceptance_keywords = ['accept', 'confirm', 'yes', 'agreed', 'agreement', 'consent'] # Added 'consent'
         is_acceptance_in_reply = any(keyword in reply_only_text.lower() for keyword in acceptance_keywords)
-        is_acceptance_in_subject = any(keyword in email_subject.lower() for keyword in acceptance_keywords)
         
-        is_acceptance = is_acceptance_in_reply or is_acceptance_in_subject
-        logger.info(f"Email webhook: Acceptance check for submission_id='{submission_id}': in_reply='{is_acceptance_in_reply}', in_subject='{is_acceptance_in_subject}', overall='{is_acceptance}'")
+        logger.info(f"Email webhook: Acceptance check for submission_id='{submission_id}': in_reply='{is_acceptance_in_reply}'")
         
-        if is_acceptance:
+        if is_acceptance_in_reply:
             submission = Submission.query.get(submission_id)
             
             if not submission:
@@ -705,8 +703,8 @@ def handle_email_reply():
                 logger.error(f"Email webhook: Database error committing acceptance for submission_id '{submission_id}': {e_commit}", exc_info=True)
                 return jsonify({"status": "error", "message": "Database error during acceptance."}), 500
         else:
-            logger.info(f"Email webhook: No acceptance keywords found in reply for submission_id='{submission_id}'. No action taken.")
-            return jsonify({"status": "info", "message": "No acceptance action taken."})
+            logger.info(f"Email webhook: No acceptance keywords found in email body for submission_id='{submission_id}'. No action taken.")
+            return jsonify({"status": "info", "message": "No acceptance action taken based on email body."})
 
     except Exception as e:
         logger.error(f"Email webhook: General error: {e}", exc_info=True)
