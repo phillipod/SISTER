@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect
 import logging # Keep this one for current_app.logger
+from pathlib import Path
 # import magic # Removed, will use the one below with other Flask imports
 
 # Set up basic logging
