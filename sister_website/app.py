@@ -644,7 +644,7 @@ def send_reply_confirmation_email(original_sender_email, submission_id, decision
             to=[to_email_recipient],
             subject=subject,
             html=html_content,
-            reply_to=[EmailAddress(email=reply_channel_address)],
+            reply_to=EmailAddress(email=reply_channel_address),
             headers={
                 'X-SISTER-Submission-ID': str(submission_id),
                 'Auto-Submitted': 'auto-replied',
@@ -828,7 +828,7 @@ def handle_email_reply():
                 db.session.rollback()
                 logger.error(f"Email webhook: Failed to log disagreement email for submission_id='{submission_id}': {e_log_disagree}", exc_info=True)
             
-            email_sent_successfully = send_reply_confirmation_email(submission_id, from_email_address, decision_for_email, to_email_address)
+            email_sent_successfully = send_reply_confirmation_email(from_email_address, submission_id, decision_for_email, to_email_address)
             response_message = f"Disagreement processed for submission {submission_id}. License not accepted."
             if email_sent_successfully:
                 response_message += " Confirmation email sent."
@@ -881,7 +881,7 @@ def handle_email_reply():
                 db.session.commit()
                 logger.info(f"Email webhook: Successfully accepted Submission '{submission_id}' and its builds via email reply.")
                 decision_for_email = "License Agreement Accepted"
-                email_sent_successfully = send_reply_confirmation_email(submission_id, from_email_address, decision_for_email, to_email_address)
+                email_sent_successfully = send_reply_confirmation_email(from_email_address, submission_id, decision_for_email, to_email_address)
                 response_message = f"Submission {submission_id} accepted via email."
                 if email_sent_successfully:
                     response_message += " Acceptance confirmation email sent."
@@ -897,7 +897,7 @@ def handle_email_reply():
         else:
             logger.info(f"Email webhook: No acceptance or disagreement keywords found in email body for submission_id='{submission_id}'. No action taken on submission status.")
             # decision_for_email is already defaulted to "Reply Received - No explicit decision keywords detected"
-            email_sent_successfully = send_reply_confirmation_email(submission_id, from_email_address, decision_for_email, to_email_address)
+            email_sent_successfully = send_reply_confirmation_email(from_email_address, submission_id, decision_for_email, to_email_address)
             response_message = "No decision keywords found. Reply logged."
             if email_sent_successfully:
                 response_message += " Neutral confirmation email sent."
