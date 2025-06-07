@@ -6,6 +6,10 @@ import json
 from datetime import datetime
 from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify, current_app
 from flask_migrate import Migrate
+from flask_caching import Cache
+from functools import lru_cache
+from collections import defaultdict
+import time
 import uuid # Ensure uuid is imported for new models
 import magic
 import re
@@ -31,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize extensions
 db = SQLAlchemy()
+cache = Cache()
 
 # Define models before creating the app to avoid circular imports
 class Submission(db.Model):
@@ -134,9 +139,14 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+    # Configure cache
+    app.config['CACHE_TYPE'] = 'simple'
+    app.config['CACHE_DEFAULT_TIMEOUT'] = 900  # 15 minutes
+
     # Initialize extensions
     db.init_app(app)
     migrate = Migrate(app, db) # Initialize Flask-Migrate
+    cache.init_app(app)
 
     # Ensure upload directory exists
     os.makedirs(upload_folder, exist_ok=True)
@@ -606,6 +616,54 @@ def extract_reply_text(email_body_text):
         reply_lines.append(line)
     
     return "\n".join(reply_lines).strip()
+
+@app.route('/training-data-stats')
+@cache.cached(timeout=900)  # Cache for 15 minutes
+def training_data_stats():
+    # Get all submissions with their builds and screenshots
+    submissions = Submission.query.options(
+        db.joinedload(Submission.builds).joinedload(Build.screenshots)
+    ).all()
+    
+    # Initialize stats
+    stats = {
+        'total_submissions': 0,
+        'total_accepted': 0,
+        'total_screenshots': 0,
+        'by_type': defaultdict(lambda: {'total': 0, 'accepted': 0}),
+        'by_platform': {
+            'pc': {'total': 0, 'accepted': 0, 'by_type': defaultdict(lambda: {'total': 0, 'accepted': 0})},
+            'console': {'total': 0, 'accepted': 0, 'by_type': defaultdict(lambda: {'total': 0, 'accepted': 0})}
+        },
+        'target_per_type': 50  # Target number of each type
+    }
+    
+    # Process submissions
+    for submission in submissions:
+        stats['total_submissions'] += 1
+        if submission.is_accepted:
+            stats['total_accepted'] += 1
+        
+        for build in submission.builds:
+            platform = 'pc' if 'pc' in build.id.lower() else 'console'
+            
+            for screenshot in build.screenshots:
+                stats['total_screenshots'] += 1
+                stats['by_type'][screenshot.type]['total'] += 1
+                stats['by_platform'][platform]['total'] += 1
+                stats['by_platform'][platform]['by_type'][screenshot.type]['total'] += 1
+                
+                if submission.is_accepted:
+                    stats['by_type'][screenshot.type]['accepted'] += 1
+                    stats['by_platform'][platform]['accepted'] += 1
+                    stats['by_platform'][platform]['by_type'][screenshot.type]['accepted'] += 1
+    
+    # Convert defaultdict to dict for template
+    stats['by_type'] = dict(stats['by_type'])
+    stats['by_platform']['pc']['by_type'] = dict(stats['by_platform']['pc']['by_type'])
+    stats['by_platform']['console']['by_type'] = dict(stats['by_platform']['console']['by_type'])
+    
+    return render_template('training_data_stats.html', stats=stats)
 
 @app.route('/acceptance-thank-you')
 def acceptance_thank_you():
