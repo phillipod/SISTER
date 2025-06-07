@@ -310,7 +310,7 @@ def send_consent_email(email, builds, consents, submission_acceptance_token, sub
         message = EmailMessage(
             from_email=from_email,
             to=[email],
-            subject="SISTER - Build Screenshot Submission Confirmation",
+            subject="SISTER - Build Screenshot Confirmation - Submission {submission_id}",
             html=html_content,
             reply_to=[reply_to_address], 
             headers={
@@ -624,8 +624,8 @@ def send_reply_confirmation_email(original_sender_email, submission_id, decision
         client = ForwardEmailClient(api_key=os.getenv('FORWARD_EMAIL_API_KEY'))
         
         from_email_obj = EmailAddress(
-            email=reply_channel_address, 
-            name="SISTER Team - Reply Channel"
+            email=os.getenv('FORWARD_EMAIL_FROM_EMAIL'), 
+            name="SISTER Team"
         )
         
         to_email_recipient = EmailAddress(email=original_sender_email)
