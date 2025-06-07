@@ -4,29 +4,37 @@ import hmac
 import hashlib
 import json
 from datetime import datetime
-from flask import Flask, render_template, request, flash, redirect, url_for, session, jsonify, current_app
+from flask import (
+    Flask,
+    render_template,
+    request,
+    flash,
+    redirect,
+    url_for,
+    session,
+    jsonify,
+    current_app,
+)
 from flask_migrate import Migrate
 from flask_caching import Cache
 from functools import lru_cache
 from collections import defaultdict
 import time
-import uuid # Ensure uuid is imported for new models
+import uuid  # Ensure uuid is imported for new models
 import magic
 import re
 from werkzeug.utils import secure_filename
-from flask_wtf import FlaskForm
-from wtforms import StringField, BooleanField
-from wtforms.validators import DataRequired, Email
-from forwardemail import ForwardEmailClient, EmailMessage, EmailAddress
-import hashlib
-import hmac
-import json
-import hashlib
 from dotenv import load_dotenv
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import inspect
-import logging # Keep this one for current_app.logger
+import logging  # Keep this one for current_app.logger
 from pathlib import Path
+
+from .models import db, Submission, Build, Screenshot, EmailLog, LinkLog
+from .forms import UploadForm
+from .email_utils import (
+    send_consent_email,
+    send_reply_confirmation_email,
+    verify_webhook_signature,
+)
 # import magic # Removed, will use the one below with other Flask imports
 
 # Set up basic logging
@@ -34,74 +42,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize extensions
-db = SQLAlchemy()
 cache = Cache()
-
-# Define models before creating the app to avoid circular imports
-class Submission(db.Model):
-    __tablename__ = 'submission'
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    email = db.Column(db.String(120), nullable=False)
-    acceptance_token = db.Column(db.String(64), unique=True, nullable=False)
-    is_accepted = db.Column(db.Boolean, default=False)
-    accepted_at = db.Column(db.DateTime, nullable=True)
-    acceptance_method = db.Column(db.String(10), nullable=True)  # 'link' or 'email'
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    # Relationship to Builds
-    builds = db.relationship('Build', backref='submission', lazy=True)
-    # Relationship to EmailLogs
-    email_logs = db.relationship('EmailLog', backref='submission', lazy=True, order_by='EmailLog.received_at')
-    # Relationship to LinkLogs
-    link_logs = db.relationship('LinkLog', backref='submission', lazy=True, order_by='LinkLog.clicked_at')
-
-class Build(db.Model):
-    __tablename__ = 'build'
-    id = db.Column(db.String(36), primary_key=True)
-    submission_id = db.Column(db.String(36), db.ForeignKey('submission.id'), nullable=False)
-    platform = db.Column(db.String(10), nullable=False)  # 'PC' or 'Console'
-    type = db.Column(db.String(10), nullable=False)      # 'Ground' or 'Space'
-    # Individual consent flags removed as per single license agreement
-    is_accepted = db.Column(db.Boolean, default=False) # Will be set when Submission is accepted
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    accepted_at = db.Column(db.DateTime, nullable=True) # Will be set when Submission is accepted
-    acceptance_method = db.Column(db.String(10), nullable=True)  # 'link' or 'email', set when Submission is accepted
-    screenshots = db.relationship('Screenshot', backref='build', lazy=True)
-
-class Screenshot(db.Model):
-    __tablename__ = 'screenshot'
-    id = db.Column(db.Integer, primary_key=True)
-    build_id = db.Column(db.String(36), db.ForeignKey('build.id'), nullable=False)
-    filename = db.Column(db.String(255), nullable=False)
-    md5sum = db.Column(db.String(32), nullable=False, index=True)
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-class EmailLog(db.Model):
-    __tablename__ = 'email_log'
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    submission_id = db.Column(db.String(36), db.ForeignKey('submission.id'), nullable=False)
-    message_id_header = db.Column(db.String(512), nullable=True, index=True)  # Message-ID header can be long and is good to index
-    from_address = db.Column(db.String(255), nullable=True)
-    to_address = db.Column(db.String(255), nullable=True) # The address the email was sent to (e.g., reply-to address)
-    subject = db.Column(db.String(512), nullable=True)
-    body_text = db.Column(db.Text, nullable=True)
-    body_html = db.Column(db.Text, nullable=True)
-    headers_json = db.Column(db.Text, nullable=True)  # Store all headers as a JSON string
-    received_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    def __repr__(self):
-        return f'<EmailLog {self.id} for Submission {self.submission_id}>'
-
-class LinkLog(db.Model):
-    __tablename__ = 'link_log'
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    submission_id = db.Column(db.String(36), db.ForeignKey('submission.id'), nullable=False)
-    ip_address = db.Column(db.String(45), nullable=True)  # IPv4 and IPv6
-    user_agent = db.Column(db.Text, nullable=True)
-    clicked_at = db.Column(db.DateTime, default=datetime.utcnow)
-    token_used = db.Column(db.String(64), nullable=False)
-
-    def __repr__(self):
-        return f'<LinkLog {self.id} for Submission {self.submission_id} from {self.ip_address}>'
 
 # Create the Flask application
 def create_app():
@@ -159,33 +100,6 @@ def create_app():
 
     return app
 
-def verify_webhook_signature(request_data, signature_header, secret_key):
-    """
-    Verify the webhook signature from ForwardEmail.
-    
-    Args:
-        request_data: The raw request data (bytes or string)
-        signature_header: The value of the X-Webhook-Signature header
-        secret_key: The webhook secret key from ForwardEmail settings
-        
-    Returns:
-        bool: True if signature is valid, False otherwise
-    """
-    if not all([request_data, signature_header, secret_key]):
-        return False
-        
-    if isinstance(request_data, str):
-        request_data = request_data.encode('utf-8')
-    
-    # Create HMAC signature
-    expected_signature = hmac.new(
-        key=secret_key.encode('utf-8'),
-        msg=request_data,
-        digestmod=hashlib.sha256
-    ).hexdigest()
-    
-    # Use constant-time comparison to prevent timing attacks
-    return hmac.compare_digest(expected_signature, signature_header)
 
 # Create the application
 app = create_app()
@@ -194,14 +108,6 @@ app = create_app()
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 ALLOWED_MIME_TYPES = {'image/png', 'image/jpeg'}
 
-class UploadForm(FlaskForm):
-    email = StringField('Email', validators=[DataRequired(), Email()])
-    agree_to_license = BooleanField(
-        'I agree to license my submitted screenshots under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license. ' \
-        'This allows SISTER to use them for: (1) training machine learning recognition models, (2) future machine learning research, and (3) inclusion in the project\'s test suite. ' \
-        'I acknowledge that this license is irrevocable for any data already distributed under these terms.',
-        validators=[DataRequired(message="You must agree to the license terms to submit screenshots.")]
-    )
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -293,48 +199,6 @@ def generate_acceptance_token(submission_id, email):
     message = f"{submission_id}:{email}".encode('utf-8')
     return hmac.new(secret.encode('utf-8'), message, hashlib.sha256).hexdigest()
 
-def send_consent_email(email, builds, consents, submission_acceptance_token, submission_id):
-    try:
-        client = ForwardEmailClient(api_key=os.getenv('FORWARD_EMAIL_API_KEY'))
-        
-        acceptance_url = url_for('accept_license', token=submission_acceptance_token, _external=True)
-        
-        from_email = EmailAddress(
-            email=os.getenv('FORWARD_EMAIL_FROM_EMAIL'),
-            name="SISTER Team"
-        )
-        
-        domain = os.getenv('FORWARD_EMAIL_DOMAIN', 'adhd.geek.nz')
-        reply_to_local_part = f"training-data-submission-{submission_id}"
-        reply_to_address = f"{reply_to_local_part}@{domain}"
-        
-        html_content = render_template(
-            'email_template.html',
-            builds=builds, 
-            consents=consents,
-            acceptance_url=acceptance_url,
-            timestamp=datetime.utcnow(),
-            reply_to=reply_to_address 
-        )
-        
-        message = EmailMessage(
-            from_email=from_email,
-            to=[email],
-            subject="SISTER - Build Screenshot Confirmation - Submission {submission_id}",
-            html=html_content,
-            reply_to=[reply_to_address], 
-            headers={
-                'X-SISTER-Submission-ID': str(submission_id), 
-                'Reply-To': reply_to_address 
-            }
-        )
-        
-        response = client.send_email(message)
-        logger.info(f"Sent consent email with reply-to: {reply_to_address} for submission ID: {submission_id}")
-        return True
-    except Exception as e:
-        logger.error(f"Email sending error for submission ID {submission_id}: {e}", exc_info=True)
-        return False
 
 @app.route('/')
 def home():
@@ -694,53 +558,6 @@ def training_data_stats():
 def acceptance_thank_you():
     return render_template('pages/acceptance_thank_you.html', active_page='acceptance_thank_you')
 
-def send_reply_confirmation_email(original_sender_email, submission_id, decision_text, reply_channel_address):
-    # submission_id is vital. If it's missing here, it implies an issue upstream or it was not passed.
-    # original_sender_email and reply_channel_address are also critical.
-    if not original_sender_email or not submission_id or not reply_channel_address:
-        # Ensure submission_id in the log message correctly reflects the variable's state.
-        log_submission_id = submission_id if submission_id else "<Not Provided>"
-        logger.warning(f"Cannot attempt to send reply confirmation for '{decision_text.lower()}' for submission ID '{log_submission_id}' due to missing critical details: Sender Email ({'Present' if original_sender_email else 'MISSING'}), Reply Channel ({'Present' if reply_channel_address else 'MISSING'}).")
-        return False
-
-    try:
-        client = ForwardEmailClient(api_key=os.getenv('FORWARD_EMAIL_API_KEY'))
-        
-        from_email_obj = EmailAddress(
-            email=os.getenv('FORWARD_EMAIL_FROM_EMAIL'), 
-            name="SISTER Team"
-        )
-        
-        to_email_recipient = EmailAddress(email=original_sender_email)
-
-        subject = f"SISTER - Reply Processed for Submission {submission_id}: {decision_text}"
-
-        html_content = render_template(
-            'reply_email_template.html',
-            submission_id=submission_id,
-            decision_text=decision_text,
-            timestamp=datetime.utcnow()
-        )
-        
-        message = EmailMessage(
-            from_email=from_email_obj,
-            to=[to_email_recipient],
-            subject=subject,
-            html=html_content,
-            reply_to=EmailAddress(email=reply_channel_address),
-            headers={
-                'X-SISTER-Submission-ID': str(submission_id),
-                'Auto-Submitted': 'auto-replied',
-                'X-SISTER-Autoresponse-Type': 'reply-confirmation'
-            }
-        )
-        
-        client.send_email(message)
-        logger.info(f"Successfully sent reply confirmation email to '{original_sender_email}' for submission ID '{submission_id}'. From: '{reply_channel_address}', Decision: '{decision_text}'.")
-        return True
-    except Exception as e:
-        logger.error(f"Error sending reply confirmation email for submission ID '{submission_id}' to '{original_sender_email}': {e}", exc_info=True)
-        return False
 
 # Webhook endpoint for handling email replies
 @app.route('/api/email-webhook', methods=['GET', 'POST'])
