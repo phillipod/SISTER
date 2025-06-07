@@ -631,10 +631,6 @@ def training_data_stats():
         'total_accepted': 0,
         'total_screenshots': 0,
         'by_type': defaultdict(lambda: {'total': 0, 'accepted': 0}),
-        'by_platform': {
-            'pc': {'total': 0, 'accepted': 0, 'by_type': defaultdict(lambda: {'total': 0, 'accepted': 0})},
-            'console': {'total': 0, 'accepted': 0, 'by_type': defaultdict(lambda: {'total': 0, 'accepted': 0})}
-        },
         'target_per_type': 50  # Target number of each type
     }
     
@@ -645,23 +641,15 @@ def training_data_stats():
             stats['total_accepted'] += 1
         
         for build in submission.builds:
-            platform = 'pc' if 'pc' in build.id.lower() else 'console'
-            
             for screenshot in build.screenshots:
                 stats['total_screenshots'] += 1
                 stats['by_type'][screenshot.type]['total'] += 1
-                stats['by_platform'][platform]['total'] += 1
-                stats['by_platform'][platform]['by_type'][screenshot.type]['total'] += 1
                 
                 if submission.is_accepted:
                     stats['by_type'][screenshot.type]['accepted'] += 1
-                    stats['by_platform'][platform]['accepted'] += 1
-                    stats['by_platform'][platform]['by_type'][screenshot.type]['accepted'] += 1
     
     # Convert defaultdict to dict for template
     stats['by_type'] = dict(stats['by_type'])
-    stats['by_platform']['pc']['by_type'] = dict(stats['by_platform']['pc']['by_type'])
-    stats['by_platform']['console']['by_type'] = dict(stats['by_platform']['console']['by_type'])
     
     return render_template('training_data_stats.html', 
                          stats=stats, 

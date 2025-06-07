@@ -60,44 +60,6 @@
             </table>
         </section>
 
-        <section class="detail-section">
-            <h3>By Platform</h3>
-            {% for platform_name, platform_data in stats.by_platform.items() %}
-                <h4>{{ platform_name|title }}</h4>
-                <table class="stats-table">
-                    <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th>Total</th>
-                            <th>Accepted</th>
-                            <th>Progress (Target: {{ stats.target_per_type }})</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for type, data in platform_data.by_type.items() %}
-                        <tr>
-                            <td>{{ type|title }}</td>
-                            <td>{{ data.total }}</td>
-                            <td>{{ data.accepted }}</td>
-                            <td>
-                                <div class="custom-progress-container">
-                                    {% set progress = (data.accepted / stats.target_per_type * 100)|round|int %}
-                                    <div class="custom-progress-bar {% if progress >= 100 %}complete{% endif %}"
-                                         style="width: {{ progress }}%;">
-                                        {{ progress }}%
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="4">No {{ platform_name|title }} data by type.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p>No platform data available.</p>
-            {% endfor %}
-        </section>
     </div>
 
     <div class="info-box">
@@ -105,10 +67,11 @@
         <p>We're aiming to collect at least {{ stats.target_per_type }} samples for each label to ensure good model performance.</p>
         <p>Special notes:
             <ul>
-                <li>PC Ship builds have an additional "Secondary Deflector" label not always present</li>
-                <li>Ship builds have additional "Experimental Weapon" and "Hangar" labels not always present</li>
+                <li>PC Ship builds have an additional "Secondary Deflector" label not always present.</li>
+                <li>Ship builds have additional "Experimental Weapon" and "Hangar" labels not always present.</li>
             </ul>
         </p>
+        <p><small>Once we have a reasonable collection of screenshots, this page will be updated with stats reflecting per-label per-platform counts, which we will run periodically.</small></p>
     </div>
 </div>
 {% endblock %}
