@@ -612,8 +612,12 @@ def acceptance_thank_you():
     return render_template('pages/acceptance_thank_you.html', active_page='acceptance_thank_you')
 
 def send_reply_confirmation_email(original_sender_email, submission_id, decision_text, reply_channel_address):
+    # submission_id is vital. If it's missing here, it implies an issue upstream or it was not passed.
+    # original_sender_email and reply_channel_address are also critical.
     if not original_sender_email or not submission_id or not reply_channel_address:
-        logger.warning(f"Cannot attempt to send confirmation for {decision_text.lower()} for submission '{submission_id}' due to missing critical details (sender: {'present' if original_sender_email else 'MISSING'}, reply_to_channel: {'present' if reply_channel_address else 'MISSING'}).")
+        # Ensure submission_id in the log message correctly reflects the variable's state.
+        log_submission_id = submission_id if submission_id else "<Not Provided>"
+        logger.warning(f"Cannot attempt to send reply confirmation for '{decision_text.lower()}' for submission ID '{log_submission_id}' due to missing critical details: Sender Email ({'Present' if original_sender_email else 'MISSING'}), Reply Channel ({'Present' if reply_channel_address else 'MISSING'}).")
         return False
 
     try:
@@ -725,14 +729,16 @@ def handle_email_reply():
 
         message_id_value = headers_dict.get('message-id')
 
-        from_email_data = data.get('from', []) 
+        from_field_data = data.get('from') # Get the 'from' object, could be dict or None
         from_email_address = None
-        if isinstance(from_email_data, list) and from_email_data:
-            sender_obj = from_email_data[0]
-            if isinstance(sender_obj, dict):
-                from_email_address = sender_obj.get('address', '').lower() or sender_obj.get('email', '').lower()
-        elif isinstance(from_email_data, dict): 
-            from_email_address = from_email_data.get('address', '').lower() or from_email_data.get('email', '').lower()
+        if isinstance(from_field_data, dict):
+            from_value_list = from_field_data.get('value')
+            if isinstance(from_value_list, list) and from_value_list:
+                sender_obj = from_value_list[0]
+                if isinstance(sender_obj, dict):
+                    from_email_address = sender_obj.get('address', '').lower() or sender_obj.get('email', '').lower()
+        if not from_email_address:
+            logger.warning(f"Email webhook: Could not parse 'from_email_address' from 'from' field: {from_field_data}")
 
         to_email_address = None
         envelope_recipients = data.get('envelopeRecipients', []) 
@@ -740,14 +746,16 @@ def handle_email_reply():
             if isinstance(envelope_recipients[0], str):
                 to_email_address = envelope_recipients[0].lower()
         
+        if not to_email_address: # Fallback if envelopeRecipients was not present or empty
+            to_field_data = data.get('to') # Get the 'to' object, could be dict or None
+            if isinstance(to_field_data, dict):
+                to_value_list = to_field_data.get('value')
+                if isinstance(to_value_list, list) and to_value_list:
+                    recipient_obj = to_value_list[0]
+                    if isinstance(recipient_obj, dict):
+                        to_email_address = recipient_obj.get('address', '').lower() or recipient_obj.get('email', '').lower()
         if not to_email_address:
-            to_data_field = data.get('to', []) 
-            if isinstance(to_data_field, list) and to_data_field:
-                recipient_obj = to_data_field[0]
-                if isinstance(recipient_obj, dict):
-                    to_email_address = recipient_obj.get('address', '').lower() or recipient_obj.get('email', '').lower()
-            elif isinstance(to_data_field, dict): 
-                to_email_address = to_data_field.get('address', '').lower() or to_data_field.get('email', '').lower()
+            logger.warning(f"Email webhook: Could not parse 'to_email_address' from 'envelopeRecipients' or 'to' field. Envelope: {envelope_recipients}, To: {data.get('to')}")
         # --- END: Enhanced Header and Email Info Extraction ---
         
         submission_id = None
