@@ -2,7 +2,7 @@ import os
 import hmac
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import (
     Flask,
     render_template,
@@ -23,6 +23,7 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import logging  # Keep this one for current_app.logger
 from pathlib import Path
+import requests
 
 from .models import db, Submission, Build, Screenshot, EmailLog, LinkLog
 from .forms import UploadForm
@@ -103,6 +104,43 @@ app = create_app()
 # Global variables
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 ALLOWED_MIME_TYPES = {'image/png', 'image/jpeg'}
+
+# Cache for ForwardEmail MX IP addresses
+_forwardemail_ips = []
+_forwardemail_ips_last_fetch = None
+
+
+def _fetch_forwardemail_ips():
+    """Download the list of ForwardEmail MX server IPs."""
+    url = "https://forwardemail.net/ips.json"
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    mx_hosts = {"mx1.forwardemail.net", "mx2.forwardemail.net"}
+    ips = []
+    for entry in data:
+        if entry.get("hostname") in mx_hosts:
+            ips.extend(entry.get("ipv4", []))
+            ips.extend(entry.get("ipv6", []))
+    return ips
+
+
+def get_forwardemail_ips():
+    """Return cached ForwardEmail MX IPs, refreshing every 24 hours."""
+    global _forwardemail_ips, _forwardemail_ips_last_fetch
+    if (
+        _forwardemail_ips_last_fetch is None
+        or datetime.utcnow() - _forwardemail_ips_last_fetch > timedelta(hours=24)
+    ):
+        try:
+            _forwardemail_ips = _fetch_forwardemail_ips()
+            _forwardemail_ips_last_fetch = datetime.utcnow()
+            logger.info(
+                f"Fetched ForwardEmail IP list containing {len(_forwardemail_ips)} entries"
+            )
+        except Exception as e:
+            logger.error(f"Failed to fetch ForwardEmail IP list: {e}")
+    return _forwardemail_ips
 
 
 def allowed_file(filename):
@@ -569,22 +607,14 @@ def handle_email_reply():
         logger.error("Email webhook: FORWARD_EMAIL_WEBHOOK_SECRET not configured")
         return jsonify({"status": "error", "message": "Server configuration error"}), 500
     
-    # Verify the request is from ForwardEmail using reverse DNS
-    try:
-        client_ip = request.remote_addr
-        import socket
-        hostname, _, _ = socket.gethostbyaddr(client_ip)
-        
-        allowed_domains = ['mx1.forwardemail.net', 'mx2.forwardemail.net']
-        if not any(hostname.endswith(domain) for domain in allowed_domains):
-            logger.warning(f"Email webhook: Rejected request from unauthorized hostname '{hostname}' (IP: {client_ip})")
-            return jsonify({"status": "error", "message": "Unauthorized"}), 403
-    except (socket.herror, socket.gaierror) as e:
-        logger.warning(f"Email webhook: Reverse DNS lookup failed for {client_ip}: {e}")
+    # Verify the request IP is one of ForwardEmail's MX servers
+    client_ip = request.remote_addr
+    allowed_ips = get_forwardemail_ips()
+    if allowed_ips and client_ip not in allowed_ips:
+        logger.warning(
+            f"Email webhook: Rejected request from unauthorized IP '{client_ip}'"
+        )
         return jsonify({"status": "error", "message": "Unauthorized"}), 403
-    except Exception as e:
-        logger.error(f"Email webhook: Error during reverse DNS verification: {e}")
-        return jsonify({"status": "error", "message": "Internal server error"}), 500
     
     # Verify webhook signature
     signature_header = request.headers.get('X-Webhook-Signature')
@@ -810,7 +840,3 @@ def handle_email_reply():
     except Exception as e:
         logger.error(f"Email webhook: General error: {e}", exc_info=True)
         return jsonify({"status": "error", "message": "An internal error occurred."}), 500
-    # Ensure the instance directory exists
-    os.makedirs(app.instance_path, exist_ok=True)
-    # The upload folder and database are already initialized
-    app.run(debug=True, host='0.0.0.0', port=5000)
