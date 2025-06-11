@@ -7,7 +7,7 @@ import json
 @pytest.fixture
 def cargo_downloader(tmp_path):
     """Create a CargoDownloader instance with a temporary cache directory."""
-    return CargoDownloader(cache_dir=tmp_path)
+    return CargoDownloader(cargo_dir=tmp_path)
 
 def test_cargo_downloader_init(cargo_downloader, tmp_path):
     """Test CargoDownloader initialization."""
