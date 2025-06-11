@@ -58,7 +58,7 @@ class LoadIconsStage(PipelineStage):
                         download_icons[cargo_type][destination_dir][cargo_filters]['name'].append(cargo_item_name)                      
 
                 
-        downloader = CargoDownloader(cache_dir=ctx.app_config.get("cargo_dir"))
+        downloader = CargoDownloader(cargo_dir=ctx.app_config.get("cargo_dir"))
         downloader.download_all()
 
         image_cache_path = ctx.app_config.get("cache_dir") / "image_cache.json"

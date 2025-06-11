@@ -26,6 +26,7 @@ class OutputTransformationStage(PipelineStage):
             "matches": ctx.matches if hasattr(ctx, 'matches') else {},
             "prefiltered_icons": ctx.prefiltered_icons if hasattr(ctx, 'prefiltered_icons') else {},
             "detected_overlays": ctx.detected_overlays if hasattr(ctx, 'detected_overlays') else {},
+            "build_type": ctx.classification.get("build_type") if hasattr(ctx, 'classification') and ctx.classification else None,
             "transformations_applied": [],
         }
 

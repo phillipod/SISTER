@@ -264,7 +264,7 @@ def on_pipeline_complete(ctx, output, all_results, save_dir, save_file, test_col
         logger.error("Pipeline output does not contain matches")
         return
 
-    success, result = save_match_summary(save_dir, save_file, output["matches"])
+    success, result = save_match_summary(save_dir, save_file, output["matches"], output["build_type"])
     tqdm.write(f"[Callback] [on_pipeline_complete] Pipeline is complete. Saved: {success} File: {result}")
 
     # Handle test instrumentation if enabled
@@ -287,16 +287,53 @@ def on_metrics_complete(metrics):
         if not metric['name'].endswith('_complete') and not metric['name'].endswith('_interactive'):
             print(f"[Callback] [on_metrics] {"\t" if not metric['name'].startswith('pipeline') else ""}{metric['name']} took {metric['duration']:.2f} seconds")
 
-def save_match_summary(output_dir, output_prefix, matches):
+def save_match_summary(output_dir, output_prefix, matches, build_type=None):
     """
     Save the match results to a text file, deduping any runner-ups
     that end up with the same item_name (keeping only the top score).
     """
     output_file = Path(output_dir) / f"{output_prefix}_matches.txt"
 
+    # Define ordering for each build type
+    build_type_orders = {
+        "PC Ship Build": [
+            "Fore Weapon", "Aft Weapon", "Experimental Weapon", "Deflector", 
+            "Secondary Deflector", "Impulse", "Warp", "Singularity", "Shield", "Devices",
+            "Universal Console", "Engineering Console", "Science Console", 
+            "Tactical Console", "Hangar", "Devices", "Starship Traits", "Personal Space Traits", "Space Reputation", "Active Space Reputation", 
+        ],        
+        "Console Ship Build": [
+            "Fore Weapon", "Aft Weapon", "Experimental Weapon", "Deflector", 
+            "Impulse", "Warp", "Singularity", "Shield", "Devices",
+            "Universal Console", "Engineering Console", "Science Console", 
+            "Tactical Console", "Hangar", "Devices", "Starship Traits", "Personal Space Traits", "Space Reputation", "Active Space Reputation", 
+        ],
+        "PC Ground Build": [
+            "Weapon", "Body", "EV Suit", "Shield", "Kit", "Kit Modules", "Devices", "Personal Ground Traits", "Ground Reputation", "Active Ground Reputation"
+        ],
+        "Console Ground Build": [
+            "Weapon", "Body", "EV Suit", "Shield", "Kit Frame", "Kit", "Devices", "Personal Ground Traits", "Ground Reputation", "Active Ground Reputation"
+        ]
+    }
+
+    # Get the appropriate order for this build type
+    if build_type and build_type in build_type_orders:
+        order = build_type_orders[build_type]
+        # Create a sorting key function that puts known items in order, unknown items at the end
+        def sort_key(icon_group_name):
+            try:
+                return order.index(icon_group_name)
+            except ValueError:
+                return len(order)  # Put unknown items at the end
+        
+        sorted_icon_groups = sorted(matches.items(), key=lambda x: sort_key(x[0]))
+    else:
+        # Fallback to alphabetical sorting if build type is unknown
+        sorted_icon_groups = sorted(matches.items())
+
     with open(output_file, "w", encoding="utf-8") as f:
-        for icon_group, slots in sorted(matches.items()):
-            f.write(f"=== Icon Group: {icon_group} ===\n")
+        for icon_group, slots in sorted_icon_groups:
+            f.write(f"=== {icon_group} ===\n")
             for slot_idx, slot_matches in sorted(slots.items()):
                 f.write(f"  -- Slot {slot_idx} --\n")
 
@@ -328,12 +365,15 @@ def save_match_summary(output_dir, output_prefix, matches):
                         return det[0].get("overlay", "unknown")
                     return m.get("overlay", "unknown")
 
+                # Helpders to pull item names
+                def get_item_names(match):
+                    meta = match.get("metadata", []) or [match]
+                    names = {md.get("item_name", "<unknown>") for md in meta}
+                    return names                
+
                 # --- BEST match and its name(s) ---
                 best = sorted_matches[0]
-                best_meta = best.get("metadata", []) or [best]
-                best_names = {
-                    md.get("item_name", "<unknown>") for md in best_meta
-                }
+                best_names = get_item_names(best)
 
                 if len(best_names) > 1:
                     display_best = "ANY OF\n\t- " + "\n\t- ".join(sorted(best_names)) + "\n\t"
@@ -355,17 +395,16 @@ def save_match_summary(output_dir, output_prefix, matches):
                 # --- COLLECT runners, skipping any whose name overlaps best_names ---
                 runners = []
                 for m in sorted_matches[1:]:
-                    meta_list = m.get("metadata", []) or [m]
-                    names = {md.get("item_name", "<unknown>") for md in meta_list}
+                    runner_names = get_item_names(m)
                     # skip if any name is the same as best
-                    if names & best_names:
+                    if runner_names & best_names:
                         continue
 
                     # build a stable display name
-                    if len(names) > 1:
-                        name_str = "ANY OF\n\t- " + "\n\t- ".join(sorted(names)) + "\n\t"
+                    if len(runner_names) > 1:
+                        name_str = "ANY OF\n\t- " + "\n\t- ".join(sorted(runner_names)) + "\n\t"
                     else:
-                        name_str = next(iter(names))
+                        name_str = next(iter(runner_names))
 
                     runners.append((name_str, m))
 

@@ -229,19 +229,21 @@ class HashIndex:
     def __init__(
         self,
         base_dir,
-        cache_file="hash_index.json",
+        cache_dir,
+        cache_file="hash_cache.json",
         recursive=True,
         match_size=(32, 32),
         metadata_map: dict = None,
         empty: bool = False
     ):
         self.base_dir = Path(base_dir)
+        self.cache_dir = Path(cache_dir)
 
-        self.cache_file = self.base_dir / cache_file
-        self.default_cache_file = self.base_dir / "hash_cache.default.json"
+        self.cache_file = self.cache_dir / cache_file
+        self.default_cache_file = self.cache_dir / "hash_cache.default.json"
 
-        self.image_cache_file = self.base_dir / "image_cache.json"
-        self.default_image_cache_file = self.base_dir / "image_cache.default.json"
+        self.image_cache_file = self.cache_dir / "image_cache.json"
+        self.default_image_cache_file = self.cache_dir / "image_cache.default.json"
 
         self.recursive = recursive
         self.match_size = match_size
@@ -272,7 +274,7 @@ class HashIndex:
 
             self.hashes = data.get("hashes", {})
 
-            logger.verbose(
+            logger.info(
                 f"Loaded hash index from {cache_file} with {len(self.hashes)} entries."
             )
 
@@ -326,8 +328,8 @@ class HashIndex:
                 self.image_cache[entry["file"]] = entry
 
 
-            logger.verbose(
-                f"Loaded image cache from {self.cache_file} with {len(self.image_cache)} entries."
+            logger.info(
+                f"Loaded image cache from {self.image_cache_file} with {len(self.image_cache)} entries."
             )
 
         except Exception as e:
@@ -524,7 +526,7 @@ class HashIndex:
             
             target_hash = hasher(masked, size=size, grayscale=grayscale)
         except Exception as e:
-            raise HashIndexFindError("Failed to prepare image for hashing") from e
+            raise HashIndexError("Failed to prepare image for hashing") from e
 
         # print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
         return str(target_hash)

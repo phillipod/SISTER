@@ -73,22 +73,22 @@ class CargoDownloader:
     Class responsible for downloading, caching, normalizing, and managing STO wiki Cargo data and associated item icons.
     """
 
-    def __init__(self, force_download=False, cache_dir=None):
+    def __init__(self, force_download=False, cargo_dir=None):
         """
         Initialize the CargoDownloader.
 
         Args:
             force_download (bool): If True, bypasses cache and forces fresh downloads.
-            cache_dir (str or Path): Optional custom path for cache directory.
+            cargo_dir (str or Path): Optional custom path for cache directory.
             verbose (bool): If True, enables console output for progress.
         """
         self.force_download = force_download
-        self.cache_dir = (
-            Path(cache_dir).expanduser() if cache_dir else DEFAULT_CACHE_DIR
+        self.cargo_dir = (
+            Path(cargo_dir).expanduser() if cargo_dir else DEFAULT_CACHE_DIR
         )
 
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Using cache directory: {self.cache_dir}")
+        self.cargo_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Using cache directory: {self.cargo_dir}")
 
     def build_url(self, cargo_type, offset=0):
         """
@@ -123,7 +123,7 @@ class CargoDownloader:
         Returns:
             Path: Path object pointing to the expected cache file.
         """
-        return self.cache_dir / f"{cargo_type}.json"
+        return self.cargo_dir / f"{cargo_type}.json"
 
     def is_cache_valid(self, path):
         """
@@ -357,7 +357,7 @@ class CargoDownloader:
             cleaned_name = re.sub(
                 r"\s*(Mk [IVXLCDM]+)$", "", cleaned_name, flags=re.IGNORECASE
             ).strip()
-            cleaned_name = re.sub(r"[\/\\:\*\?\"\<\>\|]", "_", cleaned_name).strip()
+            cleaned_name = re.sub(r"[\/\\:\*\?\<\>\|]", "_", cleaned_name).strip()
 
             filename = cleaned_name.replace(" ", "_") + ("_(" + item["faction_suffix"] + ")" if "faction_suffix" in item else "") + ".png"
             url = FILE_PATH_BASE + cleaned_name.replace(" ", "_") + ("_(" + item["faction_suffix"] + ")" if "faction_suffix" in item else "") + "_icon.png"

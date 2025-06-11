@@ -82,6 +82,7 @@ class AppInitTask(PipelineTask):
         reporter("Loading hash cache", 10.0)
         self.app_config["hash_match_size"] = self.config.get("hash_match_size", (16, 16))
         self.app_config["hash_index"] = HashIndex(
+            self.app_config.get("icon_dir"),
             self.app_config.get("cache_dir"),
             match_size=self.app_config["hash_match_size"],
             cache_file=self.config.get("hash_cache_file", "hash_cache.json"),
@@ -201,8 +202,11 @@ class AppInitTask(PipelineTask):
             if src_path.is_file():
                 relative_path = src_path.relative_to(src_dir)
                 dest_path = self.app_config["data_dir"] / relative_path
-                if dest_path.exists():
+                
+                # if the destination file exists and is newer or same age, skip
+                if dest_path.exists() and src_path.stat().st_mtime <= dest_path.stat().st_mtime:
                     continue
+
                 dest_path.parent.mkdir(parents=True, exist_ok=True)
                 dest_path.write_bytes(src_path.read_bytes())
 

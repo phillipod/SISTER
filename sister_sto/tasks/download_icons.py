@@ -36,10 +36,13 @@ class DownloadAllIconsTask(PipelineTask):
         This function is a wrapper around CargoDownloader, which is used to download icons.
         The mappings from cargo types to subdirectories are hardcoded.
         """
+        cargo_dir = Path(self.app_config["cargo_dir"])
         images_root = Path(self.app_config["icon_dir"])
-        image_cache_path = images_root / "image_cache.json"
 
-        downloader = CargoDownloader()
+        cache_dir = Path(self.app_config["cache_dir"])
+        image_cache_path = cache_dir / "image_cache.json"
+
+        downloader = CargoDownloader(cargo_dir=cargo_dir)
         downloader.download_all()
 
         # Define all mappings as a list of tuples: (cargo_type, filters, subdirectory)
