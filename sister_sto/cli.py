@@ -468,7 +468,7 @@ def main():
     config = {
         "debug": True,
         "crop_label_regions": {
-            "participate_learning_data_acquisition": True,
+            "participate_learning_data_acquisition": False,
             "label_output_dir": str(Path(args.output_dir) / "label_output" / args.output if args.output else Path(args.output_dir) / "label_output")
         },
         "data_dir": args.data_dir,
