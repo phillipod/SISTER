@@ -1598,6 +1598,10 @@ footer {
     overflow-y: auto;
 }
 
+.tree-container details {
+    padding-left: 15px;
+}
+
 .tree-container details > summary {
     font-weight: bold;
     cursor: pointer;
@@ -1764,5 +1768,65 @@ footer {
         flex: 1 1 300px; /* Give it a min-height */
         max-width: 100%;
     }
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 0.9em;
+}
+.btn-secondary {
+    background-color: #6c757d;
+}
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+.btn-success {
+    background-color: var(--tip-color);
+}
+.btn-success:hover {
+    background-color: #218838;
+}
+.btn-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+.btn-warning:hover {
+    background-color: #e0a800;
+}
+.btn-danger {
+    background-color: var(--danger-color);
+}
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.form-group-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.user-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.user-table th, .user-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+.user-table th {
+    background-color: #f8f9fa;
+}
+.user-table tr:last-child td {
+    border-bottom: none;
+}
+.actions-column {
+    width: 1%;
+    white-space: nowrap;
+}
+.actions-cell {
+    display: flex;
+    gap: 5px;
 }
 

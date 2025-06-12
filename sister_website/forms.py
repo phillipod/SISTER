@@ -22,6 +22,15 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 
+class ChangePasswordForm(FlaskForm):
+    password = PasswordField('New Password', validators=[
+        DataRequired(),
+        EqualTo('confirm_password', message='Passwords must match.')
+    ])
+    confirm_password = PasswordField('Confirm New Password', validators=[DataRequired()])
+    submit = SubmitField('Change Password')
+
+
 class AdminUserForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[
