@@ -7,52 +7,49 @@
     <h1>Screenshot Browser</h1>
 
     <div class="screenshot-browser-wrapper">
-        <!-- Sidebar with filters and tree -->
-        <aside class="screenshot-sidebar">
-            <div class="admin-filters">
-                <h3>Filters</h3>
-                <form id="filter-form">
-                    <div class="form-group">
-                        <label for="platform-filter">Platform</label>
-                        <select id="platform-filter">
-                            <option value="all">All</option>
-                            <option value="PC">PC</option>
-                            <option value="Console">Console</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="type-filter">Type</label>
-                        <select id="type-filter">
-                            <option value="all">All</option>
-                            <option value="space">Space</option>
-                            <option value="ground">Ground</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="accepted-filter">License Accepted</label>
-                        <select id="accepted-filter">
-                            <option value="all">All</option>
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
+        <!-- Filters across full width -->
+        <div class="screenshot-filters admin-filters">
+            <form id="filter-form" class="filters-grid">
+                <div class="form-group">
+                    <label for="platform-filter">Platform</label>
+                    <select id="platform-filter">
+                        <option value="all">All</option>
+                        <option value="PC">PC</option>
+                        <option value="Console">Console</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="type-filter">Type</label>
+                    <select id="type-filter">
+                        <option value="all">All</option>
+                        <option value="space">Space</option>
+                        <option value="ground">Ground</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="accepted-filter">License Accepted</label>
+                    <select id="accepted-filter">
+                        <option value="all">All</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        <!-- Content area -->
+        <div class="screenshot-browser-content">
             <div id="tree-pane" class="tree-container">
                 <p>Loading screenshots...</p>
             </div>
-        </aside>
-
-        <!-- Main preview area -->
-        <section class="screenshot-preview">
-            <div id="preview-pane">
+            <div class="screenshot-preview" id="preview-pane">
                 <div id="preview-placeholder">
                     <p>Select a screenshot to preview</p>
                 </div>
                 <img id="preview-image" src="" alt="Screenshot Preview" style="display: none;"/>
                 <div id="screenshot-info"></div>
             </div>
-        </section>
+        </div>
     </div>
 </div>
 {% endblock %}

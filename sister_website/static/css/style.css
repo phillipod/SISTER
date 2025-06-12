@@ -1754,3 +1754,40 @@ footer {
 }
 /* ---------- End Admin Screenshot Browser NEW Layout ---------- */
 
+/* --- New Screenshot Browser Grid Layout --- */
+.screenshot-filters {
+    margin-bottom: 20px;
+}
+.filters-grid {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.filters-grid .form-group {
+    flex: 1 1 120px;
+    min-width: 120px;
+}
+
+.screenshot-browser-content {
+    display: flex;
+    gap: 30px;
+    min-height: 70vh;
+}
+.tree-container {
+    flex: 0 0 35%;
+    max-width: 400px;
+}
+.screenshot-preview {
+    flex: 1 1 auto;
+}
+@media (max-width: 900px) {
+    .screenshot-browser-content {
+        flex-direction: column;
+    }
+    .tree-container {
+        flex: 1 1 auto;
+        max-width: 100%;
+    }
+}
+/* --- End Screenshot Browser Grid Layout --- */
+
