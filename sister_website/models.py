@@ -1,6 +1,7 @@
 from datetime import datetime
 import uuid
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.dialects.mysql import LONGBLOB
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # SQLAlchemy database instance
@@ -39,7 +40,7 @@ class Screenshot(db.Model):
     build_id = db.Column(db.String(36), db.ForeignKey('build.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     md5sum = db.Column(db.String(32), nullable=False, index=True)
-    data = db.Column(db.LargeBinary, nullable=True)
+    data = db.Column(LONGBLOB, nullable=True)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class EmailLog(db.Model):
