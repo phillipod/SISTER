@@ -169,7 +169,7 @@ def allowed_mime(file_storage):
     return is_allowed
 
 def save_screenshot(file, build_id):
-    """Saves a screenshot file, calculates its MD5, and creates a Screenshot record."""
+    """Saves a screenshot file, calculates its MD5, and creates a Screenshot record in memory without saving to disk."""
     filename_for_log = file.filename if file else "No file provided"
     current_app.logger.info(f"save_screenshot called for: {filename_for_log}")
     
@@ -192,25 +192,13 @@ def save_screenshot(file, build_id):
         current_app.logger.warning(f"save_screenshot: MIME type not allowed for {file.filename}.")
         return None
 
-    # Proceed with saving if both checks passed
+    # Proceed with processing if both checks passed
     if is_file_allowed and is_mime_allowed:
         filename = secure_filename(file.filename)
-        upload_path_obj = Path(current_app.config['UPLOAD_FOLDER'])
-        upload_path_obj.mkdir(parents=True, exist_ok=True)
-        
-        file_path = upload_path_obj / filename
-        counter = 1
-        original_filename = filename
-        while file_path.exists():
-            name, ext = os.path.splitext(original_filename)
-            filename = f"{name}_{counter}{ext}"
-            file_path = upload_path_obj / filename
-            counter += 1
             
         try:
-            file_content = file.read()  # Read the content
-            file.seek(0)  # Reset stream position for file.save() or further reads
-            file.save(file_path)
+            file_content = file.read()  # Read the content once
+            file.seek(0)  # Reset stream position in case it's used elsewhere, good practice.
 
             md5_hash = hashlib.md5(file_content).hexdigest()
 
@@ -222,7 +210,7 @@ def save_screenshot(file, build_id):
             )
             return new_screenshot
         except Exception as e:
-            current_app.logger.error(f"Error saving screenshot {filename}: {e}")
+            current_app.logger.error(f"Error processing screenshot data for {filename}: {e}")
             return None
     # This part is reached if the initial checks (is_file_allowed and is_mime_allowed) failed earlier
     current_app.logger.warning(f"save_screenshot: Returning None for {filename_for_log} due to failed pre-checks (extension or MIME).")
