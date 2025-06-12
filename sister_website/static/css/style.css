@@ -1831,12 +1831,16 @@ footer {
     width: 100px;
     text-align: center;
 }
+.user-table th:first-child,
+.user-table td:first-child {
+    width: auto;
+    min-width: 200px;
+}
 .actions-column {
-    width: 1%;
-    white-space: nowrap;
+    width: 300px;
 }
 .actions-cell {
-    display: flex;
-    gap: 5px;
+    white-space: nowrap;
+    padding: 0.5rem;
 }
 
