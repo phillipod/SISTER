@@ -176,6 +176,15 @@ SISTER_DATA_DIR = '/var/www/sister/data'
 LOG_LEVEL = 'WARNING'
 ```
 
+For multi-node deployments, use MySQL by setting `SQLALCHEMY_DATABASE_URI`
+to a MySQL connection string, for example:
+
+```python
+SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://user:password@dbhost/sister'
+```
+
+Screenshots are stored in the database as BLOBs so all nodes can access them.
+
 ### ForwardEmail Configuration
 
 SISTER uses ForwardEmail for sending transactional emails (e.g., consent forms for training data submissions). You'll need to configure ForwardEmail and update the application settings.

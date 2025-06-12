@@ -208,16 +208,17 @@ def save_screenshot(file, build_id):
             counter += 1
             
         try:
-            file_content = file.read() # Read the content
-            file.seek(0) # Reset stream position if file.save() needs to read it again
+            file_content = file.read()  # Read the content
+            file.seek(0)  # Reset stream position for file.save() or further reads
             file.save(file_path)
-            
+
             md5_hash = hashlib.md5(file_content).hexdigest()
-            
+
             new_screenshot = Screenshot(
                 build_id=build_id,
                 filename=filename,
-                md5sum=md5_hash
+                md5sum=md5_hash,
+                data=file_content,
             )
             return new_screenshot
         except Exception as e:

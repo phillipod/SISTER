@@ -21,6 +21,8 @@ Create a `.env` file with the following variables:
 SECRET_KEY=your-secret-key-here
 SENDGRID_API_KEY=your-sendgrid-api-key
 FROM_EMAIL=your-verified-sender-email
+# Example database connection for MySQL
+# DATABASE_URL=mysql+pymysql://user:password@hostname/dbname
 ```
 
 4. Run the application:
@@ -29,6 +31,12 @@ python app.py
 ```
 
 The application will be available at `http://localhost:5000`
+
+### Running on multiple nodes
+
+Set `DATABASE_URL` to a MySQL connection string so all instances can share the
+same database. Uploaded screenshots are also stored in the database as BLOBs,
+allowing workers on different nodes to access them.
 
 ## Features
 
