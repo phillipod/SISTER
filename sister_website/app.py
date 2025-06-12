@@ -13,6 +13,7 @@ from flask import (
     session,
     jsonify,
     current_app,
+    send_file,
 )
 from flask_migrate import Migrate
 from flask_caching import Cache
@@ -23,6 +24,7 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import logging  # Keep this one for current_app.logger
 from pathlib import Path
+from io import BytesIO
 import requests
 
 from .models import db, Submission, Build, Screenshot, EmailLog, LinkLog
@@ -167,6 +169,12 @@ def allowed_mime(file_storage):
     finally:
         file_storage.seek(0) # IMPORTANT: Reset stream for subsequent reads
     return is_allowed
+
+def is_admin():
+    """Simple token check for admin access."""
+    admin_token = os.getenv('ADMIN_TOKEN')
+    token = request.args.get('token') or request.headers.get('X-Admin-Token')
+    return admin_token and token == admin_token
 
 def save_screenshot(file, build_id):
     """Saves a screenshot file, calculates its MD5, and creates a Screenshot record in memory without saving to disk."""
@@ -580,6 +588,60 @@ def training_data_stats():
 @app.route('/acceptance-thank-you')
 def acceptance_thank_you():
     return render_template('pages/acceptance_thank_you.html', active_page='acceptance_thank_you')
+
+
+@app.route('/admin/screenshots')
+def browse_screenshots():
+    if not is_admin():
+        return "Unauthorized", 403
+    token = request.args.get('token', '')
+    return render_template('admin_screenshots.html', token=token)
+
+
+@app.route('/admin/api/screenshots')
+def admin_screenshots_data():
+    if not is_admin():
+        return jsonify({'error': 'unauthorized'}), 403
+    submissions = Submission.query.options(
+        db.joinedload(Submission.builds).joinedload(Build.screenshots)
+    ).all()
+    tree = {}
+    for submission in submissions:
+        date_key = submission.created_at.strftime('%Y-%m-%d')
+        for build in submission.builds:
+            plat = build.platform
+            typ = build.type
+            for sc in build.screenshots:
+                tree.setdefault(plat, {}).setdefault(typ, {}).setdefault(date_key, []).append({
+                    'id': sc.id,
+                    'filename': sc.filename,
+                })
+    return jsonify(tree)
+
+
+@app.route('/admin/api/screenshot_info/<int:screenshot_id>')
+def admin_screenshot_info(screenshot_id):
+    if not is_admin():
+        return jsonify({'error': 'unauthorized'}), 403
+    sc = Screenshot.query.get_or_404(screenshot_id)
+    info = {
+        'id': sc.id,
+        'filename': sc.filename,
+        'is_accepted': sc.build.submission.is_accepted,
+    }
+    return jsonify(info)
+
+
+@app.route('/admin/screenshot/<int:screenshot_id>')
+def admin_screenshot_image(screenshot_id):
+    if not is_admin():
+        return "Unauthorized", 403
+    sc = Screenshot.query.get_or_404(screenshot_id)
+    mime = 'image/png' if sc.filename.lower().endswith('png') else 'image/jpeg'
+    if sc.data:
+        return send_file(BytesIO(sc.data), mimetype=mime)
+    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], sc.filename)
+    return send_file(file_path, mimetype=mime)
 
 
 # Webhook endpoint for handling email replies
