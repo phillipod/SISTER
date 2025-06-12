@@ -1495,3 +1495,15 @@ footer {
 }
 /* End of Admin Screenshot Browser Styles */
 
+/* Styles for Admin Login */
+.admin-login form {
+    max-width: 400px;
+    margin: 2rem auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.admin-login label {
+    font-weight: bold;
+}
+

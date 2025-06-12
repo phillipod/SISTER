@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, BooleanField
+from wtforms import StringField, BooleanField, PasswordField
 from wtforms.validators import DataRequired, Email
 
 class UploadForm(FlaskForm):
@@ -10,3 +10,8 @@ class UploadForm(FlaskForm):
         'I acknowledge that this license is irrevocable for any data already distributed under these terms.',
         validators=[DataRequired(message="You must agree to the license terms to submit screenshots.")]
     )
+
+
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])

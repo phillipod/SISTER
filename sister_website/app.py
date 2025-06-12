@@ -23,12 +23,19 @@ import re
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import logging  # Keep this one for current_app.logger
-from pathlib import Path
 from io import BytesIO
 import requests
 
-from .models import db, Submission, Build, Screenshot, EmailLog, LinkLog
-from .forms import UploadForm
+from .models import (
+    db,
+    Submission,
+    Build,
+    Screenshot,
+    EmailLog,
+    LinkLog,
+    AdminUser,
+)
+from .forms import UploadForm, LoginForm
 from .email_utils import (
     send_consent_email,
     send_reply_confirmation_email,
@@ -103,6 +110,18 @@ def create_app():
 # Create the application
 app = create_app()
 
+with app.app_context():
+    db.create_all()
+    default_user = os.getenv('ADMIN_USERNAME')
+    default_pass = os.getenv('ADMIN_PASSWORD')
+    if default_user and default_pass:
+        existing = AdminUser.query.filter_by(username=default_user).first()
+        if not existing:
+            new_user = AdminUser(username=default_user)
+            new_user.set_password(default_pass)
+            db.session.add(new_user)
+            db.session.commit()
+
 # Global variables
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 ALLOWED_MIME_TYPES = {'image/png', 'image/jpeg'}
@@ -171,7 +190,9 @@ def allowed_mime(file_storage):
     return is_allowed
 
 def is_admin():
-    """Simple token check for admin access."""
+    """Check admin access via session or fallback token."""
+    if session.get('admin_user_id'):
+        return True
     admin_token = os.getenv('ADMIN_TOKEN')
     token = request.args.get('token') or request.headers.get('X-Admin-Token')
     return admin_token and token == admin_token
@@ -590,10 +611,31 @@ def acceptance_thank_you():
     return render_template('pages/acceptance_thank_you.html', active_page='acceptance_thank_you')
 
 
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = AdminUser.query.filter_by(username=form.username.data).first()
+        if user and user.check_password(form.password.data):
+            session['admin_user_id'] = user.id
+            flash('Logged in as admin.', 'success')
+            next_page = request.args.get('next') or url_for('browse_screenshots')
+            return redirect(next_page)
+        flash('Invalid credentials', 'danger')
+    return render_template('admin_login.html', form=form)
+
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('admin_user_id', None)
+    flash('Logged out.', 'info')
+    return redirect(url_for('home'))
+
+
 @app.route('/admin/screenshots')
 def browse_screenshots():
     if not is_admin():
-        return "Unauthorized", 403
+        return redirect(url_for('admin_login', next=request.path))
     token = request.args.get('token', '')
     return render_template('admin_screenshots.html', token=token)
 
