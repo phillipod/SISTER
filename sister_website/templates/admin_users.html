@@ -12,7 +12,7 @@
                 <thead>
                     <tr>
                         <th>Username</th>
-                        <th>Status</th>
+                        <th class="status-column">Status</th>
                         <th class="actions-column">Actions</th>
                     </tr>
                 </thead>
@@ -20,7 +20,7 @@
                     {% for user in users %}
                     <tr>
                         <td>{{ user.username }}</td>
-                        <td>
+                        <td class="status-column">
                             {% if user.is_locked %}
                                 <span class="status-badge status-declined">Locked</span>
                             {% else %}

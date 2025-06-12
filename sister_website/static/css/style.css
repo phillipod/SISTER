@@ -1827,6 +1827,10 @@ footer {
 .user-table tr:last-child td {
     border-bottom: none;
 }
+.status-column {
+    width: 100px;
+    text-align: center;
+}
 .actions-column {
     width: 1%;
     white-space: nowrap;
