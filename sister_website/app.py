@@ -35,7 +35,7 @@ from .models import (
     LinkLog,
     AdminUser,
 )
-from .forms import UploadForm, LoginForm
+from .forms import UploadForm, LoginForm, AdminUserForm
 from .email_utils import (
     send_consent_email,
     send_reply_confirmation_email,
@@ -641,6 +641,31 @@ def admin_logout():
     return redirect(url_for('home'))
 
 
+@app.route('/admin')
+def admin_dashboard():
+    if not is_admin():
+        return redirect(url_for('admin_login', next=request.path))
+    return render_template('admin_dashboard.html', active_page='admin_dashboard')
+
+
+@app.route('/admin/users', methods=['GET', 'POST'])
+def admin_users():
+    if not is_admin():
+        return redirect(url_for('admin_login', next=request.path))
+    
+    form = AdminUserForm()
+    if form.validate_on_submit():
+        new_user = AdminUser(username=form.username.data)
+        new_user.set_password(form.password.data)
+        db.session.add(new_user)
+        db.session.commit()
+        flash(f'Admin user {new_user.username} created successfully.', 'success')
+        return redirect(url_for('admin_users'))
+
+    users = AdminUser.query.all()
+    return render_template('admin_users.html', users=users, form=form, active_page='admin_users')
+
+
 @app.route('/admin/screenshots')
 def browse_screenshots():
     if not is_admin():
@@ -652,20 +677,31 @@ def browse_screenshots():
 def admin_screenshots_data():
     if not is_admin():
         return jsonify({'error': 'unauthorized'}), 403
-    submissions = Submission.query.options(
-        db.joinedload(Submission.builds).joinedload(Build.screenshots)
+    
+    # Eagerly load related data to prevent N+1 query problems
+    screenshots = Screenshot.query.options(
+        db.joinedload(Screenshot.build).joinedload(Build.submission)
     ).all()
+
     tree = {}
-    for submission in submissions:
+    for sc in screenshots:
+        # Get data from related models
+        build = sc.build
+        submission = build.submission
+        
+        # Structure the data
+        plat = build.platform
+        typ = build.type
         date_key = submission.created_at.strftime('%Y-%m-%d')
-        for build in submission.builds:
-            plat = build.platform
-            typ = build.type
-            for sc in build.screenshots:
-                tree.setdefault(plat, {}).setdefault(typ, {}).setdefault(date_key, []).append({
-                    'id': sc.id,
-                    'filename': sc.filename,
-                })
+
+        # Create nested dictionaries if they don't exist
+        tree.setdefault(plat, {}).setdefault(typ, {}).setdefault(date_key, []).append({
+            'id': sc.id,
+            'filename': sc.filename,
+            'is_accepted': submission.is_accepted,
+            'submission_id': submission.id,
+            'email': submission.email,
+        })
     return jsonify(tree)
 
 

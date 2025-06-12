@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Admin Dashboard</h1>
+    <p>Welcome to the admin area. From here you can manage submissions and users.</p>
+    <div class="list-group">
+        <a href="{{ url_for('browse_screenshots') }}" class="list-group-item list-group-item-action">
+            Screenshot Browser
+        </a>
+        <a href="{{ url_for('admin_users') }}" class="list-group-item list-group-item-action">
+            User Management
+        </a>
+    </div>
+</div>
+{% endblock %} 
