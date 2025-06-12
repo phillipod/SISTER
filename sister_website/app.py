@@ -35,7 +35,7 @@ from .models import (
     LinkLog,
     AdminUser,
 )
-from .forms import UploadForm, LoginForm, AdminUserForm
+from .forms import UploadForm, LoginForm, AdminUserForm, ChangePasswordForm
 from .email_utils import (
     send_consent_email,
     send_reply_confirmation_email,
@@ -116,17 +116,26 @@ def create_app():
 # Create the application
 app = create_app()
 
-with app.app_context():
-    db.create_all()
-    default_user = os.getenv('ADMIN_USERNAME')
-    default_pass = os.getenv('ADMIN_PASSWORD')
-    if default_user and default_pass:
+@app.cli.command('create-admin')
+def create_admin_command():
+    """Creates the default admin user from environment variables."""
+    with app.app_context():
+        default_user = os.getenv('ADMIN_USERNAME')
+        default_pass = os.getenv('ADMIN_PASSWORD')
+        if not default_user or not default_pass:
+            print('ADMIN_USERNAME and ADMIN_PASSWORD must be set in the environment.')
+            return
+
         existing = AdminUser.query.filter_by(username=default_user).first()
-        if not existing:
-            new_user = AdminUser(username=default_user)
-            new_user.set_password(default_pass)
-            db.session.add(new_user)
-            db.session.commit()
+        if existing:
+            print(f"Admin user '{default_user}' already exists.")
+            return
+
+        new_user = AdminUser(username=default_user)
+        new_user.set_password(default_pass)
+        db.session.add(new_user)
+        db.session.commit()
+        print(f"Admin user '{default_user}' created successfully.")
 
 # Global variables
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -627,6 +636,9 @@ def admin_login():
     if form.validate_on_submit():
         user = AdminUser.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
+            if user.is_locked:
+                flash('This account is locked.', 'danger')
+                return redirect(url_for('admin_login'))
             session['admin_user_id'] = user.id
             flash('Logged in as admin.', 'success')
             next_page = request.args.get('next') or url_for('browse_screenshots')
@@ -663,8 +675,61 @@ def admin_users():
         flash(f'Admin user {new_user.username} created successfully.', 'success')
         return redirect(url_for('admin_users'))
 
-    users = AdminUser.query.all()
+    users = AdminUser.query.order_by(AdminUser.username).all()
     return render_template('admin_users.html', users=users, form=form, active_page='admin_users')
+
+
+@app.route('/admin/user/<int:user_id>/change-password', methods=['GET', 'POST'])
+def change_admin_password(user_id):
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    
+    user = AdminUser.query.get_or_404(user_id)
+    form = ChangePasswordForm()
+    
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        db.session.commit()
+        flash(f"Password for user {user.username} has been updated.", 'success')
+        return redirect(url_for('admin_users'))
+        
+    return render_template('admin_change_password.html', user=user, form=form, active_page='admin_users')
+
+@app.route('/admin/user/<int:user_id>/lock', methods=['POST'])
+def lock_admin_user(user_id):
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    user_to_lock = AdminUser.query.get_or_404(user_id)
+    if user_to_lock.id == session['admin_user_id']:
+        flash("You cannot lock your own account.", 'danger')
+    else:
+        user_to_lock.is_locked = True
+        db.session.commit()
+        flash(f"User {user_to_lock.username} has been locked.", 'success')
+    return redirect(url_for('admin_users'))
+
+@app.route('/admin/user/<int:user_id>/unlock', methods=['POST'])
+def unlock_admin_user(user_id):
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    user_to_unlock = AdminUser.query.get_or_404(user_id)
+    user_to_unlock.is_locked = False
+    db.session.commit()
+    flash(f"User {user_to_unlock.username} has been unlocked.", 'success')
+    return redirect(url_for('admin_users'))
+
+@app.route('/admin/user/<int:user_id>/delete', methods=['POST'])
+def delete_admin_user(user_id):
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    user_to_delete = AdminUser.query.get_or_404(user_id)
+    if user_to_delete.id == session['admin_user_id']:
+        flash("You cannot delete your own account.", 'danger')
+    else:
+        db.session.delete(user_to_delete)
+        db.session.commit()
+        flash(f"User {user_to_delete.username} has been deleted.", 'success')
+    return redirect(url_for('admin_users'))
 
 
 @app.route('/admin/screenshots')
@@ -768,7 +833,7 @@ def handle_email_reply():
 
     try:
         # Parse JSON data (already verified the signature)
-        data = request.get_json()
+        data = request.get_data()
         if not data:
             current_app.logger.warning("Email webhook: No JSON data received.")
             return jsonify({"status": "error", "message": "No JSON data received"}), 400
