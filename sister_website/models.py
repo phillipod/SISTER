@@ -1,6 +1,7 @@
 from datetime import datetime
 import uuid
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # SQLAlchemy database instance
 # This is imported by the application and initialized there
@@ -68,3 +69,16 @@ class LinkLog(db.Model):
 
     def __repr__(self):
         return f'<LinkLog {self.id} for Submission {self.submission_id} from {self.ip_address}>'
+
+
+class AdminUser(db.Model):
+    __tablename__ = 'admin_user'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
