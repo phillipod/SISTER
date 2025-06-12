@@ -1721,3 +1721,36 @@ footer {
     background-color: var(--hover-color);
 }
 
+/* ---------- Admin Screenshot Browser NEW Layout ---------- */
+.screenshot-browser-wrapper {
+    display: flex;
+    gap: 30px;
+    min-height: 70vh;
+}
+
+.screenshot-sidebar {
+    flex: 0 0 320px; /* fixed sidebar width */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.tree-container {
+    flex: 1 1 auto; /* allow tree to grow */
+    overflow-y: auto;
+}
+
+.screenshot-preview {
+    flex: 1 1 auto; /* take remaining width */
+}
+
+@media (max-width: 900px) {
+    .screenshot-browser-wrapper {
+        flex-direction: column;
+    }
+    .screenshot-sidebar {
+        flex: 1 1 auto;
+    }
+}
+/* ---------- End Admin Screenshot Browser NEW Layout ---------- */
+
