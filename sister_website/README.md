@@ -21,6 +21,9 @@ Create a `.env` file with the following variables:
 SECRET_KEY=your-secret-key-here
 SENDGRID_API_KEY=your-sendgrid-api-key
 FROM_EMAIL=your-verified-sender-email
+# Default admin account credentials
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change-me
 # Example database connection for MySQL
 # DATABASE_URL=mysql+pymysql://user:password@hostname/dbname
 ```
@@ -45,6 +48,8 @@ allowing workers on different nodes to access them.
 - Automated email consent form sending
 - Privacy-focused design
 - Star Trek-inspired subtle UI
+- Admin screenshot browser organized by platform, type, and submission date
+- Admin login with local user database
 
 ## Security Notes
 

@@ -13,6 +13,7 @@ from flask import (
     session,
     jsonify,
     current_app,
+    send_file,
 )
 from flask_migrate import Migrate
 from flask_caching import Cache
@@ -22,11 +23,19 @@ import re
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 import logging  # Keep this one for current_app.logger
-from pathlib import Path
+from io import BytesIO
 import requests
 
-from .models import db, Submission, Build, Screenshot, EmailLog, LinkLog
-from .forms import UploadForm
+from .models import (
+    db,
+    Submission,
+    Build,
+    Screenshot,
+    EmailLog,
+    LinkLog,
+    AdminUser,
+)
+from .forms import UploadForm, LoginForm
 from .email_utils import (
     send_consent_email,
     send_reply_confirmation_email,
@@ -41,7 +50,7 @@ logger = logging.getLogger(__name__)
 # Initialize extensions
 cache = Cache()
 
-# Create the Flask application
+
 def create_app():
     # Load environment variables first
     env_path = os.getenv('DOTENV_PATH', '/var/www/.sister.env')
@@ -58,7 +67,9 @@ def create_app():
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-please-change')
 
     # Configure upload folder from environment or use default
-    upload_folder = os.getenv('UPLOAD_FOLDER', os.path.join(app.instance_path, 'uploads'))
+    upload_folder = os.getenv(
+        'UPLOAD_FOLDER', os.path.join(app.instance_path, 'uploads')
+    )
     app.config['UPLOAD_FOLDER'] = upload_folder
     app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB max file size
 
@@ -84,7 +95,7 @@ def create_app():
 
     # Initialize extensions
     db.init_app(app)
-    migrate = Migrate(app, db) # Initialize Flask-Migrate
+    Migrate(app, db)  # Initialize Flask-Migrate
     cache.init_app(app)
 
     # Ensure upload directory exists
@@ -100,6 +111,18 @@ def create_app():
 
 # Create the application
 app = create_app()
+
+with app.app_context():
+    db.create_all()
+    default_user = os.getenv('ADMIN_USERNAME')
+    default_pass = os.getenv('ADMIN_PASSWORD')
+    if default_user and default_pass:
+        existing = AdminUser.query.filter_by(username=default_user).first()
+        if not existing:
+            new_user = AdminUser(username=default_user)
+            new_user.set_password(default_pass)
+            db.session.add(new_user)
+            db.session.commit()
 
 # Global variables
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -136,11 +159,13 @@ def get_forwardemail_ips():
             _forwardemail_ips = _fetch_forwardemail_ips()
             _forwardemail_ips_last_fetch = datetime.utcnow()
             logger.info(
-                f"Fetched ForwardEmail IP list containing {len(_forwardemail_ips)} entries"
+                "Fetched ForwardEmail IP list containing %d entries",
+                len(_forwardemail_ips),
             )
         except Exception as e:
             logger.error(f"Failed to fetch ForwardEmail IP list: {e}")
     return _forwardemail_ips
+
 
 
 def allowed_file(filename):
@@ -151,22 +176,35 @@ def allowed_mime(file_storage):
     mime_type = None
     is_allowed = False
     try:
-        sample = file_storage.read(2048) # Read a chunk for MIME detection
+        sample = file_storage.read(2048)  # Read a chunk for MIME detection
         mime_type = magic.from_buffer(sample, mime=True)
-        current_app.logger.info(f"Detected MIME type: {mime_type} for file: {file_storage.filename}")
+        current_app.logger.info(
+            "Detected MIME type: %s for file: %s", mime_type, file_storage.filename
+        )
         is_allowed = mime_type in ALLOWED_MIME_TYPES
-        current_app.logger.info(f"MIME type {mime_type} is_allowed: {is_allowed}")
+        current_app.logger.info(
+            "MIME type %s is_allowed: %s", mime_type, is_allowed
+        )
     except ImportError as ie:
-        current_app.logger.error(f"ImportError in allowed_mime (python-magic likely not installed/found): {ie}", exc_info=True)
+        current_app.logger.error(
+            "ImportError in allowed_mime: %s", ie, exc_info=True
+        )
         # Fallback: If python-magic is not available, you might choose to skip MIME check or deny all.
         # For security, denying is safer if MIME check is critical.
-        is_allowed = False # Or True if you want to allow uploads if magic fails
+        is_allowed = False  # Or True if you want to allow uploads if magic fails
     except Exception as e:
-        current_app.logger.error(f"Exception in allowed_mime during MIME type check for {file_storage.filename}: {e}", exc_info=True)
-        is_allowed = False # Default to not allowed if there's an error in checking
+        current_app.logger.error(
+            "Exception in allowed_mime for %s: %s", file_storage.filename, e,
+            exc_info=True,
+        )
+        is_allowed = False  # Default to not allowed if there's an error in checking
     finally:
-        file_storage.seek(0) # IMPORTANT: Reset stream for subsequent reads
+        file_storage.seek(0)  # IMPORTANT: Reset stream for subsequent reads
     return is_allowed
+
+def is_admin():
+    """Return True if the current session belongs to a logged in admin."""
+    return session.get('admin_user_id') is not None
 
 def save_screenshot(file, build_id):
     """Saves a screenshot file, calculates its MD5, and creates a Screenshot record in memory without saving to disk."""
@@ -580,6 +618,80 @@ def training_data_stats():
 @app.route('/acceptance-thank-you')
 def acceptance_thank_you():
     return render_template('pages/acceptance_thank_you.html', active_page='acceptance_thank_you')
+
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = AdminUser.query.filter_by(username=form.username.data).first()
+        if user and user.check_password(form.password.data):
+            session['admin_user_id'] = user.id
+            flash('Logged in as admin.', 'success')
+            next_page = request.args.get('next') or url_for('browse_screenshots')
+            return redirect(next_page)
+        flash('Invalid credentials', 'danger')
+    return render_template('admin_login.html', form=form)
+
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('admin_user_id', None)
+    flash('Logged out.', 'info')
+    return redirect(url_for('home'))
+
+
+@app.route('/admin/screenshots')
+def browse_screenshots():
+    if not is_admin():
+        return redirect(url_for('admin_login', next=request.path))
+    return render_template('admin_screenshots.html')
+
+
+@app.route('/admin/api/screenshots')
+def admin_screenshots_data():
+    if not is_admin():
+        return jsonify({'error': 'unauthorized'}), 403
+    submissions = Submission.query.options(
+        db.joinedload(Submission.builds).joinedload(Build.screenshots)
+    ).all()
+    tree = {}
+    for submission in submissions:
+        date_key = submission.created_at.strftime('%Y-%m-%d')
+        for build in submission.builds:
+            plat = build.platform
+            typ = build.type
+            for sc in build.screenshots:
+                tree.setdefault(plat, {}).setdefault(typ, {}).setdefault(date_key, []).append({
+                    'id': sc.id,
+                    'filename': sc.filename,
+                })
+    return jsonify(tree)
+
+
+@app.route('/admin/api/screenshot_info/<int:screenshot_id>')
+def admin_screenshot_info(screenshot_id):
+    if not is_admin():
+        return jsonify({'error': 'unauthorized'}), 403
+    sc = Screenshot.query.get_or_404(screenshot_id)
+    info = {
+        'id': sc.id,
+        'filename': sc.filename,
+        'is_accepted': sc.build.submission.is_accepted,
+    }
+    return jsonify(info)
+
+
+@app.route('/admin/screenshot/<int:screenshot_id>')
+def admin_screenshot_image(screenshot_id):
+    if not is_admin():
+        return "Unauthorized", 403
+    sc = Screenshot.query.get_or_404(screenshot_id)
+    mime = 'image/png' if sc.filename.lower().endswith('png') else 'image/jpeg'
+    if sc.data:
+        return send_file(BytesIO(sc.data), mimetype=mime)
+    file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], sc.filename)
+    return send_file(file_path, mimetype=mime)
 
 
 # Webhook endpoint for handling email replies
