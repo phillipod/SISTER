@@ -1565,13 +1565,19 @@ footer {
     box-shadow: 0 4px 8px rgba(0,0,0,0.05);
 }
 
-.admin-browser-layout, .admin-users-layout {
+.admin-browser-layout {
     display: flex;
     gap: 30px;
     flex-wrap: wrap;
 }
 
-.admin-browser-sidebar, .admin-users-list {
+.admin-users-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.admin-browser-sidebar {
     flex: 1;
     min-width: 300px;
 }
