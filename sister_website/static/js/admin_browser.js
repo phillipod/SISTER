@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 buildAndRenderTree();
             })
             .catch(error => {
-                treePane.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+                treePane.innerHTML = `<div class="error-message">${error.message}</div>`;
                 console.error(error);
             });
     }
@@ -118,12 +118,13 @@ document.addEventListener('DOMContentLoaded', function() {
         previewPlaceholder.style.display = 'none';
 
         screenshotInfo.innerHTML = `
-            <strong>Submission:</strong> ${info.submission_id}<br>
-            <strong>Email:</strong> ${info.email}<br>
-            <strong>License Accepted:</strong>
-            <span class="badge ${info.is_accepted ? 'badge-success' : 'badge-danger'}">
+            <p><strong>Submission:</strong> ${info.submission_id}</p>
+            <p><strong>Email:</strong> ${info.email}</p>
+            <p><strong>License Accepted:</strong>
+            <span class="status-badge ${info.is_accepted ? 'status-accepted' : 'status-declined'}">
                 ${info.is_accepted ? 'Yes' : 'No'}
             </span>
+            </p>
         `;
     }
 

@@ -613,7 +613,8 @@ def training_data_stats():
     
     return render_template('training_data_stats.html', 
                          stats=stats, 
-                         now=datetime.utcnow())
+                         now=datetime.utcnow(),
+                         active_page='training_data_stats')
 
 @app.route('/acceptance-thank-you')
 def acceptance_thank_you():
@@ -631,7 +632,7 @@ def admin_login():
             next_page = request.args.get('next') or url_for('browse_screenshots')
             return redirect(next_page)
         flash('Invalid credentials', 'danger')
-    return render_template('admin_login.html', form=form)
+    return render_template('admin_login.html', form=form, active_page='admin_login')
 
 
 @app.route('/admin/logout')
@@ -670,7 +671,7 @@ def admin_users():
 def browse_screenshots():
     if not is_admin():
         return redirect(url_for('admin_login', next=request.path))
-    return render_template('admin_screenshots.html')
+    return render_template('admin_screenshots.html', active_page='admin_screenshots')
 
 
 @app.route('/admin/api/screenshots')

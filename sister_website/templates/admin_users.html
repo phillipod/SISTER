@@ -3,28 +3,28 @@
 {% block title %}Admin User Management{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="admin-container">
     <h1>Admin User Management</h1>
-    <div class="row">
-        <div class="col-md-6">
+    <div class="admin-users-layout">
+        <div class="admin-users-list">
             <h2>Existing Users</h2>
-            <ul class="list-group">
+            <ul>
                 {% for user in users %}
-                    <li class="list-group-item">{{ user.username }}</li>
+                    <li>{{ user.username }}</li>
                 {% else %}
-                    <li class="list-group-item">No admin users found.</li>
+                    <li>No admin users found.</li>
                 {% endfor %}
             </ul>
         </div>
-        <div class="col-md-6">
+        <div class="admin-users-form">
             <h2>Create New Admin User</h2>
             <form method="POST" action="{{ url_for('admin_users') }}">
                 {{ form.csrf_token }}
                 <div class="form-group">
-                    {{ form.username.label(class="form-control-label") }}
-                    {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else "")) }}
+                    {{ form.username.label }}
+                    {{ form.username(class="form-input" + (" input-error" if form.username.errors else "")) }}
                     {% if form.username.errors %}
-                        <div class="invalid-feedback">
+                        <div class="form-error">
                             {% for error in form.username.errors %}
                                 <span>{{ error }}</span>
                             {% endfor %}
@@ -32,10 +32,10 @@
                     {% endif %}
                 </div>
                 <div class="form-group">
-                    {{ form.password.label(class="form-control-label") }}
-                    {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else "")) }}
+                    {{ form.password.label }}
+                    {{ form.password(class="form-input" + (" input-error" if form.password.errors else "")) }}
                     {% if form.password.errors %}
-                        <div class="invalid-feedback">
+                        <div class="form-error">
                             {% for error in form.password.errors %}
                                 <span>{{ error }}</span>
                             {% endfor %}
@@ -43,10 +43,10 @@
                     {% endif %}
                 </div>
                 <div class="form-group">
-                    {{ form.confirm_password.label(class="form-control-label") }}
-                    {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else "")) }}
+                    {{ form.confirm_password.label }}
+                    {{ form.confirm_password(class="form-input" + (" input-error" if form.confirm_password.errors else "")) }}
                     {% if form.confirm_password.errors %}
-                        <div class="invalid-feedback">
+                        <div class="form-error">
                             {% for error in form.confirm_password.errors %}
                                 <span>{{ error }}</span>
                             {% endfor %}
@@ -54,7 +54,7 @@
                     {% endif %}
                 </div>
                 <div class="form-group">
-                    {{ form.submit(class="btn btn-primary") }}
+                    {{ form.submit(class="btn") }}
                 </div>
             </form>
         </div>

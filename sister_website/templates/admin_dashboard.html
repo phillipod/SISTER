@@ -3,14 +3,14 @@
 {% block title %}Admin Dashboard{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="admin-container">
     <h1>Admin Dashboard</h1>
     <p>Welcome to the admin area. From here you can manage submissions and users.</p>
-    <div class="list-group">
-        <a href="{{ url_for('browse_screenshots') }}" class="list-group-item list-group-item-action">
+    <div class="admin-links">
+        <a href="{{ url_for('browse_screenshots') }}" class="admin-link-item">
             Screenshot Browser
         </a>
-        <a href="{{ url_for('admin_users') }}" class="list-group-item list-group-item-action">
+        <a href="{{ url_for('admin_users') }}" class="admin-link-item">
             User Management
         </a>
     </div>
