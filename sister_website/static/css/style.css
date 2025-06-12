@@ -1721,61 +1721,37 @@ footer {
     background-color: var(--hover-color);
 }
 
-/* ---------- Admin Screenshot Browser NEW Layout ---------- */
+/* --- Screenshot Browser Layout --- */
 .screenshot-browser-wrapper {
-    display: flex;
-    gap: 30px;
-    min-height: 70vh;
-}
-
-.screenshot-sidebar {
-    flex: 0 0 320px; /* fixed sidebar width */
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
-
-.tree-container {
-    flex: 1 1 auto; /* allow tree to grow */
-    overflow-y: auto;
-}
-
-.screenshot-preview {
-    flex: 1 1 auto; /* take remaining width */
-}
-
-@media (max-width: 900px) {
-    .screenshot-browser-wrapper {
-        flex-direction: column;
-    }
-    .screenshot-sidebar {
-        flex: 1 1 auto;
-    }
-}
-/* ---------- End Admin Screenshot Browser NEW Layout ---------- */
-
-/* --- New Screenshot Browser Grid Layout --- */
 .screenshot-filters {
-    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: #ffffff;
 }
 .filters-grid {
     display: flex;
     gap: 20px;
     flex-wrap: wrap;
+    align-items: center;
 }
 .filters-grid .form-group {
-    flex: 1 1 120px;
-    min-width: 120px;
+    flex: 1 1 150px;
+    margin-bottom: 0; /* Override default form-group margin */
 }
-
 .screenshot-browser-content {
     display: flex;
-    gap: 30px;
+    gap: 20px;
     min-height: 70vh;
 }
 .tree-container {
     flex: 0 0 35%;
-    max-width: 400px;
+    max-width: 450px;
+    min-width: 300px;
 }
 .screenshot-preview {
     flex: 1 1 auto;
@@ -1785,9 +1761,8 @@ footer {
         flex-direction: column;
     }
     .tree-container {
-        flex: 1 1 auto;
+        flex: 1 1 300px; /* Give it a min-height */
         max-width: 100%;
     }
 }
-/* --- End Screenshot Browser Grid Layout --- */
 
