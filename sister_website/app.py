@@ -43,10 +43,6 @@ from .email_utils import (
 )
 # import magic # Removed, will use the one below with other Flask imports
 
-# Set up basic logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 # Initialize extensions
 cache = Cache()
 
@@ -54,16 +50,24 @@ cache = Cache()
 def create_app():
     # Load environment variables first
     env_path = os.getenv('DOTENV_PATH', '/var/www/.sister.env')
-    logger.info(f"Loading environment from: {env_path}")
     load_dotenv(dotenv_path=env_path, override=True)
-
-    # Print all relevant environment variables for debugging
-    logger.info("Environment variables:")
-    for var in ['UPLOAD_FOLDER', 'DATABASE_URL', 'DOTENV_PATH']:
-        logger.info(f"{var} = {os.getenv(var)}")
 
     # Initialize Flask app
     app = Flask(__name__, instance_relative_config=True)
+
+    # Configure logging
+    log_level = os.getenv('FLASK_LOG_LEVEL', 'INFO').upper()
+    app.logger.setLevel(log_level)
+
+    # Now that we have an app, we can use its logger.
+    app.logger.info(f"Log level set to {log_level}")
+    app.logger.info(f"Loading environment from: {env_path}")
+
+    # Print all relevant environment variables for debugging
+    app.logger.info("Environment variables:")
+    for var in ['UPLOAD_FOLDER', 'DATABASE_URL', 'DOTENV_PATH']:
+        app.logger.info(f"{var} = {os.getenv(var)}")
+
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-please-change')
 
     # Configure upload folder from environment or use default
@@ -100,8 +104,8 @@ def create_app():
 
     # Ensure upload directory exists
     os.makedirs(upload_folder, exist_ok=True)
-    logger.info(f"Using upload folder: {upload_folder}")
-    logger.info(f"Using database: {db_uri}")
+    app.logger.info(f"Using upload folder: {upload_folder}")
+    app.logger.info(f"Using database: {db_uri}")
 
     # Database creation/migration is now handled by Flask-Migrate
     # The db.create_all() call has been removed.
@@ -158,12 +162,12 @@ def get_forwardemail_ips():
         try:
             _forwardemail_ips = _fetch_forwardemail_ips()
             _forwardemail_ips_last_fetch = datetime.utcnow()
-            logger.info(
+            current_app.logger.info(
                 "Fetched ForwardEmail IP list containing %d entries",
                 len(_forwardemail_ips),
             )
         except Exception as e:
-            logger.error(f"Failed to fetch ForwardEmail IP list: {e}")
+            current_app.logger.error(f"Failed to fetch ForwardEmail IP list: {e}")
     return _forwardemail_ips
 
 
@@ -408,7 +412,7 @@ def training_data_submit():
             
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error in training_data_submit: {e}", exc_info=True)
+            current_app.logger.error(f"Error in training_data_submit: {e}", exc_info=True)
             flash('There was an error processing your submission. Please try again later.', 'danger')
             return redirect(url_for('training_data'))
 
@@ -470,10 +474,10 @@ def accept_license(token):
             clicked_at=submission.accepted_at # Use the same timestamp as acceptance
         )
         db.session.add(new_link_log)
-        logger.info(f"Logged link acceptance for submission {submission.id} from IP {request.remote_addr}")
+        current_app.logger.info(f"Logged link acceptance for submission {submission.id} from IP {request.remote_addr}")
     except Exception as e_link_log:
         # Log error but don't fail the acceptance if link logging fails
-        logger.error(f"Failed to create LinkLog for submission {submission.id}: {e_link_log}", exc_info=True)
+        current_app.logger.error(f"Failed to create LinkLog for submission {submission.id}: {e_link_log}", exc_info=True)
 
     # Mark all associated Builds as accepted
     for build_item in submission.builds:
@@ -493,7 +497,7 @@ def accept_license(token):
             return jsonify({"status": "success", "message": success_message})
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error in accept_license for submission {submission.id if submission else 'unknown'}: {e}", exc_info=True)
+        current_app.logger.error(f"Error in accept_license for submission {submission.id if submission else 'unknown'}: {e}", exc_info=True)
         error_message = 'An error occurred while processing your acceptance. Please try again or contact support.'
         if request.method == 'GET':
             # Clear any existing messages before setting the error message
@@ -705,14 +709,14 @@ def handle_email_reply():
     # Get the webhook secret key from environment
     webhook_secret = os.getenv('FORWARD_EMAIL_WEBHOOK_SECRET')
     if not webhook_secret:
-        logger.error("Email webhook: FORWARD_EMAIL_WEBHOOK_SECRET not configured")
+        current_app.logger.error("Email webhook: FORWARD_EMAIL_WEBHOOK_SECRET not configured")
         return jsonify({"status": "error", "message": "Server configuration error"}), 500
     
     # Verify the request IP is one of ForwardEmail's MX servers
     client_ip = request.remote_addr
     allowed_ips = get_forwardemail_ips()
     if allowed_ips and client_ip not in allowed_ips:
-        logger.warning(
+        current_app.logger.warning(
             f"Email webhook: Rejected request from unauthorized IP '{client_ip}'"
         )
         return jsonify({"status": "error", "message": "Unauthorized"}), 403
@@ -720,28 +724,28 @@ def handle_email_reply():
     # Verify webhook signature
     signature_header = request.headers.get('X-Webhook-Signature')
     if not signature_header:
-        logger.warning("Email webhook: Missing X-Webhook-Signature header")
+        current_app.logger.warning("Email webhook: Missing X-Webhook-Signature header")
         return jsonify({"status": "error", "message": "Missing signature"}), 400
     
     # Get raw request data for signature verification
     request_data = request.get_data()
     if not verify_webhook_signature(request_data, signature_header, webhook_secret):
-        logger.warning("Email webhook: Invalid webhook signature")
+        current_app.logger.warning("Email webhook: Invalid webhook signature")
         return jsonify({"status": "error", "message": "Invalid signature"}), 401
 
     try:
         # Parse JSON data (already verified the signature)
         data = request.get_json()
         if not data:
-            logger.warning("Email webhook: No JSON data received.")
+            current_app.logger.warning("Email webhook: No JSON data received.")
             return jsonify({"status": "error", "message": "No JSON data received"}), 400
         
         #logger.info(f"Email webhook: Received data: {json.dumps(data, indent=2)}")
 
         # --- START: Debugging Email Parsing --- 
-        logger.info(f"Email webhook: Debug - Raw 'from' field: {data.get('from')}")
-        logger.info(f"Email webhook: Debug - Raw 'to' field: {data.get('to')}")
-        logger.info(f"Email webhook: Debug - Raw 'envelopeRecipients' field: {data.get('envelopeRecipients')}")
+        current_app.logger.info(f"Email webhook: Debug - Raw 'from' field: {data.get('from')}")
+        current_app.logger.info(f"Email webhook: Debug - Raw 'to' field: {data.get('to')}")
+        current_app.logger.info(f"Email webhook: Debug - Raw 'envelopeRecipients' field: {data.get('envelopeRecipients')}")
         # --- END: Debugging Email Parsing ---
 
         # --- START: Enhanced Header and Email Info Extraction ---
@@ -765,7 +769,7 @@ def handle_email_reply():
                 if isinstance(sender_obj, dict):
                     from_email_address = sender_obj.get('address', '').lower() or sender_obj.get('email', '').lower()
         if not from_email_address:
-            logger.warning(f"Email webhook: Could not parse 'from_email_address' from 'from' field: {from_field_data}")
+            current_app.logger.warning(f"Email webhook: Could not parse 'from_email_address' from 'from' field: {from_field_data}")
 
         to_email_address = None
         envelope_recipients = data.get('envelopeRecipients', []) 
@@ -782,44 +786,44 @@ def handle_email_reply():
                     if isinstance(recipient_obj, dict):
                         to_email_address = recipient_obj.get('address', '').lower() or recipient_obj.get('email', '').lower()
         if not to_email_address:
-            logger.warning(f"Email webhook: Could not parse 'to_email_address' from 'envelopeRecipients' or 'to' field. Envelope: {envelope_recipients}, To: {data.get('to')}")
+            current_app.logger.warning(f"Email webhook: Could not parse 'to_email_address' from 'envelopeRecipients' or 'to' field. Envelope: {envelope_recipients}, To: {data.get('to')}")
         # --- END: Enhanced Header and Email Info Extraction ---
         
         submission_id = None
         
         username_param = request.args.get('username', '')
-        logger.info(f"Email webhook: Extracted username from query params: '{username_param}'")
+        current_app.logger.info(f"Email webhook: Extracted username from query params: '{username_param}'")
         if username_param.startswith('training-data-submission-'):
             try:
                 submission_id = username_param.split('training-data-submission-')[-1]
-                logger.info(f"Email webhook: Extracted submission_id from username: '{submission_id}'")
+                current_app.logger.info(f"Email webhook: Extracted submission_id from username: '{submission_id}'")
             except (IndexError, ValueError) as e:
-                logger.warning(f"Email webhook: Error extracting submission_id from username '{username_param}': {e}")
+                current_app.logger.warning(f"Email webhook: Error extracting submission_id from username '{username_param}': {e}")
                 submission_id = None
 
         if not submission_id:
             submission_id_from_header = headers_dict.get('x-sister-submission-id')
             if submission_id_from_header:
                 submission_id = submission_id_from_header
-                logger.info(f"Email webhook: Extracted submission_id from header 'X-SISTER-Submission-ID': '{submission_id}'")
+                current_app.logger.info(f"Email webhook: Extracted submission_id from header 'X-SISTER-Submission-ID': '{submission_id}'")
 
         if not submission_id:
-            logger.warning(f"Email webhook: Could not determine submission_id. From/To/Subject/MsgID: {from_email_address}/{to_email_address}/{data.get('subject')}/{message_id_value}")
+            current_app.logger.warning(f"Email webhook: Could not determine submission_id. From/To/Subject/MsgID: {from_email_address}/{to_email_address}/{data.get('subject')}/{message_id_value}")
             return jsonify({"status": "error", "message": "Could not identify submission from email reply."}), 400
             
         # Check if submission exists in database
         submission = Submission.query.get(submission_id)
         if not submission:
-            logger.warning(f"Email webhook: Submission with ID '{submission_id}' not found in database.")
+            current_app.logger.warning(f"Email webhook: Submission with ID '{submission_id}' not found in database.")
             return jsonify({"status": "error", "message": f"Submission {submission_id} not found."}), 404
 
         email_text_content = data.get('text', '')
         email_subject = data.get('subject', '')
         
-        logger.info(f"Email webhook: Processing reply for submission_id='{submission_id}', from='{from_email_address}', to='{to_email_address}', subject='{email_subject}', msg_id='{message_id_value}'")
+        current_app.logger.info(f"Email webhook: Processing reply for submission_id='{submission_id}', from='{from_email_address}', to='{to_email_address}', subject='{email_subject}', msg_id='{message_id_value}'")
 
         reply_only_text = extract_reply_text(email_text_content)
-        logger.info(f"Email webhook: Extracted reply-only text (first 200 chars): '{reply_only_text[:200]}...' (length: {len(reply_only_text)})")
+        current_app.logger.info(f"Email webhook: Extracted reply-only text (first 200 chars): '{reply_only_text[:200]}...' (length: {len(reply_only_text)})")
 
         acceptance_keywords = ['accept', 'confirm', 'yes', 'agree', 'consent']
         disagreement_keywords = ['disagree', 'decline']
@@ -828,13 +832,13 @@ def handle_email_reply():
         is_acceptance_in_reply = any(keyword in reply_lower for keyword in acceptance_keywords)
         is_disagreement_in_reply = any(keyword in reply_lower for keyword in disagreement_keywords)
 
-        logger.info(f"Email webhook: Decision check for submission_id='{submission_id}': acceptance_found='{is_acceptance_in_reply}', disagreement_found='{is_disagreement_in_reply}'")
+        current_app.logger.info(f"Email webhook: Decision check for submission_id='{submission_id}': acceptance_found='{is_acceptance_in_reply}', disagreement_found='{is_disagreement_in_reply}'")
         
         decision_for_email = "Reply Received - No explicit decision keywords detected" # Default
         action_taken = False
 
         if is_disagreement_in_reply:
-            logger.info(f"Email webhook: Disagreement keywords found for submission_id='{submission_id}'. Submission will NOT be accepted based on this reply.")
+            current_app.logger.info(f"Email webhook: Disagreement keywords found for submission_id='{submission_id}'. Submission will NOT be accepted based on this reply.")
             decision_for_email = "License Agreement Declined (based on your reply)"
             # No changes to submission.is_accepted or build.is_accepted needed here, they remain False or as they were.
             # Log the email, as it's a significant interaction
@@ -854,12 +858,12 @@ def handle_email_reply():
                     )
                     db.session.add(new_email_log)
                     db.session.commit()
-                    logger.info(f"Email webhook: Email log created for disagreement reply for submission_id='{submission_for_log.id}', EmailLog ID {new_email_log.id}.")
+                    current_app.logger.info(f"Email webhook: Email log created for disagreement reply for submission_id='{submission_for_log.id}', EmailLog ID {new_email_log.id}.")
                 else:
-                    logger.warning(f"Email webhook: Submission '{submission_id}' not found when trying to log disagreement email.")
+                    current_app.logger.warning(f"Email webhook: Submission '{submission_id}' not found when trying to log disagreement email.")
             except Exception as e_log_disagree:
                 db.session.rollback()
-                logger.error(f"Email webhook: Failed to log disagreement email for submission_id='{submission_id}': {e_log_disagree}", exc_info=True)
+                current_app.logger.error(f"Email webhook: Failed to log disagreement email for submission_id='{submission_id}': {e_log_disagree}", exc_info=True)
             
             email_sent_successfully = send_reply_confirmation_email(from_email_address, submission_id, decision_for_email, to_email_address)
             response_message = f"Disagreement processed for submission {submission_id}. License not accepted."
@@ -873,7 +877,7 @@ def handle_email_reply():
             submission = Submission.query.get(submission_id)
             
             if not submission:
-                logger.warning(f"Email webhook: Submission with ID '{submission_id}' not found.")
+                current_app.logger.warning(f"Email webhook: Submission with ID '{submission_id}' not found.")
                 return jsonify({"status": "error", "message": f"Submission {submission_id} not found."}), 404
 
             # Log the received email now that we have a valid submission
@@ -891,14 +895,14 @@ def handle_email_reply():
                 )
                 db.session.add(new_email_log)
                 db.session.commit()
-                logger.info(f"Email webhook: Email log created for submission_id='{submission.id}', message_id='{message_id_value}' to EmailLog ID {new_email_log.id}.")
+                current_app.logger.info(f"Email webhook: Email log created for submission_id='{submission.id}', message_id='{message_id_value}' to EmailLog ID {new_email_log.id}.")
             except Exception as e_log:
                 db.session.rollback()
-                logger.error(f"Email webhook: Failed to log email for submission_id='{submission.id}': {e_log}", exc_info=True)
+                current_app.logger.error(f"Email webhook: Failed to log email for submission_id='{submission.id}': {e_log}", exc_info=True)
                 # Continue processing acceptance even if logging failed for now.
 
             if submission.is_accepted:
-                logger.info(f"Email webhook: Submission '{submission_id}' already accepted on {submission.accepted_at} by {submission.acceptance_method}.")
+                current_app.logger.info(f"Email webhook: Submission '{submission_id}' already accepted on {submission.accepted_at} by {submission.acceptance_method}.")
                 return jsonify({"status": "info", "message": f"Submission {submission_id} already accepted."}), 200 # OK, already done
 
             submission.is_accepted = True
@@ -912,7 +916,7 @@ def handle_email_reply():
             
             try:
                 db.session.commit()
-                logger.info(f"Email webhook: Successfully accepted Submission '{submission_id}' and its builds via email reply.")
+                current_app.logger.info(f"Email webhook: Successfully accepted Submission '{submission_id}' and its builds via email reply.")
                 decision_for_email = "License Agreement Accepted"
                 email_sent_successfully = send_reply_confirmation_email(from_email_address, submission_id, decision_for_email, to_email_address)
                 response_message = f"Submission {submission_id} accepted via email."
@@ -923,12 +927,12 @@ def handle_email_reply():
                 return jsonify({"status": "success", "message": response_message}), 200
             except Exception as e_commit:
                 db.session.rollback()
-                logger.error(f"Email webhook: Database error committing acceptance for submission_id '{submission_id}': {e_commit}", exc_info=True)
+                current_app.logger.error(f"Email webhook: Database error committing acceptance for submission_id '{submission_id}': {e_commit}", exc_info=True)
                 # Optionally, send a confirmation of failure if appropriate, but be cautious about error loops.
                 # For now, we don't send an email on DB commit failure to avoid potential loops if email sending also fails.
                 return jsonify({"status": "error", "message": "Database error during acceptance."}), 500
         else:
-            logger.info(f"Email webhook: No acceptance or disagreement keywords found in email body for submission_id='{submission_id}'. No action taken on submission status.")
+            current_app.logger.info(f"Email webhook: No acceptance or disagreement keywords found in email body for submission_id='{submission_id}'. No action taken on submission status.")
             # decision_for_email is already defaulted to "Reply Received - No explicit decision keywords detected"
             email_sent_successfully = send_reply_confirmation_email(from_email_address, submission_id, decision_for_email, to_email_address)
             response_message = "No decision keywords found. Reply logged."
@@ -939,5 +943,5 @@ def handle_email_reply():
             return jsonify({"status": "info" if email_sent_successfully else "warning", "message": response_message}), 200
 
     except Exception as e:
-        logger.error(f"Email webhook: General error: {e}", exc_info=True)
+        current_app.logger.error(f"Email webhook: General error: {e}", exc_info=True)
         return jsonify({"status": "error", "message": "An internal error occurred."}), 500
