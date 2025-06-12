@@ -210,7 +210,7 @@ def is_admin():
     """Return True if the current session belongs to a logged in admin."""
     return session.get('admin_user_id') is not None
 
-def save_screenshot(file, build_id):
+def save_screenshot(file):
     """Saves a screenshot file, calculates its MD5, and creates a Screenshot record in memory without saving to disk."""
     filename_for_log = file.filename if file else "No file provided"
     current_app.logger.info(f"save_screenshot called for: {filename_for_log}")
@@ -245,7 +245,6 @@ def save_screenshot(file, build_id):
             md5_hash = hashlib.md5(file_content).hexdigest()
 
             new_screenshot = Screenshot(
-                build_id=build_id,
                 filename=filename,
                 md5sum=md5_hash,
                 data=file_content,
@@ -354,11 +353,8 @@ def training_data_submit():
             
             current_app.logger.info(f"Processing build_index {build_index}, platform: {build_platform_value}, type: {build_type_value}, {len(actual_screenshots_files)} file(s) submitted.")
 
-            # Use a consistent build_id format, incorporating the original submission_id and the current build_index
-            build_id = f"{new_submission.id}_build_{build_index}"
-            
+            # Let the database handle the build_id generation via its default
             current_build = Build(
-                id=build_id,
                 submission_id=new_submission.id,
                 platform=build_platform_value,
                 type=build_type_value
@@ -366,7 +362,7 @@ def training_data_submit():
             
             saved_screenshots_for_this_build = []
             for file_in_request in actual_screenshots_files:
-                screenshot = save_screenshot(file_in_request, build_id) 
+                screenshot = save_screenshot(file_in_request) 
                 if screenshot:
                     saved_screenshots_for_this_build.append(screenshot)
                     has_screenshots = True # Set to True if at least one screenshot is saved across all builds
@@ -375,7 +371,7 @@ def training_data_submit():
                 current_build.screenshots = saved_screenshots_for_this_build
                 build_objects_for_submission.append(current_build)
             else:
-                current_app.logger.warning(f"Build {build_id} (platform: {build_platform_value}, type: {build_type_value}) had {len(actual_screenshots_files)} file(s) submitted, but none were saved by save_screenshot. MIME type or other issue likely.")
+                current_app.logger.warning(f"Build {current_build.id} (platform: {build_platform_value}, type: {build_type_value}) had {len(actual_screenshots_files)} file(s) submitted, but none were saved by save_screenshot. MIME type or other issue likely.")
 
             build_index += 1
         

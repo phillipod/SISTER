@@ -23,7 +23,7 @@ class Submission(db.Model):
 
 class Build(db.Model):
     __tablename__ = 'build'
-    id = db.Column(db.String(36), primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     submission_id = db.Column(db.String(36), db.ForeignKey('submission.id'), nullable=False)
     platform = db.Column(db.String(10), nullable=False)
     type = db.Column(db.String(10), nullable=False)
