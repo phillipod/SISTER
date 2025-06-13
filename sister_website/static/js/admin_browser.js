@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 screenshotData = data;
                 buildAndRenderTree();
+                resetPreview();
             })
             .catch(error => {
                 treePane.innerHTML = `<div class="error-message">${error.message}</div>`;
@@ -77,6 +78,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         renderTree(nested, hasResults);
+
+        // After tree build, if nothing selected, ensure placeholder visible
+        if (!treePane.querySelector('a.active')) {
+            resetPreview();
+        }
     }
 
     function renderTree(data, hasResults) {
@@ -319,6 +325,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 img.removeAttribute('data-src');
             });
         }
+    }
+
+    // Hide preview image & grid, show placeholder
+    function resetPreview() {
+        // Hide image
+        previewImage.style.display = 'none';
+        previewImage.src = '';
+
+        // Remove any grid
+        const existingGrid = document.getElementById('preview-grid');
+        if (existingGrid) existingGrid.remove();
+
+        // Show placeholder and clear info
+        previewPlaceholder.style.display = 'block';
+        screenshotInfo.innerHTML = '';
     }
 
     Object.values(filters).forEach(filter => {
