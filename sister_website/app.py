@@ -524,12 +524,28 @@ def accept_license(token):
     
     try:
         db.session.commit()
+
+        # After successfully saving, send a confirmation email with the withdrawal link.
+        try:
+            domain = os.getenv('FORWARD_EMAIL_DOMAIN', 'adhd.geek.nz')
+            reply_to_address = f"training-data-submission-{submission.id}@{domain}"
+            decision_text = "License Agreement Accepted"
+            
+            send_reply_confirmation_email(
+                original_sender_email=submission.email,
+                submission_id=submission.id,
+                decision_text=decision_text,
+                reply_channel_address=reply_to_address,
+                submission_token=submission.acceptance_token
+            )
+            current_app.logger.info(f"Sent link-based acceptance confirmation email for submission {submission.id}")
+        except Exception as e_email:
+            current_app.logger.error(f"Failed to send link-based acceptance confirmation for submission {submission.id}: {e_email}", exc_info=True)
+            # Do not fail the whole request if the email fails, but log it.
+
         success_message = "Thank you for accepting the license for your submission!"
         if request.method == 'GET':
-            # Clear any existing messages before setting the success message
-            session.pop('_flashes', None)
-            flash(success_message, 'success')
-            return render_template('acceptance_thank_you.html', submission=submission)
+            return render_template('acceptance_thank_you.html', submission=submission, message=success_message)
         else: # For POST requests or other API uses
             return jsonify({"status": "success", "message": success_message})
     except Exception as e:

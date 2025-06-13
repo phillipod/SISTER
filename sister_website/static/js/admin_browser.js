@@ -44,8 +44,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     screenshotData[platform][type][date].forEach(sc => {
                         // License filter
                         if (acceptedFilter !== 'all') {
-                            const acceptedMatch = acceptedFilter === 'yes';
-                            if (sc.is_accepted !== acceptedMatch) return;
+                            if (acceptedFilter === 'yes' && sc.acceptance_state !== 'accepted') return;
+                            if (acceptedFilter === 'no' && sc.acceptance_state !== 'declined') return;
+                            if (acceptedFilter === 'pending' && sc.acceptance_state !== 'pending') return;
                         }
 
                         hasResults = true;
@@ -130,6 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             link.dataset.screenshotId = sc.id;
                             link.dataset.info = JSON.stringify({
                                 is_accepted: sc.is_accepted,
+                                acceptance_state: sc.acceptance_state,
                                 submission_id: sc.submission_id,
                                 email: sc.email
                             });
@@ -238,75 +240,101 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ensure screenshot info section is visible
         screenshotInfo.style.display = 'block';
 
+        let statusText;
+        let statusClass;
+
+        switch (info.acceptance_state) {
+            case 'accepted':
+                statusText = 'Yes';
+                statusClass = 'status-accepted';
+                break;
+            case 'declined':
+                statusText = 'No';
+                statusClass = 'status-declined';
+                break;
+            case 'pending':
+                statusText = 'Pending';
+                statusClass = 'status-pending';
+                break;
+            default:
+                // Fallback for old data or unexpected values
+                statusText = info.is_accepted ? 'Yes' : 'No';
+                statusClass = info.is_accepted ? 'status-accepted' : 'status-declined';
+        }
+        
         let infoHtml = `
             <p><strong>Submission:</strong> ${info.submission_id}</p>
             <p><strong>Email:</strong> ${info.email}</p>
             <p><strong>License Accepted:</strong>
-            <span class="status-badge ${info.is_accepted ? 'status-accepted' : 'status-declined'}">
-                ${info.is_accepted ? 'Yes' : 'No'}
+            <span class="status-badge ${statusClass}">
+                ${statusText}
             </span>
             </p>
         `;
 
-        // Add resend button for unaccepted submissions
-        if (!info.is_accepted) {
+        // Add a resend consent button if the submission is still pending
+        if (info.acceptance_state === 'pending') {
             infoHtml += `
-                <div class="resend-section">
-                    <button class="btn resend-btn" data-submission-id="${info.submission_id}">
+                <div class="resend-consent-container">
+                    <button class="btn btn-secondary btn-sm" id="resend-consent-btn" data-submission-id="${info.submission_id}">
                         Resend Consent Email
                     </button>
-                    <span class="resend-status"></span>
+                    <span id="resend-status" class="resend-status-message"></span>
                 </div>
             `;
         }
 
         screenshotInfo.innerHTML = infoHtml;
 
-        // Add click handler for resend button if it exists
-        const resendBtn = screenshotInfo.querySelector('.resend-btn');
+        // Add event listener for the resend button if it was added
+        const resendBtn = document.getElementById('resend-consent-btn');
         if (resendBtn) {
-            resendBtn.addEventListener('click', async function() {
-                const submissionId = this.dataset.submissionId;
-                const statusSpan = this.nextElementSibling;
+            resendBtn.addEventListener('click', handleResendConsent);
+        }
+    }
 
-                // Add confirmation dialog
-                if (!confirm('Are you sure you want to resend the consent email? This will invalidate any previous consent links.')) {
-                    return;
-                }
+    async function handleResendConsent(e) {
+        e.preventDefault();
+        const submissionId = e.target.dataset.submissionId;
+        const statusSpan = document.getElementById('resend-status');
 
-                try {
-                    this.disabled = true;
-                    statusSpan.textContent = 'Sending...';
+        // Add confirmation dialog
+        if (!confirm('Are you sure you want to resend the consent email for this submission?')) {
+            return;
+        }
 
-                    const response = await fetch(`/admin/api/resend-consent/${submissionId}`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
+        try {
+            e.target.disabled = true;
+            statusSpan.textContent = 'Sending...';
 
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        statusSpan.textContent = 'Email sent successfully!';
-                        statusSpan.style.color = 'var(--tip-color)';
-                    } else {
-                        throw new Error(data.error || 'Failed to send email');
-                    }
-                } catch (error) {
-                    statusSpan.textContent = `Error: ${error.message}`;
-                    statusSpan.style.color = 'var(--danger-color)';
-                } finally {
-                    this.disabled = false;
+            const response = await fetch(`/admin/api/resend-consent/${submissionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
             });
+            const result = await response.json();
+
+            if (response.ok) {
+                statusSpan.textContent = result.message || 'Email sent successfully!';
+                statusSpan.style.color = 'var(--success-color)';
+            } else {
+                statusSpan.textContent = result.message || 'Failed to send email.';
+                statusSpan.style.color = 'var(--danger-color)';
+            }
+        } catch (error) {
+            console.error('Error resending consent email:', error);
+            statusSpan.textContent = 'An error occurred.';
+            statusSpan.style.color = 'var(--danger-color)';
+        } finally {
+            e.target.disabled = false;
         }
     }
 
     // Lazy load helper using IntersectionObserver
     function initLazyLoad(container) {
-        const imgs = container.querySelectorAll('img[data-src]');
-        if (!imgs.length) return;
+        const lazyImages = [].slice.call(container.querySelectorAll("img[data-src]"));
+        if (!lazyImages.length) return;
 
         if ('IntersectionObserver' in window) {
             const observer = new IntersectionObserver((entries, obs) => {
@@ -320,10 +348,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }, { root: null, rootMargin: '200px', threshold: 0.01 });
 
-            imgs.forEach(img => observer.observe(img));
+            lazyImages.forEach(img => observer.observe(img));
         } else {
             // Fallback: load all immediately
-            imgs.forEach(img => {
+            lazyImages.forEach(img => {
                 img.src = img.dataset.src;
                 img.removeAttribute('data-src');
             });
