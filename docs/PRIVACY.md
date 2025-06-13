@@ -35,14 +35,14 @@ If you consent to test suite usage (and opt out of ML training):
 ## Your Rights
 
 You have the right to:
-1. Withdraw consent at any time
-2. Request data deletion
+1. Request withdrawal from future processing or distribution (existing public copies remain under the CC BY-NC-SA 4.0 license)
+2. Request deletion of data stored by the project (copies already released cannot be deleted)
 3. Know how your data is used
 4. Access copies of your submissions
 
 ## Data Retention
 
-- Training data: Retained until consent withdrawal
+- Training data: Retained indefinitely. If you withdraw consent, we will cease including your data in future datasets or training runs, but previously distributed copies will continue to be available under the CC BY-NC-SA 4.0 license.
 - Test suite data: Permanent (for validation)
 - Consent records: Permanent
 
