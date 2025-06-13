@@ -1844,3 +1844,35 @@ footer {
     padding: 0.5rem;
 }
 
+.resend-section {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.resend-btn {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.resend-btn:hover {
+    background-color: var(--hover-color);
+}
+
+.resend-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.resend-status {
+    display: inline-block;
+    margin-left: 10px;
+    font-size: 0.9em;
+}
+

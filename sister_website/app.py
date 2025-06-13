@@ -1043,3 +1043,37 @@ def handle_email_reply():
     except Exception as e:
         current_app.logger.error(f"Email webhook: General error: {e}", exc_info=True)
         return jsonify({"status": "error", "message": "An internal error occurred."}), 500
+
+@app.route('/admin/api/resend-consent/<submission_id>', methods=['POST'])
+def resend_consent_email(submission_id):
+    if not is_admin():
+        return jsonify({'error': 'unauthorized'}), 403
+    
+    submission = Submission.query.get_or_404(submission_id)
+    
+    if submission.is_accepted:
+        return jsonify({'error': 'Submission already accepted'}), 400
+    
+    # Generate a new acceptance token
+    submission.acceptance_token = generate_acceptance_token(submission.id, submission.email)
+    
+    # Prepare consents for email
+    consents_for_email = {
+        'agreed_to_license': True  # Since they're resending, we assume they agreed
+    }
+    
+    # Send consent email
+    email_sent = send_consent_email(
+        submission.email,
+        submission.builds,
+        consents_for_email,
+        submission.acceptance_token,
+        submission.id
+    )
+    
+    if email_sent:
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'Consent email resent successfully'})
+    else:
+        db.session.rollback()
+        return jsonify({'error': 'Failed to send consent email'}), 500

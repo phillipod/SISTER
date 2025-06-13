@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
         previewImage.style.display = 'block';
         previewPlaceholder.style.display = 'none';
 
-        screenshotInfo.innerHTML = `
+        let infoHtml = `
             <p><strong>Submission:</strong> ${info.submission_id}</p>
             <p><strong>Email:</strong> ${info.email}</p>
             <p><strong>License Accepted:</strong>
@@ -126,6 +126,60 @@ document.addEventListener('DOMContentLoaded', function() {
             </span>
             </p>
         `;
+
+        // Add resend button for unaccepted submissions
+        if (!info.is_accepted) {
+            infoHtml += `
+                <div class="resend-section">
+                    <button class="btn resend-btn" data-submission-id="${info.submission_id}">
+                        Resend Consent Email
+                    </button>
+                    <span class="resend-status"></span>
+                </div>
+            `;
+        }
+
+        screenshotInfo.innerHTML = infoHtml;
+
+        // Add click handler for resend button if it exists
+        const resendBtn = screenshotInfo.querySelector('.resend-btn');
+        if (resendBtn) {
+            resendBtn.addEventListener('click', async function() {
+                const submissionId = this.dataset.submissionId;
+                const statusSpan = this.nextElementSibling;
+                
+                // Add confirmation dialog
+                if (!confirm('Are you sure you want to resend the consent email? This will invalidate any previous consent links.')) {
+                    return;
+                }
+                
+                try {
+                    this.disabled = true;
+                    statusSpan.textContent = 'Sending...';
+                    
+                    const response = await fetch(`/admin/api/resend-consent/${submissionId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        statusSpan.textContent = 'Email sent successfully!';
+                        statusSpan.style.color = 'var(--tip-color)';
+                    } else {
+                        throw new Error(data.error || 'Failed to send email');
+                    }
+                } catch (error) {
+                    statusSpan.textContent = `Error: ${error.message}`;
+                    statusSpan.style.color = 'var(--danger-color)';
+                } finally {
+                    this.disabled = false;
+                }
+            });
+        }
     }
 
     Object.values(filters).forEach(filter => {

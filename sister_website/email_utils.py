@@ -16,14 +16,15 @@ def send_consent_email(email, builds, consents, submission_acceptance_token, sub
 
         acceptance_url = url_for('accept_license', token=submission_acceptance_token, _external=True)
 
-        from_email = EmailAddress(
-            email=os.getenv('FORWARD_EMAIL_FROM_EMAIL'),
-            name="SISTER Team"
-        )
-
         domain = os.getenv('FORWARD_EMAIL_DOMAIN', 'adhd.geek.nz')
         reply_to_local_part = f"training-data-submission-{submission_id}"
         reply_to_address = f"{reply_to_local_part}@{domain}"
+
+        # Use the same address for both From and Reply-To
+        from_email = EmailAddress(
+            email=reply_to_address,
+            name="SISTER Team"
+        )
 
         html_content = render_template(
             'email_template.html',
@@ -39,10 +40,9 @@ def send_consent_email(email, builds, consents, submission_acceptance_token, sub
             to=[email],
             subject=f"SISTER - Build Screenshot Confirmation - Submission {submission_id}",
             html=html_content,
-            reply_to=[reply_to_address],
+            reply_to=reply_to_address,
             headers={
-                'X-SISTER-Submission-ID': str(submission_id),
-                'Reply-To': reply_to_address
+                'X-SISTER-Submission-ID': str(submission_id)
             }
         )
 
@@ -68,8 +68,9 @@ def send_reply_confirmation_email(original_sender_email, submission_id, decision
     try:
         client = ForwardEmailClient(api_key=os.getenv('FORWARD_EMAIL_API_KEY'))
 
+        # Use the same address for both From and Reply-To
         from_email_obj = EmailAddress(
-            email=os.getenv('FORWARD_EMAIL_FROM_EMAIL'),
+            email=reply_channel_address,
             name="SISTER Team"
         )
 
@@ -89,7 +90,7 @@ def send_reply_confirmation_email(original_sender_email, submission_id, decision
             to=[to_email_recipient],
             subject=subject,
             html=html_content,
-            reply_to=EmailAddress(email=reply_channel_address),
+            reply_to=reply_channel_address,
             headers={
                 'X-SISTER-Submission-ID': str(submission_id),
                 'Auto-Submitted': 'auto-replied',
