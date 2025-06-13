@@ -32,14 +32,17 @@
                             {% if user.id != session.admin_user_id %}
                                 {% if user.is_locked %}
                                     <form method="POST" action="{{ url_for('unlock_admin_user', user_id=user.id) }}" style="display:inline;">
+                                        {{ csrf_token() }}
                                         <button type="submit" class="btn btn-sm btn-success">Unlock</button>
                                     </form>
                                 {% else %}
                                     <form method="POST" action="{{ url_for('lock_admin_user', user_id=user.id) }}" style="display:inline;">
+                                        {{ csrf_token() }}
                                         <button type="submit" class="btn btn-sm btn-warning">Lock</button>
                                     </form>
                                 {% endif %}
                                 <form method="POST" action="{{ url_for('delete_admin_user', user_id=user.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                    {{ csrf_token() }}
                                     <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                                 </form>
                             {% endif %}

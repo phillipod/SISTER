@@ -17,12 +17,15 @@ from flask import (
 )
 from flask_migrate import Migrate
 from flask_caching import Cache
+from flask_wtf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from urllib.parse import urlparse, urljoin
 import uuid  # Ensure uuid is imported for new models
 import magic
 import re
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
-import logging  # Keep this one for current_app.logger
 from io import BytesIO
 import requests
 
@@ -45,6 +48,8 @@ from .email_utils import (
 
 # Initialize extensions
 cache = Cache()
+csrf = CSRFProtect()
+limiter = Limiter(key_func=get_remote_address)
 
 
 def create_app():
@@ -69,6 +74,9 @@ def create_app():
         app.logger.info(f"{var} = {os.getenv(var)}")
 
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-please-change')
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
     # Configure upload folder from environment or use default
     upload_folder = os.getenv(
@@ -101,6 +109,8 @@ def create_app():
     db.init_app(app)
     Migrate(app, db)  # Initialize Flask-Migrate
     cache.init_app(app)
+    csrf.init_app(app)
+    limiter.init_app(app)
 
     # Ensure upload directory exists
     os.makedirs(upload_folder, exist_ok=True)
@@ -214,6 +224,13 @@ def allowed_mime(file_storage):
     finally:
         file_storage.seek(0)  # IMPORTANT: Reset stream for subsequent reads
     return is_allowed
+
+
+def is_safe_url(target):
+    """Validate a target URL to prevent open redirects."""
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ("http", "https") and ref_url.netloc == test_url.netloc
 
 def is_admin():
     """Return True if the current session belongs to a logged in admin."""
@@ -631,6 +648,7 @@ def acceptance_thank_you():
 
 
 @app.route('/admin/login', methods=['GET', 'POST'])
+@limiter.limit('10 per minute')
 def admin_login():
     form = LoginForm()
     if form.validate_on_submit():
@@ -641,7 +659,9 @@ def admin_login():
                 return redirect(url_for('admin_login'))
             session['admin_user_id'] = user.id
             flash('Logged in as admin.', 'success')
-            next_page = request.args.get('next') or url_for('browse_screenshots')
+            next_page = request.args.get('next')
+            if not next_page or not is_safe_url(next_page):
+                next_page = url_for('browse_screenshots')
             return redirect(next_page)
         flash('Invalid credentials', 'danger')
     return render_template('admin_login.html', form=form, active_page='admin_login')
