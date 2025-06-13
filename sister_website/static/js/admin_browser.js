@@ -227,6 +227,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (link) {
                 const info = JSON.parse(link.dataset.info);
                 renderScreenshotInfo(info);
+                // Move the info box to appear after the grid
+                document.getElementById('preview-pane').appendChild(screenshotInfo);
             }
         }
 
