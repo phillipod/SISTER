@@ -219,24 +219,38 @@ document.addEventListener('DOMContentLoaded', function() {
         const card = document.createElement('div');
         card.className = 'info-card';
 
-        let statusText = 'Pending';
-        if (info.acceptance_state === 'accepted') {
-            statusText = 'License Accepted';
-        } else if (info.acceptance_state === 'declined') {
-            statusText = 'License Declined';
+        let statusText;
+        let statusClass;
+        let isWithdrawn = info.is_withdrawn;
+
+        switch (info.acceptance_state) {
+            case 'accepted':
+                statusText = 'Yes';
+                statusClass = 'status-accepted';
+                break;
+            case 'declined':
+                statusText = 'No';
+                statusClass = 'status-declined';
+                break;
+            case 'pending':
+            default:
+                statusText = 'Pending';
+                statusClass = 'status-pending';
+                break;
         }
-        if (info.is_withdrawn) {
-            statusText += ' (Withdrawn)';
+
+        const statusP = document.createElement('p');
+        statusP.innerHTML = `<strong>Status:</strong> <span class="status-badge ${statusClass}">${statusText}</span>`;
+
+        if (isWithdrawn) {
+            statusP.innerHTML += ` <span class="status-badge status-withdrawn">Withdrawn</span>`;
         }
+        
+        const emailP = document.createElement('p');
+        emailP.innerHTML = `<strong>Email:</strong> ${info.email}`;
 
-        const status = document.createElement('p');
-        status.innerHTML = `<strong>Status:</strong> ${statusText}`;
-
-        const email = document.createElement('p');
-        email.innerHTML = `<strong>Email:</strong> ${info.email}`;
-
-        card.appendChild(status);
-        card.appendChild(email);
+        card.appendChild(statusP);
+        card.appendChild(emailP);
 
         // Timeline for events
         if (info.events && info.events.length > 0) {
@@ -248,22 +262,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const timestamp = new Date(event.timestamp).toLocaleString();
 
-                let eventDetailsHTML = `<p><strong>${event.type}</strong> - ${timestamp}</p>`;
+                let eventDetailsHTML = `<p><strong>${event.type}</strong> - ${timestamp}`;
                 
                 let viaContent = '';
                 if (event.method === 'Email' && event.log_id) {
-                    viaContent = `<p>Via: <a href="#" class="view-email" data-log-id="${event.log_id}">Email</a></p>`;
-                } else if (event.method === 'Link') {
-                    if (event.details) {
-                        viaContent = `<p>Via: <a href="#" class="view-link-details" data-details='${JSON.stringify(event.details)}'>Link</a></p>`;
-                    } else {
-                        viaContent = `<p>Via: ${event.method}</p>`;
-                    }
-                } else if (event.method) {
-                    viaContent = `<p>Via: ${event.method}</p>`;
+                    viaContent = ` <a href="#" class="view-email" data-log-id="${event.log_id}">(Email)</a>`;
+                } else if (event.method === 'Link' && event.details) {
+                    viaContent = ` <a href="#" class="view-link-details" data-details='${JSON.stringify(event.details)}'>(Link)</a>`;
+                } else if (event.method && event.method !== 'Web Form') {
+                     viaContent = ` (${event.method})`;
                 }
 
-                eventElement.innerHTML = eventDetailsHTML + viaContent;
+                eventElement.innerHTML = eventDetailsHTML + viaContent + `</p>`;
                 timeline.appendChild(eventElement);
             });
             card.appendChild(timeline);
