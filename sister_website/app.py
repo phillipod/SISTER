@@ -19,8 +19,6 @@ from flask import (
 from flask_migrate import Migrate
 from flask_caching import Cache
 from flask_wtf import CSRFProtect
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 from urllib.parse import urlparse, urljoin
 import uuid  # Ensure uuid is imported for new models
 import magic
@@ -50,11 +48,6 @@ from .email_utils import (
 # Initialize extensions
 cache = Cache()
 csrf = CSRFProtect()
-limiter = Limiter(key_func=get_remote_address)
-
-# Rate limit key that combines IP and submitted username to slow per-user brute-force attempts
-def admin_login_limit_key():
-    return f"{get_remote_address()}:{request.form.get('username', '').lower()}"
 
 def create_app():
     # Load environment variables first
@@ -123,7 +116,6 @@ def create_app():
     Migrate(app, db)  # Initialize Flask-Migrate
     cache.init_app(app)
     csrf.init_app(app)
-    limiter.init_app(app)
 
     # Ensure upload directory exists
     os.makedirs(upload_folder, exist_ok=True)
@@ -665,7 +657,6 @@ def acceptance_thank_you():
 
 
 @app.route('/admin/login', methods=['GET', 'POST'])
-@limiter.limit('10 per minute', key_func=admin_login_limit_key)
 def admin_login():
     form = LoginForm()
     if form.validate_on_submit():
