@@ -550,8 +550,11 @@ def decline_license(token):
     submission = Submission.query.filter_by(acceptance_token=token).first_or_404()
 
     if submission.acceptance_state != AcceptanceState.PENDING:
-        # Still flash a message here before redirecting, as there's no dedicated page for this case.
-        flash(f"This submission has already been {submission.acceptance_state.value}.", 'info')
+        if submission.acceptance_state == AcceptanceState.DECLINED:
+            return render_template('decline_confirmation.html', message="This submission has already been declined.")
+        elif submission.acceptance_state == AcceptanceState.ACCEPTED:
+            return render_template('acceptance_thank_you.html', message="This submission has already been accepted and cannot be declined. You may withdraw it if needed.")
+        # Fallback redirect for any other state, though unlikely.
         return redirect(url_for('home'))
 
     submission.acceptance_state = AcceptanceState.DECLINED
@@ -574,8 +577,7 @@ def withdraw_submission(token):
     submission = Submission.query.filter_by(acceptance_token=token).first_or_404()
 
     if submission.is_withdrawn:
-        flash("This submission has already been withdrawn.", 'info')
-        return redirect(url_for('home'))
+        return render_template('withdrawal_confirmation.html', message="This submission has already been withdrawn.")
 
     submission.is_withdrawn = True
     submission.withdrawn_at = datetime.utcnow()

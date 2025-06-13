@@ -5,7 +5,11 @@
 {% block content %}
 <section class="contact-section">
     <h2>Thank You!</h2>
-    <p class="lead">Your license acceptance has been successfully recorded.</p>
+    {% if message %}
+        <p class="lead" style="color: var(--danger-color);">{{ message }}</p>
+    {% else %}
+        <p class="lead">Your license acceptance has been successfully recorded.</p>
+    {% endif %}
     <p>Thank you for contributing to the SISTER project. Your data helps us improve our tools and research in Star Trek Online build analysis.</p>
     <p>The SISTER team appreciates your support and participation!</p>
     <hr>

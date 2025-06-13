@@ -5,7 +5,11 @@
 {% block content %}
 <section class="contact-section">
     <h2>Submission Withdrawn</h2>
-    <p class="lead">Your submission has been successfully withdrawn.</p>
+    {% if message %}
+        <p class="lead" style="color: var(--danger-color);">{{ message }}</p>
+    {% else %}
+        <p class="lead">Your submission has been successfully withdrawn.</p>
+    {% endif %}
     <p>Your data will not be used in any future training runs or dataset releases by the SISTER project.</p>
     <p>Please note that this action is not retroactive for any data that may have already been distributed under the CC BY-NC-SA 4.0 license terms prior to your withdrawal.</p>
     <p>Thank you for your understanding. If you have any further questions, please do not hesitate to contact us.</p>
