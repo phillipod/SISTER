@@ -3,24 +3,37 @@ import uuid
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.mysql import LONGBLOB
 from werkzeug.security import generate_password_hash, check_password_hash
+import enum
 
 # SQLAlchemy database instance
 # This is imported by the application and initialized there
 # when create_app() is called.
 db = SQLAlchemy()
 
+class AcceptanceState(enum.Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+
 class Submission(db.Model):
     __tablename__ = 'submission'
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email = db.Column(db.String(120), nullable=False)
     acceptance_token = db.Column(db.String(64), unique=True, nullable=False)
-    is_accepted = db.Column(db.Boolean, default=False)
+    acceptance_state = db.Column(db.Enum(AcceptanceState), default=AcceptanceState.PENDING, nullable=False)
     accepted_at = db.Column(db.DateTime, nullable=True)
     acceptance_method = db.Column(db.String(10), nullable=True)
+    is_withdrawn = db.Column(db.Boolean, default=False, nullable=False)
+    withdrawn_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     builds = db.relationship('Build', backref='submission', lazy=True)
     email_logs = db.relationship('EmailLog', backref='submission', lazy=True, order_by='EmailLog.received_at')
     link_logs = db.relationship('LinkLog', backref='submission', lazy=True, order_by='LinkLog.clicked_at')
+
+    @property
+    def is_accepted(self):
+        """Property for backward compatibility and semantic clarity."""
+        return self.acceptance_state == AcceptanceState.ACCEPTED
 
 class Build(db.Model):
     __tablename__ = 'build'
@@ -28,11 +41,18 @@ class Build(db.Model):
     submission_id = db.Column(db.String(36), db.ForeignKey('submission.id'), nullable=False)
     platform = db.Column(db.String(10), nullable=False)
     type = db.Column(db.String(10), nullable=False)
-    is_accepted = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    accepted_at = db.Column(db.DateTime, nullable=True)
-    acceptance_method = db.Column(db.String(10), nullable=True)
     screenshots = db.relationship('Screenshot', backref='build', lazy=True)
+
+    @property
+    def is_accepted(self):
+        """For compatibility, check the submission's status."""
+        return self.submission.is_accepted
+    
+    @property
+    def acceptance_state(self):
+        """Convenience property to access the submission's acceptance state."""
+        return self.submission.acceptance_state
 
 class Screenshot(db.Model):
     __tablename__ = 'screenshot'

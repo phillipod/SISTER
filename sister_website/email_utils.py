@@ -15,6 +15,7 @@ def send_consent_email(email, builds, consents, submission_acceptance_token, sub
         client = ForwardEmailClient(api_key=os.getenv('FORWARD_EMAIL_API_KEY'))
 
         acceptance_url = url_for('accept_license', token=submission_acceptance_token, _external=True)
+        decline_url = url_for('decline_license', token=submission_acceptance_token, _external=True)
 
         domain = os.getenv('FORWARD_EMAIL_DOMAIN', 'adhd.geek.nz')
         reply_to_local_part = f"training-data-submission-{submission_id}"
@@ -31,6 +32,7 @@ def send_consent_email(email, builds, consents, submission_acceptance_token, sub
             builds=builds,
             consents=consents,
             acceptance_url=acceptance_url,
+            decline_url=decline_url,
             timestamp=datetime.utcnow(),
             reply_to=reply_to_address
         )
@@ -54,7 +56,7 @@ def send_consent_email(email, builds, consents, submission_acceptance_token, sub
         return False
 
 
-def send_reply_confirmation_email(original_sender_email, submission_id, decision_text, reply_channel_address):
+def send_reply_confirmation_email(original_sender_email, submission_id, decision_text, reply_channel_address, submission_token=None):
     if not original_sender_email or not submission_id or not reply_channel_address:
         log_submission_id = submission_id if submission_id else "<Not Provided>"
         logger.warning(
@@ -78,10 +80,15 @@ def send_reply_confirmation_email(original_sender_email, submission_id, decision
 
         subject = f"SISTER - Reply Processed for Submission {submission_id}: {decision_text}"
 
+        withdrawal_url = None
+        if submission_token:
+            withdrawal_url = url_for('withdraw_submission', token=submission_token, _external=True)
+
         html_content = render_template(
             'reply_email_template.html',
             submission_id=submission_id,
             decision_text=decision_text,
+            withdrawal_url=withdrawal_url,
             timestamp=datetime.utcnow()
         )
 

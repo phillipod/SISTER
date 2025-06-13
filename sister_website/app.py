@@ -36,6 +36,7 @@ from .models import (
     EmailLog,
     LinkLog,
     AdminUser,
+    AcceptanceState,
 )
 from .forms import UploadForm, LoginForm, AdminUserForm, ChangePasswordForm
 from .email_utils import (
@@ -490,8 +491,16 @@ def accept_license(token):
         else:
             return jsonify({"status": "info", "message": message, "accepted_at": submission.accepted_at.isoformat() if submission.accepted_at else None }), 200
 
+    if submission.acceptance_state != AcceptanceState.PENDING:
+        message = f"This submission has already been {submission.acceptance_state.value} and cannot be changed."
+        if request.method == 'GET':
+            flash(message, 'warning')
+            return redirect(url_for('home'))
+        else:
+            return jsonify({"status": "error", "message": message}), 409 # 409 Conflict
+
     # Mark the Submission as accepted
-    submission.is_accepted = True
+    submission.acceptance_state = AcceptanceState.ACCEPTED
     submission.accepted_at = datetime.utcnow()
     submission.acceptance_method = 'link'
 
@@ -510,11 +519,8 @@ def accept_license(token):
         # Log error but don't fail the acceptance if link logging fails
         current_app.logger.error(f"Failed to create LinkLog for submission {submission.id}: {e_link_log}", exc_info=True)
 
-    # Mark all associated Builds as accepted
-    for build_item in submission.builds:
-        build_item.is_accepted = True
-        build_item.accepted_at = submission.accepted_at # Use submission's acceptance time
-        build_item.acceptance_method = 'link'
+    # The logic to update builds is no longer needed here since the build status
+    # is now derived from the submission's status.
     
     try:
         db.session.commit()
@@ -537,6 +543,51 @@ def accept_license(token):
             return redirect(url_for('training_data')) # Or a generic error page
         else:
             return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
+
+@app.route('/api/decline-license/<token>', methods=['GET'])
+def decline_license(token):
+    """Handle license declining via email link for a Submission."""
+    submission = Submission.query.filter_by(acceptance_token=token).first_or_404()
+
+    if submission.acceptance_state != AcceptanceState.PENDING:
+        flash(f"This submission has already been {submission.acceptance_state.value}.", 'info')
+        return redirect(url_for('home'))
+
+    submission.acceptance_state = AcceptanceState.DECLINED
+    submission.accepted_at = datetime.utcnow() # Using accepted_at to mark when the decision was made
+    submission.acceptance_method = 'link'
+    
+    try:
+        db.session.commit()
+        flash("You have declined the license agreement. Your submission will be deleted.", 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error declining license for submission {submission.id}: {e}", exc_info=True)
+        flash("An error occurred while processing your request. Please contact support.", 'danger')
+
+    return redirect(url_for('home'))
+
+@app.route('/api/withdraw-submission/<token>', methods=['GET'])
+def withdraw_submission(token):
+    """Handle submission withdrawal via email link."""
+    submission = Submission.query.filter_by(acceptance_token=token).first_or_404()
+
+    if submission.is_withdrawn:
+        flash("This submission has already been withdrawn.", 'info')
+        return redirect(url_for('home'))
+
+    submission.is_withdrawn = True
+    submission.withdrawn_at = datetime.utcnow()
+    
+    try:
+        db.session.commit()
+        flash("You have successfully withdrawn your submission. It will not be used in future datasets.", 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error withdrawing submission {submission.id}: {e}", exc_info=True)
+        flash("An error occurred while processing your request. Please contact support.", 'danger')
+        
+    return redirect(url_for('home'))
 
 def extract_reply_text(email_body_text):
     """Attempts to extract the new reply text from an email, stripping quoted original messages."""
@@ -583,15 +634,17 @@ def extract_reply_text(email_body_text):
 @app.route('/training-data-stats')
 @cache.cached(timeout=900)  # Cache for 15 minutes
 def training_data_stats():
-    # Get all submissions with their builds and screenshots
+    # Get all non-withdrawn submissions with their builds and screenshots
     submissions = Submission.query.options(
         db.joinedload(Submission.builds).joinedload(Build.screenshots)
-    ).all()
+    ).filter(Submission.is_withdrawn == False).all()
     
     # Initialize stats
     stats = {
         'total_submissions': 0,
         'total_accepted': 0,
+        'total_declined': 0,
+        'total_pending': 0,
         'total_screenshots': 0,
         'by_screenshot_type': {  # Renamed for clarity
             'space': {'total': 0, 'accepted': 0},
@@ -614,8 +667,12 @@ def training_data_stats():
     # Process submissions
     for submission in submissions:
         stats['total_submissions'] += 1
-        if submission.is_accepted:
+        if submission.acceptance_state == AcceptanceState.ACCEPTED:
             stats['total_accepted'] += 1
+        elif submission.acceptance_state == AcceptanceState.DECLINED:
+            stats['total_declined'] += 1
+        else: # PENDING
+            stats['total_pending'] += 1
         
         for build in submission.builds:
             # Ensure platform and type are valid keys
@@ -624,7 +681,7 @@ def training_data_stats():
 
             if platform_key and type_key:
                 stats['by_platform_type'][platform_key][type_key]['total_builds'] += 1
-                if submission.is_accepted:
+                if submission.acceptance_state == AcceptanceState.ACCEPTED:
                     stats['by_platform_type'][platform_key][type_key]['accepted_builds'] += 1
 
             for screenshot in build.screenshots:
@@ -634,13 +691,13 @@ def training_data_stats():
                 # Submission.query.options(db.joinedload(Submission.builds).joinedload(Build.screenshots))
                 if screenshot.build and screenshot.build.type in stats['by_screenshot_type']:
                     stats['by_screenshot_type'][screenshot.build.type]['total'] += 1
-                    if submission.is_accepted:
+                    if submission.acceptance_state == AcceptanceState.ACCEPTED:
                         stats['by_screenshot_type'][screenshot.build.type]['accepted'] += 1
                 
                 # Aggregate screenshot counts within platform/type as well
                 if platform_key and type_key:
                     stats['by_platform_type'][platform_key][type_key]['total_screenshots'] += 1
-                    if submission.is_accepted:
+                    if submission.acceptance_state == AcceptanceState.ACCEPTED:
                         stats['by_platform_type'][platform_key][type_key]['accepted_screenshots'] += 1
     
     # Ensure by_type is a standard dict for the template, which it already is now
@@ -791,6 +848,8 @@ def admin_screenshots_data():
             'id': sc.id,
             'filename': sc.filename,
             'is_accepted': submission.is_accepted,
+            'acceptance_state': submission.acceptance_state.value,
+            'is_withdrawn': submission.is_withdrawn,
             'submission_id': submission.id,
             'email': submission.email,
             'build_id': build.id,
@@ -804,10 +863,13 @@ def admin_screenshot_info(screenshot_id):
     if not is_admin():
         return jsonify({'error': 'unauthorized'}), 403
     sc = Screenshot.query.get_or_404(screenshot_id)
+    submission = sc.build.submission
     info = {
         'id': sc.id,
         'filename': sc.filename,
-        'is_accepted': sc.build.submission.is_accepted,
+        'is_accepted': submission.is_accepted,
+        'acceptance_state': submission.acceptance_state.value,
+        'is_withdrawn': submission.is_withdrawn,
     }
     return jsonify(info)
 
@@ -957,64 +1019,91 @@ def handle_email_reply():
 
         acceptance_keywords = ['accept', 'confirm', 'yes', 'agree', 'consent']
         disagreement_keywords = ['disagree', 'decline']
+        withdrawal_keywords = ['withdraw']
 
         reply_lower = reply_only_text.lower()
         is_acceptance_in_reply = any(keyword in reply_lower for keyword in acceptance_keywords)
         is_disagreement_in_reply = any(keyword in reply_lower for keyword in disagreement_keywords)
+        is_withdrawal_in_reply = any(keyword in reply_lower for keyword in withdrawal_keywords)
 
-        current_app.logger.info(f"Email webhook: Decision check for submission_id='{submission_id}': acceptance_found='{is_acceptance_in_reply}', disagreement_found='{is_disagreement_in_reply}'")
+        current_app.logger.info(f"Email webhook: Decision check for submission_id='{submission_id}': acceptance='{is_acceptance_in_reply}', disagreement='{is_disagreement_in_reply}', withdrawal='{is_withdrawal_in_reply}'")
         
         decision_for_email = "Reply Received - No explicit decision keywords detected" # Default
         action_taken = False
 
-        if is_disagreement_in_reply:
-            current_app.logger.info(f"Email webhook: Disagreement keywords found for submission_id='{submission_id}'. Submission will NOT be accepted based on this reply.")
-            decision_for_email = "License Agreement Declined (based on your reply)"
-            # No changes to submission.is_accepted or build.is_accepted needed here, they remain False or as they were.
-            # Log the email, as it's a significant interaction
-            try:
-                submission_for_log = Submission.query.get(submission_id)
-                if submission_for_log:
-                    email_html_content = data.get('html', '')
-                    new_email_log = EmailLog(
-                        submission_id=submission_for_log.id,
-                        message_id_header=message_id_value,
-                        from_address=from_email_address,
-                        to_address=to_email_address,
-                        subject=email_subject,
-                        body_text=email_text_content,
-                        body_html=email_html_content,
-                        headers_json=headers_json_str
-                    )
-                    db.session.add(new_email_log)
-                    db.session.commit()
-                    current_app.logger.info(f"Email webhook: Email log created for disagreement reply for submission_id='{submission_for_log.id}', EmailLog ID {new_email_log.id}.")
-                else:
-                    current_app.logger.warning(f"Email webhook: Submission '{submission_id}' not found when trying to log disagreement email.")
-            except Exception as e_log_disagree:
-                db.session.rollback()
-                current_app.logger.error(f"Email webhook: Failed to log disagreement email for submission_id='{submission_id}': {e_log_disagree}", exc_info=True)
+        # Priority: Withdrawal > Disagreement > Agreement
+        if is_withdrawal_in_reply:
+            submission_to_withdraw = Submission.query.get(submission_id)
+            if not submission_to_withdraw:
+                 current_app.logger.warning(f"Email webhook: Submission with ID '{submission_id}' not found for withdrawal.")
+                 return jsonify({"status": "error", "message": f"Submission {submission_id} not found."}), 404
             
-            email_sent_successfully = send_reply_confirmation_email(from_email_address, submission_id, decision_for_email, to_email_address)
-            response_message = f"Disagreement processed for submission {submission_id}. License not accepted."
-            if email_sent_successfully:
-                response_message += " Confirmation email sent."
-            else:
-                response_message += " Confirmation email FAILED to send (check logs)."
-            return jsonify({"status": "info", "message": response_message}), 200
+            if submission_to_withdraw.is_withdrawn:
+                current_app.logger.info(f"Email webhook: Submission '{submission_id}' already withdrawn.")
+                return jsonify({"status": "info", "message": f"Submission {submission_id} already withdrawn."}), 200
 
-        elif is_acceptance_in_reply: # Only if not disagreement
-            submission = Submission.query.get(submission_id)
+            submission_to_withdraw.is_withdrawn = True
+            submission_to_withdraw.withdrawn_at = datetime.utcnow()
+            decision_for_email = "Submission Withdrawn"
             
-            if not submission:
-                current_app.logger.warning(f"Email webhook: Submission with ID '{submission_id}' not found.")
+            try:
+                db.session.commit()
+                current_app.logger.info(f"Email webhook: Successfully marked submission '{submission_id}' as withdrawn.")
+                email_sent_successfully = send_reply_confirmation_email(from_email_address, submission_id, decision_for_email, to_email_address)
+                response_message = f"Submission {submission_id} has been withdrawn."
+                if not email_sent_successfully:
+                    response_message += " Confirmation email FAILED to send."
+                return jsonify({"status": "success", "message": response_message}), 200
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Email webhook: DB error withdrawing submission '{submission_id}': {e}", exc_info=True)
+                return jsonify({"status": "error", "message": "Database error during withdrawal."}), 500
+
+        elif is_disagreement_in_reply:
+            submission_to_decline = Submission.query.get(submission_id)
+            if not submission_to_decline:
+                current_app.logger.warning(f"Email webhook: Submission with ID '{submission_id}' not found for declining.")
                 return jsonify({"status": "error", "message": f"Submission {submission_id} not found."}), 404
 
-            # Log the received email now that we have a valid submission
+            if submission_to_decline.acceptance_state != AcceptanceState.PENDING:
+                 current_app.logger.info(f"Email webhook: Submission '{submission_id}' already has state '{submission_to_decline.acceptance_state.value}'. Cannot decline.")
+                 return jsonify({"status": "info", "message": f"Submission {submission_id} already processed."}), 200
+
+            submission_to_decline.acceptance_state = AcceptanceState.DECLINED
+            submission_to_decline.acceptance_method = 'email'
+            submission_to_decline.accepted_at = datetime.utcnow() # Timestamp of decision
+
+            decision_for_email = "License Agreement Declined (based on your reply)"
+            
             try:
-                email_html_content = data.get('html', '') # Get HTML content if available
+                db.session.commit()
+                current_app.logger.info(f"Email webhook: Successfully marked submission '{submission_id}' as declined.")
+                email_sent_successfully = send_reply_confirmation_email(from_email_address, submission_id, decision_for_email, to_email_address)
+                response_message = f"Disagreement processed for submission {submission_id}. License declined."
+                if not email_sent_successfully:
+                    response_message += " Confirmation email FAILED to send."
+                return jsonify({"status": "success", "message": response_message}), 200
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Email webhook: DB error declining submission '{submission_id}': {e}", exc_info=True)
+                return jsonify({"status": "error", "message": "Database error during decline."}), 500
+
+        elif is_acceptance_in_reply:
+            submission_to_accept = Submission.query.get(submission_id)
+            
+            if not submission_to_accept:
+                current_app.logger.warning(f"Email webhook: Submission with ID '{submission_id}' not found for acceptance.")
+                return jsonify({"status": "error", "message": f"Submission {submission_id} not found."}), 404
+
+            if submission_to_accept.acceptance_state != AcceptanceState.PENDING:
+                 current_app.logger.info(f"Email webhook: Submission '{submission_id}' already has state '{submission_to_accept.acceptance_state.value}'. Cannot accept again.")
+                 return jsonify({"status": "info", "message": f"Submission {submission_id} already processed."}), 200
+
+            # Log the received email - This logic seems to be missing from the original disagreement block, let's keep it here for acceptance
+            try:
+                email_html_content = data.get('html', '')
                 new_email_log = EmailLog(
-                    submission_id=submission.id,
+                    submission_id=submission_to_accept.id,
                     message_id_header=message_id_value,
                     from_address=from_email_address,
                     to_address=to_email_address,
@@ -1025,52 +1114,43 @@ def handle_email_reply():
                 )
                 db.session.add(new_email_log)
                 db.session.commit()
-                current_app.logger.info(f"Email webhook: Email log created for submission_id='{submission.id}', message_id='{message_id_value}' to EmailLog ID {new_email_log.id}.")
+                current_app.logger.info(f"Email webhook: Email log created for submission_id='{submission_to_accept.id}', message_id='{message_id_value}' to EmailLog ID {new_email_log.id}.")
             except Exception as e_log:
                 db.session.rollback()
-                current_app.logger.error(f"Email webhook: Failed to log email for submission_id='{submission.id}': {e_log}", exc_info=True)
-                # Continue processing acceptance even if logging failed for now.
+                current_app.logger.error(f"Email webhook: Failed to log email for submission_id='{submission_to_accept.id}': {e_log}", exc_info=True)
+                # Continue processing acceptance even if logging failed
 
-            if submission.is_accepted:
-                current_app.logger.info(f"Email webhook: Submission '{submission_id}' already accepted on {submission.accepted_at} by {submission.acceptance_method}.")
-                return jsonify({"status": "info", "message": f"Submission {submission_id} already accepted."}), 200 # OK, already done
+            submission_to_accept.acceptance_state = AcceptanceState.ACCEPTED
+            submission_to_accept.accepted_at = datetime.utcnow()
+            submission_to_accept.acceptance_method = 'email'
 
-            submission.is_accepted = True
-            submission.accepted_at = datetime.utcnow()
-            submission.acceptance_method = 'email'
-
-            for build_item in submission.builds:
-                build_item.is_accepted = True
-                build_item.accepted_at = submission.accepted_at
-                build_item.acceptance_method = 'email'
-            
             try:
                 db.session.commit()
-                current_app.logger.info(f"Email webhook: Successfully accepted Submission '{submission_id}' and its builds via email reply.")
+                current_app.logger.info(f"Email webhook: Successfully accepted Submission '{submission_id}' via email reply.")
                 decision_for_email = "License Agreement Accepted"
-                email_sent_successfully = send_reply_confirmation_email(from_email_address, submission_id, decision_for_email, to_email_address)
+                email_sent_successfully = send_reply_confirmation_email(
+                    from_email_address, 
+                    submission_id, 
+                    decision_for_email, 
+                    to_email_address,
+                    submission_token=submission_to_accept.acceptance_token # Pass token for withdrawal link
+                )
                 response_message = f"Submission {submission_id} accepted via email."
-                if email_sent_successfully:
-                    response_message += " Acceptance confirmation email sent."
-                else:
-                    response_message += " Acceptance confirmation email FAILED to send (check logs)."
+                if not email_sent_successfully:
+                    response_message += " Acceptance confirmation email FAILED to send."
                 return jsonify({"status": "success", "message": response_message}), 200
             except Exception as e_commit:
                 db.session.rollback()
                 current_app.logger.error(f"Email webhook: Database error committing acceptance for submission_id '{submission_id}': {e_commit}", exc_info=True)
-                # Optionally, send a confirmation of failure if appropriate, but be cautious about error loops.
-                # For now, we don't send an email on DB commit failure to avoid potential loops if email sending also fails.
                 return jsonify({"status": "error", "message": "Database error during acceptance."}), 500
         else:
-            current_app.logger.info(f"Email webhook: No acceptance or disagreement keywords found in email body for submission_id='{submission_id}'. No action taken on submission status.")
-            # decision_for_email is already defaulted to "Reply Received - No explicit decision keywords detected"
+            current_app.logger.info(f"Email webhook: No decision keywords found for submission_id='{submission_id}'.")
+            decision_for_email = "Reply Received - No explicit decision keywords detected"
             email_sent_successfully = send_reply_confirmation_email(from_email_address, submission_id, decision_for_email, to_email_address)
             response_message = "No decision keywords found. Reply logged."
-            if email_sent_successfully:
-                response_message += " Neutral confirmation email sent."
-            else:
-                response_message += " Neutral confirmation email FAILED to send (check logs)."
-            return jsonify({"status": "info" if email_sent_successfully else "warning", "message": response_message}), 200
+            if not email_sent_successfully:
+                 response_message += " Neutral confirmation email FAILED to send."
+            return jsonify({"status": "info", "message": response_message}), 200
 
     except Exception as e:
         current_app.logger.error(f"Email webhook: General error: {e}", exc_info=True)
@@ -1083,8 +1163,8 @@ def resend_consent_email(submission_id):
     
     submission = Submission.query.get_or_404(submission_id)
     
-    if submission.is_accepted:
-        return jsonify({'error': 'Submission already accepted'}), 400
+    if submission.acceptance_state != AcceptanceState.PENDING:
+        return jsonify({'error': f'Submission is already in "{submission.acceptance_state.value}" state.'}), 400
     
     # Generate a new acceptance token
     submission.acceptance_token = generate_acceptance_token(submission.id, submission.email)
