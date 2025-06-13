@@ -1,29 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}Acceptance Confirmed - SISTER{% endblock %}
+{% block title %}Acceptance Confirmed{% endblock %}
 
 {% block content %}
-<section class="content-section text-center" style="padding-top: 40px; padding-bottom: 40px;">
-    <div class="container-sm" style="max-width: 700px; margin: auto;">
-        <h2>Thank You!</h2>
-        
-        <p class="lead" style="font-size: 1.25rem; margin-bottom: 1rem;">Your license acceptance has been successfully recorded.</p>
-        
-        <p style="font-size: 1.1rem; margin-bottom: 1rem;">
-            Thank you for contributing to the SISTER project. Your data helps us improve our tools and research in Star Trek Online build analysis.
-        </p>
-        
-        <p style="font-size: 1.1rem; margin-bottom: 1.5rem;">
-            The SISTER team appreciates your support and participation!
-        </p>
-        
-        <hr style="margin-top: 2rem; margin-bottom: 2rem;">
-        
-        <p class="text-muted" style="font-size: 1rem; margin-bottom: 1.5rem;">
-            If you have any questions or would like to know more about the project, please feel free to <a href="{{ url_for('contact') }}">contact us</a> or visit our <a href="https://github.com/phillipod/SISTER" target="_blank" rel="noopener noreferrer">GitHub repository</a>.
-        </p>
-        
-        <a href="{{ url_for('home') }}" class="btn btn-primary" style="padding: 10px 20px; font-size: 1.1rem;">Return to Homepage</a>
+<section class="contact-section">
+    <h2>Thank You!</h2>
+    <p class="lead">Your license acceptance has been successfully recorded.</p>
+    <p>Thank you for contributing to the SISTER project. Your data helps us improve our tools and research in Star Trek Online build analysis.</p>
+    <p>The SISTER team appreciates your support and participation!</p>
+    <hr>
+    <p>If you have any questions or would like to know more about the project, please feel free to <a href="{{ url_for('contact') }}">contact us</a> or visit our <a href="https://github.com/phillipod/SISTER" target="_blank" rel="noopener noreferrer">GitHub repository</a>.</p>
+    <div class="contact-actions">
+        <a href="{{ url_for('home') }}" class="contact-button">Return to Homepage</a>
     </div>
 </section>
 {% endblock %}

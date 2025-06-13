@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Submission Declined{% endblock %}
+
+{% block content %}
+<section class="contact-section">
+    <h2>Submission Declined</h2>
+    <p class="lead">You have chosen to decline the license agreement for your submission.</p>
+    <p>Your submission and all associated data will be securely deleted from our system within 14 days and will not be used by the SISTER project.</p>
+    <p>Thank you for considering a contribution. If you change your mind or have any questions, feel free to visit our site again or contact us.</p>
+    <div class="contact-actions">
+        <a href="{{ url_for('home') }}" class="contact-button">Return to Homepage</a>
+    </div>
+</section>
+{% endblock %} 

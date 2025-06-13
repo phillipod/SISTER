@@ -550,6 +550,7 @@ def decline_license(token):
     submission = Submission.query.filter_by(acceptance_token=token).first_or_404()
 
     if submission.acceptance_state != AcceptanceState.PENDING:
+        # Still flash a message here before redirecting, as there's no dedicated page for this case.
         flash(f"This submission has already been {submission.acceptance_state.value}.", 'info')
         return redirect(url_for('home'))
 
@@ -559,13 +560,13 @@ def decline_license(token):
     
     try:
         db.session.commit()
-        flash("You have declined the license agreement. Your submission will be deleted.", 'success')
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error declining license for submission {submission.id}: {e}", exc_info=True)
         flash("An error occurred while processing your request. Please contact support.", 'danger')
+        return redirect(url_for('home'))
 
-    return redirect(url_for('home'))
+    return render_template('decline_confirmation.html')
 
 @app.route('/api/withdraw-submission/<token>', methods=['GET'])
 def withdraw_submission(token):
@@ -581,13 +582,13 @@ def withdraw_submission(token):
     
     try:
         db.session.commit()
-        flash("You have successfully withdrawn your submission. It will not be used in future datasets.", 'success')
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error withdrawing submission {submission.id}: {e}", exc_info=True)
         flash("An error occurred while processing your request. Please contact support.", 'danger')
+        return redirect(url_for('home'))
         
-    return redirect(url_for('home'))
+    return render_template('withdrawal_confirmation.html')
 
 def extract_reply_text(email_body_text):
     """Attempts to extract the new reply text from an email, stripping quoted original messages."""
@@ -710,7 +711,11 @@ def training_data_stats():
 
 @app.route('/acceptance-thank-you')
 def acceptance_thank_you():
-    return render_template('pages/acceptance_thank_you.html', active_page='acceptance_thank_you')
+    # This page is rendered dynamically by the accept_license route.
+    # A direct link here doesn't make sense without submission context.
+    # If a generic thank you is needed, it should be a static page or have logic.
+    # For now, redirecting to home to avoid errors from missing template/context.
+    return redirect(url_for('home'))
 
 
 @app.route('/admin/login', methods=['GET', 'POST'])
