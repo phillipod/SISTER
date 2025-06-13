@@ -191,13 +191,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
         ids.forEach(id => {
             const img = document.createElement('img');
-            img.src = `/admin/screenshot/${id}?t=${Date.now()}`;
+            // Defer actual loading using data-src for lazy observer
+            img.dataset.src = `/admin/screenshot/${id}?t=${Date.now()}`;
             img.style.width = '100%';
             img.style.objectFit = 'cover';
+            img.dataset.screenshotId = id;
+            img.loading = 'lazy'; // native hint where supported
+
+            // When a tile is clicked, trigger the corresponding tree link click
+            img.addEventListener('click', () => {
+                const link = treePane.querySelector(`a[data-screenshot-id="${id}"]`);
+                if (link) {
+                    link.scrollIntoView({behavior: 'smooth', block: 'center'});
+                    link.click();
+                }
+            });
+
             grid.appendChild(img);
         });
 
         document.getElementById('preview-pane').appendChild(grid);
+
+        // Initialize lazy loading for the newly added grid
+        initLazyLoad(grid);
     }
 
     function handleScreenshotClick(e) {
@@ -274,6 +290,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 } finally {
                     this.disabled = false;
                 }
+            });
+        }
+    }
+
+    // Lazy load helper using IntersectionObserver
+    function initLazyLoad(container) {
+        const imgs = container.querySelectorAll('img[data-src]');
+        if (!imgs.length) return;
+
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries, obs) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        obs.unobserve(img);
+                    }
+                });
+            }, { root: null, rootMargin: '200px', threshold: 0.01 });
+
+            imgs.forEach(img => observer.observe(img));
+        } else {
+            // Fallback: load all immediately
+            imgs.forEach(img => {
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
             });
         }
     }
