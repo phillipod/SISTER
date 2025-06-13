@@ -1018,23 +1018,34 @@ def handle_email_reply():
     
     # Get raw request data for signature verification
     request_data = request.get_data()
-    if not verify_webhook_signature(request_data, signature_header, webhook_secret):
-        current_app.logger.warning("Email webhook: Invalid webhook signature")
+    
+    current_app.logger.info("Email webhook: Verifying signature...")
+    current_app.logger.debug(f"Email webhook: Signature header: {signature_header}")
+
+    # The signature is based on the JSON string, not the raw bytes.
+    # We must ensure we verify against the same format.
+    try:
+        # First, parse the JSON to ensure it's valid
+        json_data = json.loads(request_data)
+        # Then, re-serialize it without extra whitespace to match the signature's source
+        verification_data = json.dumps(json_data, separators=(',', ':')).encode('utf-8')
+    except json.JSONDecodeError:
+        current_app.logger.warning("Email webhook: Received non-JSON data, cannot verify signature against JSON.")
+        # Fallback to raw data for verification, though it will likely fail
+        verification_data = request_data
+
+    if not verify_webhook_signature(verification_data, signature_header, webhook_secret):
+        current_app.logger.warning(f"Email webhook: Invalid webhook signature. Verification failed for IP: {client_ip}")
+        # For debugging, let's log the data used for verification
+        current_app.logger.debug(f"Email webhook: Data used for signature verification: {verification_data.decode('utf-8', errors='ignore')}")
         return jsonify({"status": "error", "message": "Invalid signature"}), 401
+    
+    current_app.logger.info("Email webhook: Signature verified successfully.")
 
     try:
-        # Parse JSON data (already verified the signature)
-        if not request_data:
-            current_app.logger.warning("Email webhook: No JSON data received.")
-            return jsonify({"status": "error", "message": "No JSON data received"}), 400
+        # Use the already-parsed json_data from the verification step
+        data = json_data
         
-        # Parse the JSON data from bytes
-        try:
-            data = json.loads(request_data)
-        except json.JSONDecodeError as e:
-            current_app.logger.error(f"Email webhook: Failed to parse JSON data: {e}")
-            return jsonify({"status": "error", "message": "Invalid JSON data"}), 400
-
         # --- START: Debugging Email Parsing --- 
         current_app.logger.info(f"Email webhook: Debug - Raw 'from' field: {data.get('from')}")
         current_app.logger.info(f"Email webhook: Debug - Raw 'to' field: {data.get('to')}")
@@ -1042,42 +1053,46 @@ def handle_email_reply():
         # --- END: Debugging Email Parsing ---
 
         # --- START: Enhanced Header and Email Info Extraction ---
-        all_headers_raw = data.get('headers', []) 
+        # The 'headers' in the payload body is a dict, not a list of dicts.
+        all_headers_raw = data.get('headers', {})
         headers_json_str = json.dumps(all_headers_raw) if all_headers_raw else None
         
-        headers_dict = {}
-        if isinstance(all_headers_raw, list):
-            headers_dict = {h.get('key', '').lower(): h.get('value', '') for h in all_headers_raw if isinstance(h, dict) and h.get('key')}
-        elif isinstance(all_headers_raw, dict): 
-            headers_dict = {k.lower(): v for k, v in all_headers_raw.items()}
+        headers_dict = {k.lower(): v for k, v in all_headers_raw.items()}
 
         message_id_value = headers_dict.get('message-id')
 
-        from_field_data = data.get('from') # Get the 'from' object, could be dict or None
+        # Robustly parse 'from' address
         from_email_address = None
-        if isinstance(from_field_data, dict):
+        from_field_data = data.get('from')
+        if isinstance(from_field_data, str):
+            from_email_address = from_field_data.lower()
+        elif isinstance(from_field_data, dict):
             from_value_list = from_field_data.get('value')
             if isinstance(from_value_list, list) and from_value_list:
                 sender_obj = from_value_list[0]
                 if isinstance(sender_obj, dict):
                     from_email_address = sender_obj.get('address', '').lower() or sender_obj.get('email', '').lower()
+
         if not from_email_address:
             current_app.logger.warning(f"Email webhook: Could not parse 'from_email_address' from 'from' field: {from_field_data}")
 
+        # Robustly parse 'to' address
         to_email_address = None
         envelope_recipients = data.get('envelopeRecipients', []) 
-        if isinstance(envelope_recipients, list) and envelope_recipients:
-            if isinstance(envelope_recipients[0], str):
-                to_email_address = envelope_recipients[0].lower()
+        if isinstance(envelope_recipients, list) and envelope_recipients and isinstance(envelope_recipients[0], str):
+            to_email_address = envelope_recipients[0].lower()
         
-        if not to_email_address: # Fallback if envelopeRecipients was not present or empty
-            to_field_data = data.get('to') # Get the 'to' object, could be dict or None
-            if isinstance(to_field_data, dict):
+        if not to_email_address:
+            to_field_data = data.get('to')
+            if isinstance(to_field_data, str):
+                to_email_address = to_field_data.lower()
+            elif isinstance(to_field_data, dict):
                 to_value_list = to_field_data.get('value')
                 if isinstance(to_value_list, list) and to_value_list:
                     recipient_obj = to_value_list[0]
                     if isinstance(recipient_obj, dict):
                         to_email_address = recipient_obj.get('address', '').lower() or recipient_obj.get('email', '').lower()
+        
         if not to_email_address:
             current_app.logger.warning(f"Email webhook: Could not parse 'to_email_address' from 'envelopeRecipients' or 'to' field. Envelope: {envelope_recipients}, To: {data.get('to')}")
         # --- END: Enhanced Header and Email Info Extraction ---

@@ -90,11 +90,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         const submissionLabel = `Submission ${submissionId.substring(0, 8)}`;
                         
                         const submissionScreenshotIds = screenshots.map(sc => sc.id);
-                        const submissionDetails = createDetails(submissionLabel, submissionScreenshotIds);
-                        
+                    const submissionDetails = createDetails(submissionLabel, submissionScreenshotIds);
+
                         const scUl = document.createElement('ul');
                         scUl.className = 'list-unstyled pl-3';
-                        
+
                         screenshots.forEach(sc => {
                             const scLi = document.createElement('li');
                             const link = document.createElement('a');
@@ -219,24 +219,24 @@ document.addEventListener('DOMContentLoaded', function() {
         const card = document.createElement('div');
         card.className = 'info-card';
 
-        let statusText;
-        let statusClass;
+            let statusText;
+            let statusClass;
         let isWithdrawn = info.is_withdrawn;
 
-        switch (info.acceptance_state) {
-            case 'accepted':
-                statusText = 'Yes';
-                statusClass = 'status-accepted';
-                break;
-            case 'declined':
-                statusText = 'No';
-                statusClass = 'status-declined';
-                break;
-            case 'pending':
+            switch (info.acceptance_state) {
+                case 'accepted':
+                    statusText = 'Yes';
+                    statusClass = 'status-accepted';
+                    break;
+                case 'declined':
+                    statusText = 'No';
+                    statusClass = 'status-declined';
+                    break;
+                case 'pending':
             default:
-                statusText = 'Pending';
-                statusClass = 'status-pending';
-                break;
+                    statusText = 'Pending';
+                    statusClass = 'status-pending';
+                    break;
         }
 
         const statusP = document.createElement('p');
@@ -387,6 +387,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!statusSpan) {
             console.error("Could not find status message element for resend button.");
+            return;
+        }
+
+        if (!confirm('Are you sure you want to resend the consent email for this submission?')) {
             return;
         }
 
