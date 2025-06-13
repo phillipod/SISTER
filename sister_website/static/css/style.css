@@ -1672,6 +1672,10 @@ footer {
     background-color: var(--danger-color);
 }
 
+.status-pending {
+    background-color: var(--accent-color);
+}
+
 .error-message {
     color: var(--danger-color);
     background-color: #f8d7da;
