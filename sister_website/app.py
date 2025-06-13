@@ -833,12 +833,16 @@ def handle_email_reply():
 
     try:
         # Parse JSON data (already verified the signature)
-        data = request.get_data()
-        if not data:
+        if not request_data:
             current_app.logger.warning("Email webhook: No JSON data received.")
             return jsonify({"status": "error", "message": "No JSON data received"}), 400
         
-        #logger.info(f"Email webhook: Received data: {json.dumps(data, indent=2)}")
+        # Parse the JSON data from bytes
+        try:
+            data = json.loads(request_data)
+        except json.JSONDecodeError as e:
+            current_app.logger.error(f"Email webhook: Failed to parse JSON data: {e}")
+            return jsonify({"status": "error", "message": "Invalid JSON data"}), 400
 
         # --- START: Debugging Email Parsing --- 
         current_app.logger.info(f"Email webhook: Debug - Raw 'from' field: {data.get('from')}")
