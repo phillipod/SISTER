@@ -848,37 +848,62 @@ def browse_screenshots():
 @app.route('/admin/api/screenshots')
 def admin_screenshots_data():
     if not is_admin():
-        return jsonify({'error': 'unauthorized'}), 403
-    
-    # Eagerly load related data to prevent N+1 query problems
-    screenshots = Screenshot.query.options(
-        db.joinedload(Screenshot.build).joinedload(Build.submission)
-    ).all()
+        return jsonify({"error": "Unauthorized"}), 403
 
-    tree = {}
-    for sc in screenshots:
-        # Get data from related models
-        build = sc.build
-        submission = build.submission
+    # Eager load related data to avoid N+1 queries
+    submissions = Submission.query.options(
+        db.joinedload(Submission.builds).joinedload(Build.screenshots),
+        db.joinedload(Submission.email_logs),
+        db.joinedload(Submission.link_logs)
+    ).order_by(Submission.created_at.desc()).all()
+
+    data_structured = {}
+    for sub in submissions:
+        if not sub.builds:
+            continue
         
-        # Structure the data
-        plat = build.platform
-        typ = build.type
-        date_key = submission.created_at.strftime('%Y-%m-%d')
+        # We only care about the latest build for display purpose in the tree
+        latest_build = max(sub.builds, key=lambda b: b.created_at)
 
-        # Create nested dictionaries if they don't exist
-        tree.setdefault(plat, {}).setdefault(typ, {}).setdefault(date_key, []).append({
+        platform = latest_build.platform or "Unknown"
+        sc_type = latest_build.type or "Unknown"
+
+        # Events
+        events = []
+        events.append({"type": "Submitted", "timestamp": sub.created_at.isoformat(), "method": "Web Form"})
+        if sub.acceptance_state == AcceptanceState.ACCEPTED and sub.accepted_at:
+            events.append({"type": "Accepted", "timestamp": sub.accepted_at.isoformat(), "method": sub.acceptance_method.capitalize() if sub.acceptance_method else "Unknown"})
+        elif sub.acceptance_state == AcceptanceState.DECLINED and sub.accepted_at:
+            events.append({"type": "Declined", "timestamp": sub.accepted_at.isoformat(), "method": sub.acceptance_method.capitalize() if sub.acceptance_method else "Unknown"})
+        if sub.is_withdrawn and sub.withdrawn_at:
+            events.append({"type": "Withdrawn", "timestamp": sub.withdrawn_at.isoformat(), "method": "Link"})
+        for log in sub.email_logs:
+            events.append({"type": "Email Event", "timestamp": log.received_at.isoformat(), "method": "Email", "log_id": log.id, "details": {"subject": log.subject, "from": log.from_address}})
+        for log in sub.link_logs:
+            events.append({"type": "Link Click", "timestamp": log.clicked_at.isoformat(), "method": "Link", "log_id": log.id, "details": {"ip_address": log.ip_address, "user_agent": log.user_agent}})
+        events.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')))
+
+
+        screenshots_info = [{
             'id': sc.id,
             'filename': sc.filename,
-            'is_accepted': submission.is_accepted,
-            'acceptance_state': submission.acceptance_state.name.lower() if submission.acceptance_state else None,
-            'is_withdrawn': submission.is_withdrawn,
-            'submission_id': submission.id,
-            'email': submission.email,
-            'build_id': build.id,
-            'submission_created': submission.created_at.strftime('%Y-%m-%d %H:%M'),
-        })
-    return jsonify(tree)
+            'build_id': str(latest_build.id),
+            'submission_id': str(sub.id),
+            'submission_created': sub.created_at.isoformat(),
+            'is_accepted': sub.is_accepted,
+            'acceptance_state': sub.acceptance_state.value,
+            'is_withdrawn': sub.is_withdrawn,
+            'email': sub.email,
+            'events': events
+        } for sc in latest_build.screenshots]
+
+        if not screenshots_info:
+            continue
+
+        date_str = sub.created_at.strftime('%Y-%m-%d')
+        data_structured.setdefault(platform, {}).setdefault(sc_type, {}).setdefault(date_str, []).extend(screenshots_info)
+        
+    return jsonify(data_structured)
 
 
 @app.route('/admin/api/screenshot_info/<int:screenshot_id>')
@@ -895,6 +920,24 @@ def admin_screenshot_info(screenshot_id):
         'is_withdrawn': submission.is_withdrawn,
     }
     return jsonify(info)
+
+
+@app.route('/admin/api/email_log/<log_id>')
+def get_email_log(log_id):
+     if not is_admin():
+         return jsonify({"error": "Unauthorized"}), 403
+     
+     log = EmailLog.query.get_or_404(log_id)
+     
+     return jsonify({
+         "from": log.from_address,
+         "to": log.to_address,
+         "subject": log.subject,
+         "body_html": log.body_html,
+         "body_text": log.body_text,
+         "received_at": log.received_at.isoformat(),
+         "headers": json.loads(log.headers_json) if log.headers_json else {}
+     })
 
 
 @app.route('/admin/screenshot/<int:screenshot_id>')

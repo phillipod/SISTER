@@ -32,58 +32,42 @@ document.addEventListener('DOMContentLoaded', function() {
         const typeFilter = filters.type.value;
         const acceptedFilter = filters.accepted.value;
 
-        const nested = {};
+        const treeData = {};
         let hasResults = false;
 
         for (const platform in screenshotData) {
             if (platformFilter !== 'all' && platform !== platformFilter) continue;
+            treeData[platform] = {};
+
             for (const type in screenshotData[platform]) {
                 if (typeFilter !== 'all' && type !== typeFilter) continue;
+                treeData[platform][type] = {};
 
                 for (const date in screenshotData[platform][type]) {
-                    screenshotData[platform][type][date].forEach(sc => {
-                        // License filter
-                        if (acceptedFilter !== 'all') {
-                            if (acceptedFilter === 'yes' && sc.acceptance_state !== 'accepted') return;
-                            if (acceptedFilter === 'no' && sc.acceptance_state !== 'declined') return;
-                            if (acceptedFilter === 'pending' && sc.acceptance_state !== 'pending') return;
-                        }
-
-                        hasResults = true;
-
-                        nested[platform] = nested[platform] || {};
-                        nested[platform][type] = nested[platform][type] || {};
-
-                        const submissionId = sc.submission_id;
-                        const buildId = sc.build_id;
-
-                        if (!nested[platform][type][submissionId]) {
-                            nested[platform][type][submissionId] = {
-                                meta: {
-                                    created_at: sc.submission_created,
-                                    is_accepted: sc.is_accepted,
-                                    email: sc.email
-                                },
-                                builds: {}
-                            };
-                        }
-
-                        if (!nested[platform][type][submissionId].builds[buildId]) {
-                            nested[platform][type][submissionId].builds[buildId] = [];
-                        }
-
-                        nested[platform][type][submissionId].builds[buildId].push(sc);
+                    const screenshots = screenshotData[platform][type][date];
+                    
+                    const filteredScreenshots = screenshots.filter(sc => {
+                        if (acceptedFilter === 'all') return true;
+                        if (acceptedFilter === 'yes' && sc.acceptance_state === 'accepted') return true;
+                        if (acceptedFilter === 'no' && sc.acceptance_state === 'declined') return true;
+                        if (acceptedFilter === 'pending' && sc.acceptance_state === 'pending') return true;
+                        return false;
                     });
+
+                    if (filteredScreenshots.length > 0) {
+                        const submissions = filteredScreenshots.reduce((acc, sc) => {
+                            acc[sc.submission_id] = acc[sc.submission_id] || [];
+                            acc[sc.submission_id].push(sc);
+                            return acc;
+                        }, {});
+
+                        treeData[platform][type][date] = submissions;
+                        hasResults = true;
+                    }
                 }
             }
         }
-
-        renderTree(nested, hasResults);
-
-        // After tree build, if nothing selected, ensure placeholder visible
-        if (!treePane.querySelector('a.active')) {
-            resetPreview();
-        }
+        renderTree(treeData, hasResults);
     }
 
     function renderTree(data, hasResults) {
@@ -97,65 +81,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
         for (const platform in data) {
             const platformDetails = createDetails(platform);
-
             for (const type in data[platform]) {
                 const typeDetails = createDetails(type);
-
-                for (const submissionId in data[platform][type]) {
-                    const submission = data[platform][type][submissionId];
-                    const submissionLabel = `Submission ${submissionId.substring(0, 8)} (${submission.meta.created_at.split(' ')[0]})`;
-
-                    // Collect all screenshot ids under this submission for group preview
-                    const submissionScreenshotIds = [];
-
-                    const submissionDetails = createDetails(submissionLabel, submissionScreenshotIds);
-
-                    for (const buildId in submission.builds) {
-                        const buildScreens = submission.builds[buildId];
-
-                        // push screenshots ids to submission ids list
-                        buildScreens.forEach(sc => submissionScreenshotIds.push(sc.id));
-
-                        const buildLabel = `Build ${buildId.substring(0, 8)}`;
-                        const buildScreenshotIds = buildScreens.map(sc => sc.id);
-                        const buildDetails = createDetails(buildLabel, buildScreenshotIds);
-
+                for (const date in data[platform][type]) {
+                    const dateDetails = createDetails(date);
+                    for (const submissionId in data[platform][type][date]) {
+                        const screenshots = data[platform][type][date][submissionId];
+                        const firstSc = screenshots[0];
+                        const submissionLabel = `Submission ${submissionId.substring(0, 8)} (${firstSc.email})`;
+                        
+                        const submissionScreenshotIds = screenshots.map(sc => sc.id);
+                        const submissionDetails = createDetails(submissionLabel, submissionScreenshotIds);
+                        
                         const scUl = document.createElement('ul');
                         scUl.className = 'list-unstyled pl-3';
-
-                        buildScreens.forEach(sc => {
+                        
+                        screenshots.forEach(sc => {
                             const scLi = document.createElement('li');
                             const link = document.createElement('a');
                             link.href = '#';
                             link.textContent = sc.filename;
                             link.dataset.screenshotId = sc.id;
-                            link.dataset.info = JSON.stringify({
-                                is_accepted: sc.is_accepted,
-                                acceptance_state: sc.acceptance_state,
-                                is_withdrawn: sc.is_withdrawn,
-                                submission_id: sc.submission_id,
-                                email: sc.email
-                            });
+                            link.dataset.info = JSON.stringify(sc);
                             link.addEventListener('click', handleScreenshotClick);
                             scLi.appendChild(link);
                             scUl.appendChild(scLi);
                         });
-
-                        buildDetails.appendChild(scUl);
-                        submissionDetails.appendChild(buildDetails);
+                        submissionDetails.appendChild(scUl);
+                        dateDetails.appendChild(submissionDetails);
                     }
-
-                    // After processing builds, attach aggregated ids to submission summary
-                    const submissionSummary = submissionDetails.querySelector('summary');
-                    submissionSummary.dataset.groupScreenshots = submissionScreenshotIds.join(',');
-                    submissionSummary.addEventListener('click', handleGroupClick);
-
-                    typeDetails.appendChild(submissionDetails);
+                    typeDetails.appendChild(dateDetails);
                 }
-
                 platformDetails.appendChild(typeDetails);
             }
-
             treePane.appendChild(platformDetails);
         }
     }
@@ -229,6 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderScreenshotInfo(info);
                 // Move the info box to appear after the grid
                 document.getElementById('preview-pane').appendChild(screenshotInfo);
+                screenshotInfo.style.display = 'block';
             }
         }
 
@@ -250,77 +209,150 @@ document.addEventListener('DOMContentLoaded', function() {
         previewPlaceholder.style.display = 'none';
 
         renderScreenshotInfo(info);
+
+        // Make sure info card is visible
+        screenshotInfo.style.display = 'block';
     }
 
     function renderScreenshotInfo(info) {
-        // Ensure screenshot info section is visible
-        screenshotInfo.style.display = 'block';
+        screenshotInfo.innerHTML = ''; // Clear previous info
 
-        let infoHtml = `
-            <p><strong>Submission:</strong> ${info.submission_id}</p>
-            <p><strong>Email:</strong> ${info.email}</p>
+        const card = document.createElement('div');
+        card.className = 'info-card';
+
+        let statusText = 'Pending';
+        if (info.acceptance_state === 'accepted') {
+            statusText = 'License Accepted';
+        } else if (info.acceptance_state === 'declined') {
+            statusText = 'License Declined';
+        }
+        if (info.is_withdrawn) {
+            statusText += ' (Withdrawn)';
+        }
+
+        const status = document.createElement('p');
+        status.innerHTML = `<strong>Status:</strong> ${statusText}`;
+
+        const email = document.createElement('p');
+        email.innerHTML = `<strong>Email:</strong> ${info.email}`;
+
+        card.appendChild(status);
+        card.appendChild(email);
+
+        // Timeline for events
+        if (info.events && info.events.length > 0) {
+            const timeline = document.createElement('div');
+            timeline.className = 'timeline';
+            info.events.forEach(event => {
+                const eventElement = document.createElement('div');
+                eventElement.className = 'timeline-item';
+                
+                const timestamp = new Date(event.timestamp).toLocaleString();
+
+                let eventDetailsHTML = `<p><strong>${event.type}</strong> - ${timestamp}</p>`;
+                if (event.method) {
+                    eventDetailsHTML += `<p>Method: ${event.method}</p>`;
+                }
+
+                if (event.method === 'Email' && event.log_id) {
+                    eventDetailsHTML += `<p><a href="#" class="view-email" data-log-id="${event.log_id}">View Email</a></p>`;
+                } else if (event.method === 'Link' && event.details) {
+                    let detailsList = '';
+                    if (event.details.ip_address) detailsList += `<li>IP Address: ${event.details.ip_address}</li>`;
+                    if (event.details.user_agent) detailsList += `<li>User Agent: ${event.details.user_agent}</li>`;
+                    if (detailsList) {
+                         eventDetailsHTML += `<p><a href="#" class="view-link-details">View Details</a></p><div class="link-details" style="display: none;"><ul>${detailsList}</ul></div>`;
+                    }
+                }
+
+                eventElement.innerHTML = eventDetailsHTML;
+                timeline.appendChild(eventElement);
+            });
+            card.appendChild(timeline);
+        }
+        
+        // Add resend consent button if license is pending
+        if (info.acceptance_state === 'pending' && !info.is_withdrawn) {
+            const resendButton = document.createElement('button');
+            resendButton.textContent = 'Resend Consent Email';
+            resendButton.className = 'btn btn-primary btn-sm mt-2';
+            resendButton.dataset.submissionId = info.submission_id;
+            resendButton.addEventListener('click', handleResendConsent);
+            card.appendChild(resendButton);
+        }
+
+        screenshotInfo.appendChild(card);
+        attachTimelineEventListeners();
+    }
+
+    function attachTimelineEventListeners() {
+        screenshotInfo.querySelectorAll('.view-email').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const logId = this.dataset.logId;
+                fetch(`/admin/api/email_log/${logId}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Failed to fetch email log.');
+                        return response.json();
+                    })
+                    .then(data => {
+                        let emailContent = `<h3>${data.subject}</h3>
+                                            <p><strong>From:</strong> ${data.from}</p>
+                                            <p><strong>To:</strong> ${data.to}</p>
+                                            <p><strong>Date:</strong> ${new Date(data.received_at).toLocaleString()}</p>
+                                            <hr>
+                                            <div>${data.body_html || '<p>No HTML body.</p>'}</div>`;
+                        showModal('Email Details', emailContent);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching email log:', error);
+                        showModal('Error', 'Could not load email details.');
+                    });
+            });
+        });
+
+        screenshotInfo.querySelectorAll('.view-link-details').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const detailsDiv = this.parentElement.querySelector('.link-details');
+                if (detailsDiv) {
+                    detailsDiv.style.display = detailsDiv.style.display === 'none' ? 'block' : 'none';
+                }
+            });
+        });
+    }
+
+    function showModal(title, content) {
+        // Remove existing modal first
+        const existingModal = document.getElementById('event-details-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'event-details-modal';
+        modal.className = 'modal-backdrop'; // Use a class for styling
+        
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>${title}</h2>
+                    <button id="close-modal-btn" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    ${content}
+                </div>
+            </div>
         `;
 
-        // Check for withdrawn status first, but only if it was previously accepted
-        if (info.is_withdrawn && info.acceptance_state === 'accepted') {
-            infoHtml += `
-                <p><strong>Status:</strong>
-                <span class="status-badge status-withdrawn">
-                    Withdrawn
-                </span>
-                </p>
-            `;
-        } else {
-            let statusText;
-            let statusClass;
+        document.body.appendChild(modal);
 
-            switch (info.acceptance_state) {
-                case 'accepted':
-                    statusText = 'Yes';
-                    statusClass = 'status-accepted';
-                    break;
-                case 'declined':
-                    statusText = 'No';
-                    statusClass = 'status-declined';
-                    break;
-                case 'pending':
-                    statusText = 'Pending';
-                    statusClass = 'status-pending';
-                    break;
-                default:
-                    // Fallback for old data or unexpected values
-                    statusText = info.is_accepted ? 'Yes' : 'No';
-                    statusClass = info.is_accepted ? 'status-accepted' : 'status-declined';
+        modal.querySelector('#close-modal-btn').addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', function(e) {
+            if (e.target.id === 'event-details-modal') {
+                modal.remove();
             }
-            
-            infoHtml += `
-                <p><strong>License Accepted:</strong>
-                <span class="status-badge ${statusClass}">
-                    ${statusText}
-                </span>
-                </p>
-            `;
-
-            // Add a resend consent button if the submission is still pending
-            if (info.acceptance_state === 'pending') {
-                infoHtml += `
-                    <div class="resend-consent-container">
-                        <button class="btn btn-secondary btn-sm" id="resend-consent-btn" data-submission-id="${info.submission_id}">
-                            Resend Consent Email
-                        </button>
-                        <span id="resend-status" class="resend-status-message"></span>
-                    </div>
-                `;
-            }
-        }
-
-        screenshotInfo.innerHTML = infoHtml;
-
-        // Add event listener for the resend button if it was added
-        const resendBtn = document.getElementById('resend-consent-btn');
-        if (resendBtn) {
-            resendBtn.addEventListener('click', handleResendConsent);
-        }
+        });
     }
 
     async function handleResendConsent(e) {
