@@ -1885,3 +1885,56 @@ footer {
     font-size: 0.9em;
 }
 
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050;
+}
+.modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    width: 80%;
+    max-width: 700px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+.close-btn {
+    border: none;
+    background: transparent;
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+}
+.modal-body {
+    overflow-y: auto;
+}
+.modal-body ul {
+    padding-left: 20px;
+    margin-top: 0;
+}
+.modal-body hr {
+    margin: 1rem 0;
+}
+

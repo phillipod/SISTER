@@ -871,16 +871,51 @@ def admin_screenshots_data():
         # Events
         events = []
         events.append({"type": "Submitted", "timestamp": sub.created_at.isoformat(), "method": "Web Form"})
+        
+        # Helper to find the log associated with an event
+        def find_log_for_event(timestamp, method):
+            if method == 'link':
+                # Find the link log closest in time
+                return min(sub.link_logs, key=lambda log: abs(log.clicked_at - timestamp), default=None)
+            elif method == 'email':
+                # Find the email log closest in time
+                return min(sub.email_logs, key=lambda log: abs(log.received_at - timestamp), default=None)
+            return None
+
         if sub.acceptance_state == AcceptanceState.ACCEPTED and sub.accepted_at:
-            events.append({"type": "Accepted", "timestamp": sub.accepted_at.isoformat(), "method": sub.acceptance_method.capitalize() if sub.acceptance_method else "Unknown"})
+            log = find_log_for_event(sub.accepted_at, sub.acceptance_method)
+            details = {}
+            if log:
+                if sub.acceptance_method == 'link':
+                    details = {"log_id": log.id, "details": {"ip_address": log.ip_address, "user_agent": log.user_agent}}
+                elif sub.acceptance_method == 'email':
+                    details = {"log_id": log.id, "details": {"subject": log.subject, "from": log.from_address}}
+            events.append({"type": "Accepted", "timestamp": sub.accepted_at.isoformat(), "method": sub.acceptance_method.capitalize(), **details})
+        
         elif sub.acceptance_state == AcceptanceState.DECLINED and sub.accepted_at:
-            events.append({"type": "Declined", "timestamp": sub.accepted_at.isoformat(), "method": sub.acceptance_method.capitalize() if sub.acceptance_method else "Unknown"})
+            log = find_log_for_event(sub.accepted_at, sub.acceptance_method)
+            details = {}
+            if log:
+                if sub.acceptance_method == 'link':
+                    details = {"log_id": log.id, "details": {"ip_address": log.ip_address, "user_agent": log.user_agent}}
+                elif sub.acceptance_method == 'email':
+                    details = {"log_id": log.id, "details": {"subject": log.subject, "from": log.from_address}}
+            events.append({"type": "Declined", "timestamp": sub.accepted_at.isoformat(), "method": sub.acceptance_method.capitalize(), **details})
+
         if sub.is_withdrawn and sub.withdrawn_at:
-            events.append({"type": "Withdrawn", "timestamp": sub.withdrawn_at.isoformat(), "method": "Link"})
+            # Withdrawals are always via link
+            log = find_log_for_event(sub.withdrawn_at, 'link')
+            details = {}
+            if log:
+                details = {"log_id": log.id, "details": {"ip_address": log.ip_address, "user_agent": log.user_agent}}
+            events.append({"type": "Withdrawn", "timestamp": sub.withdrawn_at.isoformat(), "method": "Link", **details})
+
+        # Add other general email events that are not the deciding event
         for log in sub.email_logs:
-            events.append({"type": "Email Event", "timestamp": log.received_at.isoformat(), "method": "Email", "log_id": log.id, "details": {"subject": log.subject, "from": log.from_address}})
-        for log in sub.link_logs:
-            events.append({"type": "Link Click", "timestamp": log.clicked_at.isoformat(), "method": "Link", "log_id": log.id, "details": {"ip_address": log.ip_address, "user_agent": log.user_agent}})
+            is_decision_log = (sub.accepted_at and abs(log.received_at - sub.accepted_at) < timedelta(seconds=10))
+            if not is_decision_log:
+                 events.append({"type": "Email Received", "timestamp": log.received_at.isoformat(), "method": "Email", "log_id": log.id, "details": {"subject": log.subject, "from": log.from_address}})
+
         events.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')))
 
 

@@ -87,8 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const dateDetails = createDetails(date);
                     for (const submissionId in data[platform][type][date]) {
                         const screenshots = data[platform][type][date][submissionId];
-                        const firstSc = screenshots[0];
-                        const submissionLabel = `Submission ${submissionId.substring(0, 8)} (${firstSc.email})`;
+                        const submissionLabel = `Submission ${submissionId.substring(0, 8)}`;
                         
                         const submissionScreenshotIds = screenshots.map(sc => sc.id);
                         const submissionDetails = createDetails(submissionLabel, submissionScreenshotIds);
@@ -250,22 +249,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 const timestamp = new Date(event.timestamp).toLocaleString();
 
                 let eventDetailsHTML = `<p><strong>${event.type}</strong> - ${timestamp}</p>`;
-                if (event.method) {
-                    eventDetailsHTML += `<p>Method: ${event.method}</p>`;
-                }
-
+                
+                let viaContent = '';
                 if (event.method === 'Email' && event.log_id) {
-                    eventDetailsHTML += `<p><a href="#" class="view-email" data-log-id="${event.log_id}">View Email</a></p>`;
-                } else if (event.method === 'Link' && event.details) {
-                    let detailsList = '';
-                    if (event.details.ip_address) detailsList += `<li>IP Address: ${event.details.ip_address}</li>`;
-                    if (event.details.user_agent) detailsList += `<li>User Agent: ${event.details.user_agent}</li>`;
-                    if (detailsList) {
-                         eventDetailsHTML += `<p><a href="#" class="view-link-details">View Details</a></p><div class="link-details" style="display: none;"><ul>${detailsList}</ul></div>`;
+                    viaContent = `<p>Via: <a href="#" class="view-email" data-log-id="${event.log_id}">Email</a></p>`;
+                } else if (event.method === 'Link') {
+                    if (event.details) {
+                        viaContent = `<p>Via: <a href="#" class="view-link-details" data-details='${JSON.stringify(event.details)}'>Link</a></p>`;
+                    } else {
+                        viaContent = `<p>Via: ${event.method}</p>`;
                     }
+                } else if (event.method) {
+                    viaContent = `<p>Via: ${event.method}</p>`;
                 }
 
-                eventElement.innerHTML = eventDetailsHTML;
+                eventElement.innerHTML = eventDetailsHTML + viaContent;
                 timeline.appendChild(eventElement);
             });
             card.appendChild(timeline);
@@ -314,9 +312,16 @@ document.addEventListener('DOMContentLoaded', function() {
         screenshotInfo.querySelectorAll('.view-link-details').forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
-                const detailsDiv = this.parentElement.querySelector('.link-details');
-                if (detailsDiv) {
-                    detailsDiv.style.display = detailsDiv.style.display === 'none' ? 'block' : 'none';
+                try {
+                    const details = JSON.parse(this.dataset.details);
+                    let detailsContent = '<ul>';
+                    if (details.ip_address) detailsContent += `<li>IP Address: ${details.ip_address}</li>`;
+                    if (details.user_agent) detailsContent += `<li>User Agent: ${details.user_agent}</li>`;
+                    detailsContent += '</ul>';
+                    showModal('Link Details', detailsContent);
+                } catch (error) {
+                    console.error('Error parsing link details:', error);
+                    showModal('Error', 'Could not display link details.');
                 }
             });
         });
