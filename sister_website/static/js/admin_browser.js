@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             link.dataset.info = JSON.stringify({
                                 is_accepted: sc.is_accepted,
                                 acceptance_state: sc.acceptance_state,
+                                is_withdrawn: sc.is_withdrawn,
                                 submission_id: sc.submission_id,
                                 email: sc.email
                             });
@@ -240,48 +241,62 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ensure screenshot info section is visible
         screenshotInfo.style.display = 'block';
 
-        let statusText;
-        let statusClass;
-
-        switch (info.acceptance_state) {
-            case 'accepted':
-                statusText = 'Yes';
-                statusClass = 'status-accepted';
-                break;
-            case 'declined':
-                statusText = 'No';
-                statusClass = 'status-declined';
-                break;
-            case 'pending':
-                statusText = 'Pending';
-                statusClass = 'status-pending';
-                break;
-            default:
-                // Fallback for old data or unexpected values
-                statusText = info.is_accepted ? 'Yes' : 'No';
-                statusClass = info.is_accepted ? 'status-accepted' : 'status-declined';
-        }
-        
         let infoHtml = `
             <p><strong>Submission:</strong> ${info.submission_id}</p>
             <p><strong>Email:</strong> ${info.email}</p>
-            <p><strong>License Accepted:</strong>
-            <span class="status-badge ${statusClass}">
-                ${statusText}
-            </span>
-            </p>
         `;
 
-        // Add a resend consent button if the submission is still pending
-        if (info.acceptance_state === 'pending') {
+        // Check for withdrawn status first, but only if it was previously accepted
+        if (info.is_withdrawn && info.acceptance_state === 'accepted') {
             infoHtml += `
-                <div class="resend-consent-container">
-                    <button class="btn btn-secondary btn-sm" id="resend-consent-btn" data-submission-id="${info.submission_id}">
-                        Resend Consent Email
-                    </button>
-                    <span id="resend-status" class="resend-status-message"></span>
-                </div>
+                <p><strong>Status:</strong>
+                <span class="status-badge status-withdrawn">
+                    Withdrawn
+                </span>
+                </p>
             `;
+        } else {
+            let statusText;
+            let statusClass;
+
+            switch (info.acceptance_state) {
+                case 'accepted':
+                    statusText = 'Yes';
+                    statusClass = 'status-accepted';
+                    break;
+                case 'declined':
+                    statusText = 'No';
+                    statusClass = 'status-declined';
+                    break;
+                case 'pending':
+                    statusText = 'Pending';
+                    statusClass = 'status-pending';
+                    break;
+                default:
+                    // Fallback for old data or unexpected values
+                    statusText = info.is_accepted ? 'Yes' : 'No';
+                    statusClass = info.is_accepted ? 'status-accepted' : 'status-declined';
+            }
+            
+            infoHtml += `
+                <p><strong>License Accepted:</strong>
+                <span class="status-badge ${statusClass}">
+                    ${statusText}
+                </span>
+                </p>
+            `;
+
+            // Add a resend consent button if the submission is still pending
+            if (info.acceptance_state === 'pending') {
+                infoHtml += `
+                    <div class="resend-consent-container">
+                        <button class="btn btn-secondary btn-sm" id="resend-consent-btn" data-submission-id="${info.submission_id}">
+                            Resend Consent Email
+                        </button>
+                        <span id="resend-status" class="resend-status-message"></span>
+                    </div>
+                `;
+            }
         }
 
         screenshotInfo.innerHTML = infoHtml;
