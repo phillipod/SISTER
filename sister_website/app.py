@@ -989,18 +989,9 @@ def admin_screenshot_image(screenshot_id):
 
 # Webhook endpoint for handling email replies
 @app.route('/api/email-webhook', methods=['GET', 'POST'])
+@csrf.exempt
 def handle_email_reply():
     """Handle email replies from ForwardEmail for Submissions."""
-    # --- TOP-LEVEL DEBUGGING ---
-    current_app.logger.info("--- ENTERING /api/email-webhook ---")
-    current_app.logger.info(f"Request Method: {request.method}")
-    current_app.logger.info(f"Request Headers: {request.headers}")
-    current_app.logger.info(f"Request Remote Addr: {request.remote_addr}")
-    # Log raw data carefully in case it's large
-    raw_data = request.get_data(as_text=True)
-    current_app.logger.info(f"Request Raw Data: {raw_data}")
-    current_app.logger.info("--- END TOP-LEVEL DEBUGGING ---")
-
     if request.method == 'GET':
         # ForwardEmail webhook verification often uses GET for initial setup
         return jsonify({"status": "ok, webhook alive"})
