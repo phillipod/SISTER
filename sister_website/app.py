@@ -52,6 +52,9 @@ cache = Cache()
 csrf = CSRFProtect()
 limiter = Limiter(key_func=get_remote_address)
 
+# Rate limit key that combines IP and submitted username to slow per-user brute-force attempts
+def admin_login_limit_key():
+    return f"{get_remote_address()}:{request.form.get('username', '').lower()}"
 
 def create_app():
     # Load environment variables first
@@ -1136,7 +1139,3 @@ def verify_admin_session():
             flash('Please log in again.', 'warning')
             if request.path.startswith('/admin'):
                 return redirect(url_for('admin_login', next=request.path))
-
-# Rate limit key that combines IP and submitted username to slow per-user brute-force attempts
-def admin_login_limit_key():
-    return f"{get_remote_address()}:{request.form.get('username', '').lower()}"
