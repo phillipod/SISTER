@@ -281,12 +281,21 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Add resend consent button if license is pending
         if (info.acceptance_state === 'pending' && !info.is_withdrawn) {
+            const container = document.createElement('div');
+            container.className = 'resend-consent-container';
+
             const resendButton = document.createElement('button');
             resendButton.textContent = 'Resend Consent Email';
-            resendButton.className = 'btn btn-primary btn-sm mt-2';
+            resendButton.className = 'btn btn-secondary btn-sm';
             resendButton.dataset.submissionId = info.submission_id;
             resendButton.addEventListener('click', handleResendConsent);
-            card.appendChild(resendButton);
+            
+            const statusSpan = document.createElement('span');
+            statusSpan.className = 'resend-status-message';
+
+            container.appendChild(resendButton);
+            container.appendChild(statusSpan);
+            card.appendChild(container);
         }
 
         screenshotInfo.appendChild(card);
@@ -371,40 +380,46 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function handleResendConsent(e) {
-        e.preventDefault();
-        const submissionId = e.target.dataset.submissionId;
-        const statusSpan = document.getElementById('resend-status');
+        const button = e.target;
+        const submissionId = button.dataset.submissionId;
+        const statusSpan = button.parentElement.querySelector('.resend-status-message');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        // Add confirmation dialog
-        if (!confirm('Are you sure you want to resend the consent email for this submission?')) {
+        if (!statusSpan) {
+            console.error("Could not find status message element for resend button.");
             return;
         }
 
-        try {
-            e.target.disabled = true;
-            statusSpan.textContent = 'Sending...';
+        button.disabled = true;
+        statusSpan.textContent = 'Sending...';
+        statusSpan.style.color = '#333';
 
+        try {
             const response = await fetch(`/admin/api/resend-consent/${submissionId}`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'X-CSRF-Token': csrfToken
                 }
             });
+
             const result = await response.json();
 
             if (response.ok) {
-                statusSpan.textContent = result.message || 'Email sent successfully!';
-                statusSpan.style.color = 'var(--success-color)';
+                statusSpan.textContent = 'Sent successfully!';
+                statusSpan.style.color = 'green';
             } else {
-                statusSpan.textContent = result.message || 'Failed to send email.';
-                statusSpan.style.color = 'var(--danger-color)';
+                statusSpan.textContent = `Error: ${result.error || 'Unknown error'}`;
+                statusSpan.style.color = 'red';
             }
         } catch (error) {
             console.error('Error resending consent email:', error);
-            statusSpan.textContent = 'An error occurred.';
-            statusSpan.style.color = 'var(--danger-color)';
+            statusSpan.textContent = 'Failed to send.';
+            statusSpan.style.color = 'red';
         } finally {
-            e.target.disabled = false;
+            button.disabled = false;
+            setTimeout(() => {
+                statusSpan.textContent = '';
+            }, 5000);
         }
     }
 
