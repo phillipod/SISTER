@@ -1091,7 +1091,7 @@ def resend_consent_email(submission_id):
     
     # Prepare consents for email
     consents_for_email = {
-        'agreed_to_license': True  # Since they're resending, we assume they agreed
+        'agreed_to_license': True  # The user must have agreed during the initial submission to get to this stage.
     }
     
     # Send consent email
