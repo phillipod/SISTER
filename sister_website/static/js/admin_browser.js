@@ -31,30 +31,52 @@ document.addEventListener('DOMContentLoaded', function() {
         const typeFilter = filters.type.value;
         const acceptedFilter = filters.accepted.value;
 
-        const filteredData = {};
+        const nested = {};
         let hasResults = false;
 
         for (const platform in screenshotData) {
             if (platformFilter !== 'all' && platform !== platformFilter) continue;
             for (const type in screenshotData[platform]) {
                 if (typeFilter !== 'all' && type !== typeFilter) continue;
-                for (const date in screenshotData[platform][type]) {
-                    const screenshots = screenshotData[platform][type][date].filter(sc => {
-                        if (acceptedFilter === 'all') return true;
-                        return acceptedFilter === 'yes' ? sc.is_accepted : !sc.is_accepted;
-                    });
 
-                    if (screenshots.length > 0) {
-                        if (!filteredData[platform]) filteredData[platform] = {};
-                        if (!filteredData[platform][type]) filteredData[platform][type] = {};
-                        filteredData[platform][type][date] = screenshots;
+                for (const date in screenshotData[platform][type]) {
+                    screenshotData[platform][type][date].forEach(sc => {
+                        // License filter
+                        if (acceptedFilter !== 'all') {
+                            const acceptedMatch = acceptedFilter === 'yes';
+                            if (sc.is_accepted !== acceptedMatch) return;
+                        }
+
                         hasResults = true;
-                    }
+
+                        nested[platform] = nested[platform] || {};
+                        nested[platform][type] = nested[platform][type] || {};
+
+                        const submissionId = sc.submission_id;
+                        const buildId = sc.build_id;
+
+                        if (!nested[platform][type][submissionId]) {
+                            nested[platform][type][submissionId] = {
+                                meta: {
+                                    created_at: sc.submission_created,
+                                    is_accepted: sc.is_accepted,
+                                    email: sc.email
+                                },
+                                builds: {}
+                            };
+                        }
+
+                        if (!nested[platform][type][submissionId].builds[buildId]) {
+                            nested[platform][type][submissionId].builds[buildId] = [];
+                        }
+
+                        nested[platform][type][submissionId].builds[buildId].push(sc);
+                    });
                 }
             }
         }
 
-        renderTree(filteredData, hasResults);
+        renderTree(nested, hasResults);
     }
 
     function renderTree(data, hasResults) {
@@ -68,44 +90,114 @@ document.addEventListener('DOMContentLoaded', function() {
 
         for (const platform in data) {
             const platformDetails = createDetails(platform);
+
             for (const type in data[platform]) {
                 const typeDetails = createDetails(type);
-                for (const date in data[platform][type]) {
-                    const dateDetails = createDetails(date);
-                    const scUl = document.createElement('ul');
-                    scUl.className = 'list-unstyled pl-3';
-                    data[platform][type][date].forEach(sc => {
-                        const scLi = document.createElement('li');
-                        const link = document.createElement('a');
-                        link.href = '#';
-                        link.textContent = sc.filename;
-                        link.dataset.screenshotId = sc.id;
-                        link.dataset.info = JSON.stringify({
-                            is_accepted: sc.is_accepted,
-                            submission_id: sc.submission_id,
-                            email: sc.email
+
+                for (const submissionId in data[platform][type]) {
+                    const submission = data[platform][type][submissionId];
+                    const submissionLabel = `Submission ${submissionId.substring(0, 8)} (${submission.meta.created_at.split(' ')[0]})`;
+
+                    // Collect all screenshot ids under this submission for group preview
+                    const submissionScreenshotIds = [];
+
+                    const submissionDetails = createDetails(submissionLabel, submissionScreenshotIds);
+
+                    for (const buildId in submission.builds) {
+                        const buildScreens = submission.builds[buildId];
+
+                        // push screenshots ids to submission ids list
+                        buildScreens.forEach(sc => submissionScreenshotIds.push(sc.id));
+
+                        const buildLabel = `Build ${buildId.substring(0, 8)}`;
+                        const buildScreenshotIds = buildScreens.map(sc => sc.id);
+                        const buildDetails = createDetails(buildLabel, buildScreenshotIds);
+
+                        const scUl = document.createElement('ul');
+                        scUl.className = 'list-unstyled pl-3';
+
+                        buildScreens.forEach(sc => {
+                            const scLi = document.createElement('li');
+                            const link = document.createElement('a');
+                            link.href = '#';
+                            link.textContent = sc.filename;
+                            link.dataset.screenshotId = sc.id;
+                            link.dataset.info = JSON.stringify({
+                                is_accepted: sc.is_accepted,
+                                submission_id: sc.submission_id,
+                                email: sc.email
+                            });
+                            link.addEventListener('click', handleScreenshotClick);
+                            scLi.appendChild(link);
+                            scUl.appendChild(scLi);
                         });
-                        link.addEventListener('click', handleScreenshotClick);
-                        scLi.appendChild(link);
-                        scUl.appendChild(scLi);
-                    });
-                    dateDetails.appendChild(scUl);
-                    typeDetails.appendChild(dateDetails);
+
+                        buildDetails.appendChild(scUl);
+                        submissionDetails.appendChild(buildDetails);
+                    }
+
+                    // After processing builds, attach aggregated ids to submission summary
+                    const submissionSummary = submissionDetails.querySelector('summary');
+                    submissionSummary.dataset.groupScreenshots = submissionScreenshotIds.join(',');
+                    submissionSummary.addEventListener('click', handleGroupClick);
+
+                    typeDetails.appendChild(submissionDetails);
                 }
+
                 platformDetails.appendChild(typeDetails);
             }
+
             treePane.appendChild(platformDetails);
         }
     }
 
-    function createDetails(summaryText) {
+    function createDetails(summaryText, screenshotIds = []) {
         const details = document.createElement('details');
         details.open = true;
         const summary = document.createElement('summary');
         summary.textContent = summaryText;
         summary.style.cursor = 'pointer';
+
+        // If this node represents a group (submission or build) attach screenshotIds for preview
+        if (screenshotIds.length > 0) {
+            summary.dataset.groupScreenshots = screenshotIds.join(',');
+            summary.addEventListener('click', handleGroupClick);
+        }
+
         details.appendChild(summary);
         return details;
+    }
+
+    function handleGroupClick(e) {
+        const idsCsv = e.target.dataset.groupScreenshots;
+        if (!idsCsv) return;
+
+        const ids = idsCsv.split(',');
+
+        // Remove single preview image and any previous grid
+        previewImage.style.display = 'none';
+        previewImage.src = '';
+        const existingGrid = document.getElementById('preview-grid');
+        if (existingGrid) existingGrid.remove();
+
+        previewPlaceholder.style.display = 'none';
+        screenshotInfo.innerHTML = '';
+
+        const grid = document.createElement('div');
+        grid.id = 'preview-grid';
+        grid.style.display = 'grid';
+        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(180px, 1fr))';
+        grid.style.gap = '8px';
+
+        ids.forEach(id => {
+            const img = document.createElement('img');
+            img.src = `/admin/screenshot/${id}?t=${Date.now()}`;
+            img.style.width = '100%';
+            img.style.objectFit = 'cover';
+            grid.appendChild(img);
+        });
+
+        document.getElementById('preview-pane').appendChild(grid);
     }
 
     function handleScreenshotClick(e) {
@@ -113,6 +205,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const target = e.target;
         const info = JSON.parse(target.dataset.info);
         
+        // Clear any existing grid preview
+        const existingGrid = document.getElementById('preview-grid');
+        if (existingGrid) existingGrid.remove();
+
         previewImage.src = `/admin/screenshot/${target.dataset.screenshotId}?t=${Date.now()}`;
         previewImage.style.display = 'block';
         previewPlaceholder.style.display = 'none';
@@ -147,25 +243,25 @@ document.addEventListener('DOMContentLoaded', function() {
             resendBtn.addEventListener('click', async function() {
                 const submissionId = this.dataset.submissionId;
                 const statusSpan = this.nextElementSibling;
-                
+
                 // Add confirmation dialog
                 if (!confirm('Are you sure you want to resend the consent email? This will invalidate any previous consent links.')) {
                     return;
                 }
-                
+
                 try {
                     this.disabled = true;
                     statusSpan.textContent = 'Sending...';
-                    
+
                     const response = await fetch(`/admin/api/resend-consent/${submissionId}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         }
                     });
-                    
+
                     const data = await response.json();
-                    
+
                     if (response.ok) {
                         statusSpan.textContent = 'Email sent successfully!';
                         statusSpan.style.color = 'var(--tip-color)';

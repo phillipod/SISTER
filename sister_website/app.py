@@ -793,6 +793,8 @@ def admin_screenshots_data():
             'is_accepted': submission.is_accepted,
             'submission_id': submission.id,
             'email': submission.email,
+            'build_id': build.id,
+            'submission_created': submission.created_at.strftime('%Y-%m-%d %H:%M'),
         })
     return jsonify(tree)
 
