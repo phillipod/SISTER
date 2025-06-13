@@ -190,7 +190,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (existingGrid) existingGrid.remove();
 
         previewPlaceholder.style.display = 'none';
-        screenshotInfo.style.display = 'none';
 
         const grid = document.createElement('div');
         grid.id = 'preview-grid';
@@ -221,6 +220,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         document.getElementById('preview-pane').appendChild(grid);
 
+        // Render submission info for the group
+        if (ids.length > 0) {
+            const firstScreenshotId = ids[0];
+            const link = treePane.querySelector(`a[data-screenshot-id="${firstScreenshotId}"]`);
+            if (link) {
+                const info = JSON.parse(link.dataset.info);
+                renderScreenshotInfo(info);
+            }
+        }
+
         // Initialize lazy loading for the newly added grid
         initLazyLoad(grid);
     }
@@ -238,6 +247,10 @@ document.addEventListener('DOMContentLoaded', function() {
         previewImage.style.display = 'block';
         previewPlaceholder.style.display = 'none';
 
+        renderScreenshotInfo(info);
+    }
+
+    function renderScreenshotInfo(info) {
         // Ensure screenshot info section is visible
         screenshotInfo.style.display = 'block';
 
