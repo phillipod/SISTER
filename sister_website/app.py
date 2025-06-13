@@ -871,7 +871,7 @@ def admin_screenshots_data():
             'id': sc.id,
             'filename': sc.filename,
             'is_accepted': submission.is_accepted,
-            'acceptance_state': submission.acceptance_state.value,
+            'acceptance_state': submission.acceptance_state.name.lower() if submission.acceptance_state else None,
             'is_withdrawn': submission.is_withdrawn,
             'submission_id': submission.id,
             'email': submission.email,
@@ -891,7 +891,7 @@ def admin_screenshot_info(screenshot_id):
         'id': sc.id,
         'filename': sc.filename,
         'is_accepted': submission.is_accepted,
-        'acceptance_state': submission.acceptance_state.value,
+        'acceptance_state': submission.acceptance_state.name.lower() if submission.acceptance_state else None,
         'is_withdrawn': submission.is_withdrawn,
     }
     return jsonify(info)
