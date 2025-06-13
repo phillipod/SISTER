@@ -1,72 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Submission Received - SISTER</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            color: #333;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .container {
-            background-color: #fff;
-            padding: 30px 40px;
-            border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 600px;
-            margin-top: 50px;
-        }
-        h1 {
-            color: #2c3e50;
-            margin-bottom: 20px;
-        }
-        p {
-            font-size: 1.1em;
-            line-height: 1.6;
-            margin-bottom: 20px;
-        }
-        .button-link {
-            display: inline-block;
-            background-color: #3498db;
-            color: white;
-            padding: 12px 25px;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 1.1em;
-            transition: background-color 0.3s ease;
-        }
-        .button-link:hover {
-            background-color: #2980b9;
-        }
-        .footer {
-            margin-top: auto;
-            padding: 20px;
-            text-align: center;
-            font-size: 0.9em;
-            color: #7f8c8d;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Submission Received!</h1>
-        <p>Thank you for submitting your screenshots to the SISTER project.</p>
-        <p>An email has been sent to the address you provided. <strong>Please check your inbox (and spam folder, just in case) and click the confirmation link or reply to the email to accept the license terms.</strong></p>
-        <p>Your submission will only be fully processed after you confirm your acceptance of the license.</p>
-        <a href="{{ url_for('home') }}" class="button-link">Return to Homepage</a>
+{% extends "base.html" %}
+
+{% block title %}Submission Received{% endblock %}
+
+{% block content %}
+<section class="contact-section">
+    <h2>Submission Received!</h2>
+    <p>Thank you for submitting your screenshots to the SISTER project.</p>
+    <p>An email has been sent to the address you provided. <strong>Please check your inbox (and spam folder, just in case) and click the confirmation link or reply to the email to accept the license terms.</strong></p>
+    <p>Your submission will only be fully processed after you confirm your acceptance of the license.</p>
+    <div class="contact-actions">
+        <a href="{{ url_for('home') }}" class="contact-button">Return to Homepage</a>
     </div>
-    <div class="footer">
-        <p>&copy; SISTER Project. All rights reserved.</p>
-    </div>
-</body>
-</html>
+</section>
+{% endblock %}
