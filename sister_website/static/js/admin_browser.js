@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (existingGrid) existingGrid.remove();
 
         previewPlaceholder.style.display = 'none';
-        screenshotInfo.innerHTML = '';
+        screenshotInfo.style.display = 'none';
 
         const grid = document.createElement('div');
         grid.id = 'preview-grid';
@@ -234,6 +234,9 @@ document.addEventListener('DOMContentLoaded', function() {
         previewImage.src = `/admin/screenshot/${target.dataset.screenshotId}?t=${Date.now()}`;
         previewImage.style.display = 'block';
         previewPlaceholder.style.display = 'none';
+
+        // Ensure screenshot info section is visible
+        screenshotInfo.style.display = 'block';
 
         let infoHtml = `
             <p><strong>Submission:</strong> ${info.submission_id}</p>
@@ -340,6 +343,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show placeholder and clear info
         previewPlaceholder.style.display = 'block';
         screenshotInfo.innerHTML = '';
+        screenshotInfo.style.display = 'none';
     }
 
     Object.values(filters).forEach(filter => {
