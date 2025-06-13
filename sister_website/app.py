@@ -2,6 +2,7 @@ import os
 import hmac
 import hashlib
 import json
+import logging
 from datetime import datetime, timedelta
 from flask import (
     Flask,
@@ -68,15 +69,24 @@ def create_app():
     app.logger.info(f"Log level set to {log_level}")
     app.logger.info(f"Loading environment from: {env_path}")
 
-    # Print all relevant environment variables for debugging
-    app.logger.info("Environment variables:")
-    for var in ['UPLOAD_FOLDER', 'DATABASE_URL', 'DOTENV_PATH']:
-        app.logger.info(f"{var} = {os.getenv(var)}")
+    # Only print environment variables when running in debug mode to avoid leaking paths in logs
+    if app.logger.isEnabledFor(logging.DEBUG):
+        app.logger.debug("Environment variables (debug):")
+        for var in ['UPLOAD_FOLDER', 'DATABASE_URL', 'DOTENV_PATH']:
+            app.logger.debug(f"{var} = {os.getenv(var)}")
 
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-please-change')
+    # SECRET_KEY is mandatory in production – abort startup if missing
+    secret_key = os.getenv('SECRET_KEY')
+    if not secret_key:
+        raise RuntimeError("SECRET_KEY environment variable must be set for secure operation.")
+    app.config['SECRET_KEY'] = secret_key
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
+    # Short lifetime for admin sessions (default 30 minutes, configurable via env)
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(
+        minutes=int(os.getenv('SESSION_LIFETIME_MINUTES', '30'))
+    )
 
     # Configure upload folder from environment or use default
     upload_folder = os.getenv(
@@ -233,8 +243,12 @@ def is_safe_url(target):
     return test_url.scheme in ("http", "https") and ref_url.netloc == test_url.netloc
 
 def is_admin():
-    """Return True if the current session belongs to a logged in admin."""
-    return session.get('admin_user_id') is not None
+    """Return True if the current session belongs to a valid, unlocked admin."""
+    admin_id = session.get('admin_user_id')
+    if not admin_id:
+        return False
+    user = AdminUser.query.get(admin_id)
+    return user is not None and not user.is_locked
 
 def save_screenshot(file):
     """Saves a screenshot file, calculates its MD5, and creates a Screenshot record in memory without saving to disk."""
@@ -285,7 +299,7 @@ def save_screenshot(file):
 
 def generate_acceptance_token(submission_id, email):
     """Generate a secure token for email acceptance for a Submission"""
-    secret = os.getenv('SECRET_KEY', 'dev-key-please-change')
+    secret = current_app.config['SECRET_KEY']
     message = f"{submission_id}:{email}".encode('utf-8')
     return hmac.new(secret.encode('utf-8'), message, hashlib.sha256).hexdigest()
 
@@ -648,16 +662,14 @@ def acceptance_thank_you():
 
 
 @app.route('/admin/login', methods=['GET', 'POST'])
-@limiter.limit('10 per minute')
+@limiter.limit('10 per minute', key_func=admin_login_limit_key)
 def admin_login():
     form = LoginForm()
     if form.validate_on_submit():
         user = AdminUser.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data):
-            if user.is_locked:
-                flash('This account is locked.', 'danger')
-                return redirect(url_for('admin_login'))
+        if user and user.check_password(form.password.data) and not user.is_locked:
             session['admin_user_id'] = user.id
+            session.permanent = True  # honour PERMANENT_SESSION_LIFETIME
             flash('Logged in as admin.', 'success')
             next_page = request.args.get('next')
             if not next_page or not is_safe_url(next_page):
@@ -1101,3 +1113,30 @@ def resend_consent_email(submission_id):
     else:
         db.session.rollback()
         return jsonify({'error': 'Failed to send consent email'}), 500
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Global response hardening
+# ────────────────────────────────────────────────────────────────────────────────
+
+# Add common security headers to all responses
+@app.after_request
+def set_security_headers(resp):
+    resp.headers.setdefault('X-Frame-Options', 'DENY')
+    resp.headers.setdefault('Content-Security-Policy', "default-src 'self'")
+    return resp
+
+# Invalidate admin sessions if the user no longer exists or is locked
+@app.before_request
+def verify_admin_session():
+    admin_id = session.get('admin_user_id')
+    if admin_id is not None:
+        user = AdminUser.query.get(admin_id)
+        if not user or user.is_locked:
+            session.pop('admin_user_id', None)
+            flash('Please log in again.', 'warning')
+            if request.path.startswith('/admin'):
+                return redirect(url_for('admin_login', next=request.path))
+
+# Rate limit key that combines IP and submitted username to slow per-user brute-force attempts
+def admin_login_limit_key():
+    return f"{get_remote_address()}:{request.form.get('username', '').lower()}"
