@@ -1022,36 +1022,28 @@ def handle_email_reply():
     current_app.logger.info("Email webhook: Verifying signature...")
     current_app.logger.debug(f"Email webhook: Signature header: {signature_header}")
 
-    # The signature is based on the JSON string, not the raw bytes.
-    # We must ensure we verify against the same format.
-    try:
-        # First, parse the JSON to ensure it's valid
-        json_data = json.loads(request_data)
-        # Then, re-serialize it without extra whitespace to match the signature's source
-        verification_data = json.dumps(json_data, separators=(',', ':')).encode('utf-8')
-    except json.JSONDecodeError:
-        current_app.logger.warning("Email webhook: Received non-JSON data, cannot verify signature against JSON.")
-        # Fallback to raw data for verification, though it will likely fail
-        verification_data = request_data
-
-    if not verify_webhook_signature(verification_data, signature_header, webhook_secret):
+    if not verify_webhook_signature(request_data, signature_header, webhook_secret):
         current_app.logger.warning(f"Email webhook: Invalid webhook signature. Verification failed for IP: {client_ip}")
         # For debugging, let's log the data used for verification
-        current_app.logger.debug(f"Email webhook: Data used for signature verification: {verification_data.decode('utf-8', errors='ignore')}")
+        current_app.logger.debug(f"Email webhook: Data used for signature verification: {request_data.decode('utf-8', errors='ignore')}")
         return jsonify({"status": "error", "message": "Invalid signature"}), 401
     
     current_app.logger.info("Email webhook: Signature verified successfully.")
 
     try:
-        # Use the already-parsed json_data from the verification step
-        data = json_data
+        # Now that signature is verified, parse the JSON data
+        try:
+            data = json.loads(request_data)
+        except json.JSONDecodeError as e:
+            current_app.logger.error(f"Email webhook: Failed to parse JSON data after signature verification: {e}")
+            return jsonify({"status": "error", "message": "Invalid JSON data"}), 400
         
         # --- START: Debugging Email Parsing --- 
         current_app.logger.info(f"Email webhook: Debug - Raw 'from' field: {data.get('from')}")
         current_app.logger.info(f"Email webhook: Debug - Raw 'to' field: {data.get('to')}")
         current_app.logger.info(f"Email webhook: Debug - Raw 'envelopeRecipients' field: {data.get('envelopeRecipients')}")
         # --- END: Debugging Email Parsing ---
-
+        
         # --- START: Enhanced Header and Email Info Extraction ---
         # The 'headers' in the payload body is a dict, not a list of dicts.
         all_headers_raw = data.get('headers', {})
