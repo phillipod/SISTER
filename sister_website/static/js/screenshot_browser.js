@@ -353,6 +353,8 @@ class ScreenshotBrowser {
             </div>`;
         
         document.body.appendChild(modal);
+        // Ensure modal is visible even if default CSS hides it (e.g., display: none)
+        modal.style.display = 'flex';
 
         const closeModal = () => {
             modal.remove();
