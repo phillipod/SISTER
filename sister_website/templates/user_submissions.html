@@ -9,6 +9,25 @@
 {% block content %}
 <div class="user-submissions-page">
     <h1>My Submissions</h1>
+
+    <div class="table-toolbar">
+        <div class="toolbar-group">
+            <div class="filterable">
+                <i id="tree-options-btn" class="fas fa-cogs toolbar-icon" title="Tree Display Options"></i>
+                <div id="tree-options-popup" class="filter-popup">
+                    <fieldset>
+                        <legend>Group By</legend>
+                        <label><input type="checkbox" id="group-by-platform" checked> Platform</label>
+                        <label><input type="checkbox" id="group-by-type" checked> Type</label>
+                    </fieldset>
+                    <div class="popup-footer">
+                        <button id="apply-tree-options" class="btn btn-sm">Apply</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="browser-wrapper">
         <div id="tree-pane" class="tree-container">
             <p>Loading your submissions...</p>

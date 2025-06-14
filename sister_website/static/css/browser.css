@@ -213,4 +213,168 @@
     height: 400px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
+}
+
+.modal-backdrop {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%; /* Could be more or less, depending on screen size */
+    max-width: 500px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eaeaea;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.modal-header h2 {
+    margin: 0;
+}
+
+.close-btn {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid #eaeaea;
+    padding-top: 10px;
+}
+
+.browser-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.toolbar-btn {
+    padding: 5px 10px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.toolbar-btn:hover {
+    background-color: #e6e6e6;
+    border-color: #adadad;
+}
+
+/* Styles adapted from Dataset Manager for Screenshot Browser */
+.table-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.toolbar-group {
+    position: relative; /* For popup positioning */
+}
+
+.toolbar-icon {
+    font-size: 1.2rem;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.toolbar-icon:hover {
+    color: #007bff;
+}
+
+.filterable {
+    position: relative;
+}
+
+.filter-popup {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0; /* Align to the right of the icon */
+    z-index: 1000;
+    background-color: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    padding: 15px;
+    min-width: 220px;
+    border-radius: 4px;
+}
+
+.filter-popup.active {
+    display: block;
+}
+
+.filter-popup fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.filter-popup legend {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.filter-popup label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.popup-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+    border-top: 1px solid #eee;
+    padding-top: 0.75rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: .875rem;
+    line-height: 1.5;
+    border-radius: .2rem;
 } 

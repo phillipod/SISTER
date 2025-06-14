@@ -5,17 +5,22 @@ document.addEventListener('DOMContentLoaded', function() {
         accepted: document.getElementById('accepted-filter')
     };
 
+    const groupBy = {
+        platform: document.getElementById('group-by-platform'),
+        type: document.getElementById('group-by-type'),
+        user: document.getElementById('group-by-user')
+    };
+
+    const popup = document.getElementById('tree-options-popup');
+    const openPopupBtn = document.getElementById('tree-options-btn');
+    const applyBtn = document.getElementById('apply-tree-options');
+
     const mapBuilder = (data) => {
         const map = {};
-        for (const platform in data) {
-            for (const type in data[platform]) {
-                for (const date in data[platform][type]) {
-                    data[platform][type][date].forEach(sc => {
-                        map[sc.id] = sc;
-                    });
-                }
-            }
-        }
+        if (!data) return map;
+        data.forEach(sc => {
+            map[sc.id] = sc;
+        });
         return map;
     };
 
@@ -25,80 +30,110 @@ document.addEventListener('DOMContentLoaded', function() {
         const acceptedFilter = filters.accepted.value;
 
         treePane.innerHTML = '';
-        let hasResults = false;
+        
+        const filteredData = data.filter(sc => {
+            const platformMatch = platformFilter === 'all' || sc.platform === platformFilter;
+            const typeMatch = typeFilter === 'all' || sc.type === typeFilter;
+            const acceptedMatch = acceptedFilter === 'all' || sc.acceptance_state === acceptedFilter;
+            return platformMatch && typeMatch && acceptedMatch;
+        });
 
-        const createDetails = (summaryText) => {
+        if (filteredData.length === 0) {
+            treePane.innerHTML = '<p>No screenshots match the current filters.</p>';
+            return;
+        }
+
+        const groupOrder = [];
+        if (groupBy.platform.checked) groupOrder.push('platform');
+        if (groupBy.type.checked) groupOrder.push('type');
+        if (groupBy.user.checked) groupOrder.push('email');
+        groupOrder.push('date');
+
+        const hierarchicalData = {};
+        filteredData.forEach(sc => {
+            let currentLevel = hierarchicalData;
+            groupOrder.forEach(key => {
+                const value = sc[key] || 'Unknown';
+                if (!currentLevel[value]) {
+                    currentLevel[value] = {};
+                }
+                currentLevel = currentLevel[value];
+            });
+            
+            if (!currentLevel[sc.submission_id]) {
+                currentLevel[sc.submission_id] = [];
+            }
+            currentLevel[sc.submission_id].push(sc);
+        });
+
+        const createDetails = (summaryText, parentElement, allScreenshots) => {
             const details = document.createElement('details');
             details.open = true;
             const summary = document.createElement('summary');
             const summarySpan = document.createElement('span');
             summarySpan.textContent = summaryText;
+
+            if (allScreenshots && allScreenshots.length > 0) {
+                summarySpan.dataset.groupScreenshots = allScreenshots.map(sc => sc.id).join(',');
+            }
+
             summary.appendChild(summarySpan);
             details.appendChild(summary);
+            parentElement.appendChild(details);
             return details;
         };
-        
-        for (const platform in data) {
-            if (platformFilter !== 'all' && platform !== platformFilter) continue;
-            const platformDetails = createDetails(platform);
 
-            for (const type in data[platform]) {
-                if (typeFilter !== 'all' && type !== typeFilter) continue;
-                const typeDetails = createDetails(type);
-                    
-                for (const date in data[platform][type]) {
-                    const screenshots = data[platform][type][date].filter(sc => {
-                        if (acceptedFilter === 'all') return true;
-                        return sc.acceptance_state === acceptedFilter;
-                    });
+        const renderNode = (node, parentElement) => {
+            for (const key in node) {
+                const childNode = node[key];
+                
+                const isSubmissionContainer = Object.values(childNode).every(val => Array.isArray(val));
 
-                    if (screenshots.length > 0) {
-                        const dateDetails = createDetails(date);
-                        const submissions = screenshots.reduce((acc, sc) => {
-                            acc[sc.submission_id] = acc[sc.submission_id] || [];
-                            acc[sc.submission_id].push(sc);
-                            return acc;
-                        }, {});
-
-                        for (const submissionId in submissions) {
-                            const subScreenshots = submissions[submissionId];
+                if (isSubmissionContainer) {
+                    const dateDetails = createDetails(key, parentElement, getAllScreenshots(childNode));
+                     for (const subId in childNode) {
+                        const subScreenshots = childNode[subId];
+                        if (subScreenshots.length > 0) {
                             const firstSc = subScreenshots[0];
                             const subLabel = `Submission ${firstSc.submission_id.substring(0, 8)}`;
-                            
-                            const subDetails = createDetails(subLabel);
-                            subDetails.dataset.buildId = firstSc.build_id; // For scrolling
-                            
-                            const summary = subDetails.querySelector('summary');
-                            const summarySpan = summary.querySelector('span');
-                            summarySpan.dataset.groupScreenshots = subScreenshots.map(sc => sc.id).join(',');
+                            const subDetails = createDetails(subLabel, dateDetails, subScreenshots);
+                            subDetails.dataset.buildId = firstSc.build_id;
 
-                        const scUl = document.createElement('ul');
+                            const scUl = document.createElement('ul');
                             subScreenshots.forEach(sc => {
-                            const scLi = document.createElement('li');
-                            const link = document.createElement('a');
+                                const scLi = document.createElement('li');
+                                const link = document.createElement('a');
                                 link.href = '#';
                                 link.className = 'screenshot-link';
-                            link.textContent = sc.filename;
-                            link.dataset.screenshotId = sc.id;
-                            scLi.appendChild(link);
-                            scUl.appendChild(scLi);
-                        });
-
+                                link.textContent = sc.filename;
+                                link.dataset.screenshotId = sc.id;
+                                scLi.appendChild(link);
+                                scUl.appendChild(scLi);
+                            });
                             subDetails.appendChild(scUl);
-                            dateDetails.appendChild(subDetails);
-                            hasResults = true;
+                        }
                     }
-                    typeDetails.appendChild(dateDetails);
+                } else {
+                    const details = createDetails(key, parentElement, getAllScreenshots(childNode));
+                    renderNode(childNode, details);
                 }
-                }
-                if (typeDetails.childElementCount > 1) platformDetails.appendChild(typeDetails);
             }
-            if (platformDetails.childElementCount > 1) treePane.appendChild(platformDetails);
-        }
+        };
+        
+        const getAllScreenshots = (node) => {
+            let screenshots = [];
+            for (const key in node) {
+                const child = node[key];
+                if (Array.isArray(child)) {
+                    screenshots = screenshots.concat(child);
+                } else {
+                    screenshots = screenshots.concat(getAllScreenshots(child));
+                }
+            }
+            return screenshots;
+        };
 
-        if (!hasResults) {
-            treePane.innerHTML = '<p>No screenshots match the current filters.</p>';
-        }
+        renderNode(hierarchicalData, treePane);
     };
     
     const scriptTag = document.getElementById('admin-browser-script');
@@ -112,7 +147,6 @@ document.addEventListener('DOMContentLoaded', function() {
         dataUrl: '/admin/api/screenshots',
         mapBuilder: mapBuilder,
         treeRenderer: (data, treePane) => adminTreeRenderer(data, treePane),
-        // API Endpoints
         logAccessTokenUrl: '/api/log-access-token/{log_id}',
         emailLogUrl: '/admin/api/email_log/{log_id}',
         linkLogUrl: '/admin/api/link_log/{log_id}',
@@ -124,5 +158,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
     Object.values(filters).forEach(filter => {
         filter.addEventListener('change', () => browser.renderTree());
+    });
+
+    openPopupBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        popup.classList.toggle('active');
+    });
+
+    applyBtn.addEventListener('click', () => {
+        popup.classList.remove('active');
+        browser.renderTree();
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!popup.contains(event.target) && !openPopupBtn.contains(event.target)) {
+            popup.classList.remove('active');
+        }
+    });
+
+    popup.addEventListener('click', (event) => {
+        event.stopPropagation();
     });
 });

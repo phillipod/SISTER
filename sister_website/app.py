@@ -915,7 +915,7 @@ def admin_screenshots_data():
         db.joinedload(Submission.link_logs)
     ).order_by(Submission.created_at.desc()).all()
 
-    data_structured = {}
+    data_flat = []
     for sub in submissions:
         if not sub.builds:
             continue
@@ -975,26 +975,25 @@ def admin_screenshots_data():
             platform = build.platform or "Unknown"
             sc_type = build.type or "Unknown"
 
-            screenshots_info = [{
-                'id': sc.id,
-                'filename': sc.filename,
-                'build_id': str(build.id),
-                'submission_id': str(sub.id),
-                'submission_created': sub.created_at.isoformat(),
-                'is_accepted': sub.is_accepted,
-                'acceptance_state': sub.acceptance_state.value,
-                'is_withdrawn': sub.is_withdrawn,
-                'email': sub.email,
-                'events': events
-            } for sc in build.screenshots]
-
-            if not screenshots_info:
-                continue
-
-            date_str = sub.created_at.strftime('%Y-%m-%d')
-            data_structured.setdefault(platform, {}).setdefault(sc_type, {}).setdefault(date_str, []).extend(screenshots_info)
+            for sc in build.screenshots:
+                screenshot_info = {
+                    'id': sc.id,
+                    'filename': sc.filename,
+                    'build_id': str(build.id),
+                    'submission_id': str(sub.id),
+                    'submission_created': sub.created_at.isoformat(),
+                    'is_accepted': sub.is_accepted,
+                    'acceptance_state': sub.acceptance_state.value,
+                    'is_withdrawn': sub.is_withdrawn,
+                    'email': sub.email,
+                    'events': events,
+                    'platform': platform,
+                    'type': sc_type,
+                    'date': sub.created_at.strftime('%Y-%m-%d')
+                }
+                data_flat.append(screenshot_info)
         
-    return jsonify(data_structured)
+    return jsonify(data_flat)
 
 
 @app.route('/admin/api/screenshot_info/<int:screenshot_id>')
