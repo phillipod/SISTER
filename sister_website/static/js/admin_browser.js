@@ -303,11 +303,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             switch (info.acceptance_state) {
                 case 'accepted':
-                    statusText = 'Yes';
+                    statusText = 'Accepted';
                     statusClass = 'status-accepted';
                     break;
                 case 'declined':
-                    statusText = 'No';
+                    statusText = 'Declined';
                     statusClass = 'status-declined';
                     break;
                 case 'pending':
@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const statusP = document.createElement('p');
-        statusP.innerHTML = `<strong>Status:</strong> <span class="status-badge ${statusClass}">${statusText}</span>`;
+        statusP.innerHTML = `<strong>License Status:</strong> <span class="status-badge ${statusClass}">${statusText}</span>`;
 
         if (isWithdrawn) {
             statusP.innerHTML += ` <span class="status-badge status-withdrawn">Withdrawn</span>`;
