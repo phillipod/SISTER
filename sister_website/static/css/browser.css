@@ -445,7 +445,7 @@
     background-color: #c8ebfb;
 }
 
-.draggable-label {
+.filter-popup .draggable-label {
     cursor: move;
     cursor: -webkit-grab;
     cursor: grab;
@@ -458,12 +458,12 @@
     width: 100%;
 }
 
-.draggable-label:active {
+.filter-popup .draggable-label:active {
     cursor: -webkit-grabbing;
     cursor: grabbing;
 }
 
-.draggable-label:hover {
+.filter-popup .draggable-label:hover {
     border-color: #ddd;
 }
 
@@ -474,6 +474,6 @@
     margin-left: auto;
 }
 
-.draggable-label:hover .drag-handle {
+.filter-popup .draggable-label:hover .drag-handle {
     color: #666;
 } 
