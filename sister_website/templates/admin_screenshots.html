@@ -68,9 +68,9 @@
 
 {% block scripts %}
 {{ super() }}
-<script>
-    // Pass build_id from Flask template to JavaScript
-    const initialBuildId = "{{ build_id or '' }}";
+<script id="admin-browser-script" 
+        src="{{ url_for('static', filename='js/admin_browser.js') }}"
+        data-build-id="{{ build_id or '' }}"
+        defer>
 </script>
-<script src="{{ url_for('static', filename='js/admin_browser.js') }}"></script>
 {% endblock %}

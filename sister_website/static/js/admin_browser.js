@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const scriptTag = document.getElementById('admin-browser-script');
+    const initialBuildId = scriptTag ? scriptTag.dataset.buildId : null;
+
     const filters = {
         platform: document.getElementById('platform-filter'),
         type: document.getElementById('type-filter'),
@@ -144,6 +147,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
         details.appendChild(summary);
         return details;
+    }
+
+    function scrollToBuild(buildId) {
+        // Find the element for the build. We added a 'data-build-id' attribute for this.
+        const buildElement = treePane.querySelector(`details[data-build-id="${buildId}"]`);
+        if (buildElement) {
+            // Scroll the element into view
+            buildElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Optionally, open the details and highlight it
+            buildElement.open = true;
+            buildElement.classList.add('highlight'); // Add a class for styling
+            
+            // Trigger a click on the summary to show the screenshot previews
+            const summary = buildElement.querySelector('summary');
+            if (summary) {
+                summary.click();
+            }
+
+            // Remove the highlight after a few seconds
+            setTimeout(() => {
+                buildElement.classList.remove('highlight');
+            }, 3000);
+        }
     }
 
     function handleGroupClick(e) {
@@ -480,30 +507,6 @@ document.addEventListener('DOMContentLoaded', function() {
         previewPlaceholder.style.display = 'block';
         screenshotInfo.innerHTML = '';
         screenshotInfo.style.display = 'none';
-    }
-
-    function scrollToBuild(buildId) {
-        // Find the element for the build. We added a 'data-build-id' attribute for this.
-        const buildElement = treePane.querySelector(`details[data-build-id="${buildId}"]`);
-        if (buildElement) {
-            // Scroll the element into view
-            buildElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-            // Optionally, open the details and highlight it
-            buildElement.open = true;
-            buildElement.classList.add('highlight'); // Add a class for styling
-            
-            // Trigger a click on the summary to show the screenshot previews
-            const summary = buildElement.querySelector('summary');
-            if (summary) {
-                summary.click();
-            }
-
-            // Remove the highlight after a few seconds
-            setTimeout(() => {
-                buildElement.classList.remove('highlight');
-            }, 3000);
-        }
     }
 
     Object.values(filters).forEach(filter => {
