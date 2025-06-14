@@ -589,26 +589,28 @@ footer {
     text-decoration: underline;
 }
 
-.main-nav ul {
-    list-style: none;
-    display: flex;
-    padding: 0;
-    margin: 0;
-    justify-content: center;
-}
-
+/* Base navigation styles */
 .main-nav {
     display: flex;
-    justify-content: center;
+    justify-content: space-between; /* Aligns children to left and right */
+    align-items: center;
     padding-bottom: 0;
 }
 
-.nav-item-right {
-    margin-left: auto;
+.main-nav ul {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+}
+
+.main-nav-right li {
+    margin-left: 15px; /* Spacing for right-aligned items */
 }
 
 .main-nav li {
-    margin: 0 15px;
+    margin: 0 10px; /* Adjusted from 15px for a tighter look */
 }
 
 .main-nav a {

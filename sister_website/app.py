@@ -1712,7 +1712,8 @@ def user_submissions_data():
 
         events.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')))
 
-        submission_info = {
+        # This dictionary is safe to embed inside screenshots to avoid circular references.
+        submission_details_for_embedding = {
             'id': sub.id,
             'created_at': sub.created_at.isoformat(),
             'acceptance_state': sub.acceptance_state.value,
@@ -1720,26 +1721,27 @@ def user_submissions_data():
             'acceptance_token': sub.acceptance_token,
             'email': sub.email,
             'events': events,
-            'builds': []
+        }
+
+        # This is the full object for the top-level response.
+        submission_info = {
+            **submission_details_for_embedding,
+            'builds': [
+                {
+                    'id': build.id,
+                    'platform': build.platform,
+                    'type': build.type,
+                    'screenshots': [
+                        {
+                            'id': sc.id,
+                            'filename': sc.filename,
+                            'submission_details': submission_details_for_embedding
+                        } for sc in build.screenshots
+                    ]
+                } for build in sub.builds
+            ]
         }
         
-        for build in sub.builds:
-            build_info = {
-                'id': build.id,
-                'platform': build.platform,
-                'type': build.type,
-                'screenshots': [{
-                    'id': sc.id,
-                    'filename': sc.filename
-                } for sc in build.screenshots]
-            }
-            submission_info['builds'].append(build_info)
-        
-        # Add the full submission details to each screenshot for easy access on the frontend
-        for build in submission_info['builds']:
-            for sc in build['screenshots']:
-                sc['submission_details'] = submission_info
-
         data_structured.append(submission_info)
         
     return jsonify(data_structured)
