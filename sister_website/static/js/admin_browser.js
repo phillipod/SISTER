@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
         details.open = true;
         const summary = document.createElement('summary');
         summary.textContent = summaryText;
-        summary.style.cursor = 'pointer';
+        summary.classList.add('cursor-pointer');
 
         // If this node represents a group (submission or build) attach screenshotIds for preview
         if (screenshotIds.length > 0) {
@@ -180,25 +180,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const ids = idsCsv.split(',');
 
         // Remove single preview image and any previous grid
-        previewImage.style.display = 'none';
+        previewImage.classList.add('hidden');
         previewImage.src = '';
         const existingGrid = document.getElementById('preview-grid');
         if (existingGrid) existingGrid.remove();
 
-        previewPlaceholder.style.display = 'none';
+        previewPlaceholder.classList.add('hidden');
 
         const grid = document.createElement('div');
         grid.id = 'preview-grid';
-        grid.style.display = 'grid';
-        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(180px, 1fr))';
-        grid.style.gap = '8px';
+        grid.classList.add('preview-grid');
 
         ids.forEach(id => {
             const img = document.createElement('img');
             // Defer actual loading using data-src for lazy observer
             img.dataset.src = `/admin/screenshot/${id}?t=${Date.now()}`;
-            img.style.width = '100%';
-            img.style.objectFit = 'cover';
+            img.classList.add('preview-grid-img');
             img.dataset.screenshotId = id;
             img.loading = 'lazy'; // native hint where supported
 
@@ -225,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderScreenshotInfo(info);
                 // Move the info box to appear after the grid
                 document.getElementById('preview-pane').appendChild(screenshotInfo);
-                screenshotInfo.style.display = 'block';
+                screenshotInfo.classList.remove('hidden');
             }
         }
 
@@ -243,13 +240,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (existingGrid) existingGrid.remove();
 
         previewImage.src = `/admin/screenshot/${target.dataset.screenshotId}?t=${Date.now()}`;
-        previewImage.style.display = 'block';
-        previewPlaceholder.style.display = 'none';
+        previewImage.classList.remove('hidden');
+        previewPlaceholder.classList.add('hidden');
 
         renderScreenshotInfo(info);
 
         // Make sure info card is visible
-        screenshotInfo.style.display = 'block';
+        screenshotInfo.classList.remove('hidden');
     }
 
     function renderScreenshotInfo(info) {
@@ -435,7 +432,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         button.disabled = true;
         statusSpan.textContent = 'Sending...';
-        statusSpan.style.color = '#333';
+        statusSpan.classList.add('resend-status-sending');
 
         try {
             const response = await fetch(`/admin/api/resend-consent/${submissionId}`, {
@@ -449,15 +446,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (response.ok) {
                 statusSpan.textContent = 'Sent successfully!';
-                statusSpan.style.color = 'green';
+                statusSpan.className = 'resend-status-message resend-status-success';
             } else {
                 statusSpan.textContent = `Error: ${result.error || 'Unknown error'}`;
-                statusSpan.style.color = 'red';
+                statusSpan.className = 'resend-status-message resend-status-error';
             }
         } catch (error) {
             console.error('Error resending consent email:', error);
             statusSpan.textContent = 'Failed to send.';
-            statusSpan.style.color = 'red';
+            statusSpan.className = 'resend-status-message resend-status-error';
         } finally {
             button.disabled = false;
             setTimeout(() => {
@@ -496,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Hide preview image & grid, show placeholder
     function resetPreview() {
         // Hide image
-        previewImage.style.display = 'none';
+        previewImage.classList.add('hidden');
         previewImage.src = '';
 
         // Remove any grid
@@ -504,9 +501,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (existingGrid) existingGrid.remove();
 
         // Show placeholder and clear info
-        previewPlaceholder.style.display = 'block';
+        previewPlaceholder.classList.remove('hidden');
         screenshotInfo.innerHTML = '';
-        screenshotInfo.style.display = 'none';
+        screenshotInfo.classList.add('hidden');
     }
 
     Object.values(filters).forEach(filter => {

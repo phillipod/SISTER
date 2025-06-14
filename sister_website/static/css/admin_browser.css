@@ -1,0 +1,40 @@
+/* General styles for the screenshot browser */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.visible {
+    display: block !important;
+}
+
+.preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+}
+
+.preview-grid-img {
+    width: 100%;
+    object-fit: cover;
+}
+
+.highlight {
+    background-color: #f0e68c; /* Khaki */
+    border: 1px solid #c8b868;
+    border-radius: 5px;
+}
+
+/* Resend consent status message colors */
+.resend-status-sending {
+    color: #333;
+}
+.resend-status-success {
+    color: green;
+}
+.resend-status-error {
+    color: red;
+} 

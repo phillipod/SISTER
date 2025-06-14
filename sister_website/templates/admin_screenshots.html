@@ -57,13 +57,7 @@
 
 {% block styles %}
 {{ super() }}
-<style>
-    .highlight {
-        background-color: #f0e68c; /* Khaki */
-        border: 1px solid #c8b868;
-        border-radius: 5px;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_browser.css') }}">
 {% endblock %}
 
 {% block scripts %}
