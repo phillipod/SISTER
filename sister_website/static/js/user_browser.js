@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    
     const userTreeRenderer = (data, treePane) => {
         if (data.length === 0) {
             treePane.innerHTML = '<p>You have no submissions.</p>';
@@ -47,4 +46,4 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     new ScreenshotBrowser(config);
-}); 
+});
