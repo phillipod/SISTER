@@ -372,6 +372,21 @@
     padding-top: 0.75rem;
 }
 
+.form-group-popup {
+    margin-bottom: 0.75rem;
+}
+
+.form-group-popup label {
+    display: block;
+    margin-bottom: .25rem;
+    font-weight: normal;
+}
+
+.form-group-popup select {
+    width: 100%;
+    padding: 0.25rem;
+}
+
 .btn-sm {
     padding: 0.25rem 0.5rem;
     font-size: .875rem;

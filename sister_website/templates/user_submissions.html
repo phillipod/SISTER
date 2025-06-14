@@ -16,6 +16,25 @@
                 <i id="tree-options-btn" class="fas fa-cogs toolbar-icon" title="Tree Display Options"></i>
                 <div id="tree-options-popup" class="filter-popup">
                     <fieldset>
+                        <legend>Filter By</legend>
+                        <div class="form-group-popup">
+                            <label for="platform-filter">Platform</label>
+                            <select id="platform-filter">
+                                <option value="all">All</option>
+                                <option value="PC">PC</option>
+                                <option value="Console">Console</option>
+                            </select>
+                        </div>
+                        <div class="form-group-popup">
+                            <label for="type-filter">Type</label>
+                            <select id="type-filter">
+                                <option value="all">All</option>
+                                <option value="space">Space</option>
+                                <option value="ground">Ground</option>
+                            </select>
+                        </div>
+                    </fieldset>
+                    <fieldset>
                         <legend>Group By</legend>
                         <label><input type="checkbox" id="group-by-platform" checked> Platform</label>
                         <label><input type="checkbox" id="group-by-type" checked> Type</label>

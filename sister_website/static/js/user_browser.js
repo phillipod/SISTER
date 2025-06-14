@@ -2,6 +2,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const groupByPlatformCheckbox = document.getElementById('group-by-platform');
     const groupByTypeCheckbox = document.getElementById('group-by-type');
 
+    const filters = {
+        platform: document.getElementById('platform-filter'),
+        type: document.getElementById('type-filter')
+    };
+
     const popup = document.getElementById('tree-options-popup');
     const openPopupBtn = document.getElementById('tree-options-btn');
     const applyBtn = document.getElementById('apply-tree-options');
@@ -23,8 +28,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const userTreeRenderer = (data, treePane) => {
         treePane.innerHTML = '';
-        if (!data || data.length === 0) {
-            treePane.innerHTML = '<p>You have no submissions.</p>';
+
+        // 1. Filter data based on dropdowns
+        const platformFilter = filters.platform.value;
+        const typeFilter = filters.type.value;
+
+        const filteredData = data.map(sub => {
+            const newSub = {...sub, builds: []};
+            sub.builds.forEach(build => {
+                const platformMatch = platformFilter === 'all' || build.platform === platformFilter;
+                const typeMatch = typeFilter === 'all' || build.type === typeFilter;
+                if (platformMatch && typeMatch) {
+                    newSub.builds.push(build);
+                }
+            });
+            return newSub;
+        }).filter(sub => sub.builds.length > 0); // Remove submissions with no matching builds
+
+        if (!filteredData || filteredData.length === 0) {
+            treePane.innerHTML = '<p>You have no submissions matching the current options.</p>';
             return;
         }
 
@@ -35,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 1. Transform the flat submission list into a dynamic hierarchical structure.
         const hierarchicalData = {};
-        data.forEach(sub => {
+        filteredData.forEach(sub => {
             const dateStr = new Date(sub.created_at).toISOString().split('T')[0];
             sub.builds.forEach(build => {
                 build.screenshots.forEach(sc => {
@@ -163,6 +185,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const browser = new ScreenshotBrowser(config);
     browser.initialize();
+
+    // Re-render tree when a filter is changed
+    Object.values(filters).forEach(filter => {
+        filter.addEventListener('change', () => browser.renderTree());
+    });
 
     openPopupBtn.addEventListener('click', (event) => {
         event.stopPropagation();
