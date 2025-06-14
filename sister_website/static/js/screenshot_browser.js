@@ -145,22 +145,49 @@ class ScreenshotBrowser {
             img.addEventListener('click', () => {
                 const screenshotInfo = this.screenshotDataMap[id];
                 if (screenshotInfo) {
-                    // Extract build_id from screenshot data
+                    console.log('Screenshot info:', screenshotInfo);
+                    
+                    // Extract build_id from screenshot data - try multiple possible locations
                     const buildId = screenshotInfo.build_id || 
-                                   (screenshotInfo.submission_details && screenshotInfo.submission_details.build_id);
+                                   (screenshotInfo.submission_details && screenshotInfo.submission_details.build_id) ||
+                                   screenshotInfo.submission_id; // fallback to submission_id
+                    
+                    console.log('Build ID found:', buildId);
                     
                     if (buildId) {
-                        // First scroll to and expand the build
-                        this.scrollToId(buildId);
-                        
-                        // Then after a brief delay, select the specific screenshot
-                        setTimeout(() => {
-                            const link = this.treePane.querySelector(`a[data-screenshot-id="${id}"]`);
-                            if (link) {
+                        // First find the screenshot link to determine its build location
+                        const link = this.treePane.querySelector(`a[data-screenshot-id="${id}"]`);
+                        if (link) {
+                            // Find the submission details element that contains this screenshot
+                            const submissionDetails = link.closest('details[data-build-id]');
+                            if (submissionDetails) {
+                                console.log('Found submission details:', submissionDetails);
+                                
+                                // Expand all parent details elements
+                                let currentElement = submissionDetails;
+                                while (currentElement) {
+                                    if (currentElement.tagName === 'DETAILS') {
+                                        currentElement.open = true;
+                                    }
+                                    currentElement = currentElement.parentElement.closest('details');
+                                }
+                                
+                                // Scroll to the submission and highlight it
+                                submissionDetails.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                submissionDetails.classList.add('highlight');
+                                
+                                setTimeout(() => {
+                                    submissionDetails.classList.remove('highlight');
+                                    // Select the specific screenshot
+                                    link.click();
+                                }, 1000);
+                            } else {
+                                // Fallback: just click the link directly
                                 link.click();
                             }
-                        }, 500); // Wait for scroll animation to complete
+                        }
                     } else {
+                        console.log('No build ID found, using fallback');
                         // Fallback to original behavior if no build_id found
                         const link = this.treePane.querySelector(`a[data-screenshot-id="${id}"]`);
                         if (link) {
@@ -168,6 +195,8 @@ class ScreenshotBrowser {
                             link.click();
                         }
                     }
+                } else {
+                    console.log('No screenshot info found for ID:', id);
                 }
             });
 
