@@ -5,6 +5,7 @@ from sqlalchemy.dialects.mysql import LONGBLOB
 from werkzeug.security import generate_password_hash, check_password_hash
 import enum
 import secrets
+from flask_login import UserMixin
 
 # SQLAlchemy database instance
 # This is imported by the application and initialized there
@@ -94,7 +95,7 @@ class LinkLog(db.Model):
         return f'<LinkLog {self.id} for Submission {self.submission_id} from {self.ip_address}>'
 
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     __tablename__ = 'user'
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
