@@ -95,6 +95,55 @@
             {% endfor %}
         </section>
 
+        <section class="detail-section">
+            <h2>Label Counts by Platform & Type</h2>
+            <p>Counts of accepted builds assigned to each dataset label.</p>
+            <div class="table-responsive">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Dataset Label</th>
+                            <th>PC / Space</th>
+                            <th>PC / Ground</th>
+                            <th>Console / Space</th>
+                            <th>Console / Ground</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for label_data in stats.label_pivot.rows.values()|sort(attribute='name') %}
+                            <tr>
+                                <td>
+                                    {{ label_data.name }}
+                                    {% if not label_data.is_active %}
+                                        <span class="inactive-label">(inactive)</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ label_data.counts.PC_space }}</td>
+                                <td>{{ label_data.counts.PC_ground }}</td>
+                                <td>{{ label_data.counts.Console_space }}</td>
+                                <td>{{ label_data.counts.Console_ground }}</td>
+                                <td><strong>{{ label_data.row_total }}</strong></td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="6">No labeled builds found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th>Total</th>
+                            <th><strong>{{ stats.label_pivot.column_totals.PC_space }}</strong></th>
+                            <th><strong>{{ stats.label_pivot.column_totals.PC_ground }}</strong></th>
+                            <th><strong>{{ stats.label_pivot.column_totals.Console_space }}</strong></th>
+                            <th><strong>{{ stats.label_pivot.column_totals.Console_ground }}</strong></th>
+                            <th><strong>{{ stats.label_pivot.grand_total }}</strong></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
     </div>
 
     <div class="info-box">

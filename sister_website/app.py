@@ -28,6 +28,7 @@ from dotenv import load_dotenv
 from io import BytesIO
 import requests
 from sqlalchemy import or_
+from sqlalchemy import case, func, and_
 
 from .models import (
     db,
@@ -649,76 +650,97 @@ def extract_reply_text(email_body_text):
 @app.route('/training-data-stats')
 @cache.cached(timeout=900)  # Cache for 15 minutes
 def training_data_stats():
-    # Get all labels first, including deactivated ones, for the template
-    all_labels = DatasetLabel.query.order_by(DatasetLabel.name).all()
-    label_map = {label.id: label for label in all_labels}
-
-    # Get all non-withdrawn submissions with their builds
+    # --- Overview Stats ---
+    # This query is still useful for high-level numbers and the progress bars.
     submissions = Submission.query.options(
-        db.joinedload(Submission.builds)
+        db.joinedload(Submission.builds).joinedload(Build.screenshots)
     ).filter(Submission.is_withdrawn == False).all()
-    
-    # Initialize stats
+
     stats = {
-        'total_submissions': 0,
-        'total_accepted': 0,
-        'total_declined': 0,
-        'total_pending': 0,
-        'total_screenshots': 0,
-        'by_screenshot_type': {  # Renamed for clarity
-            'space': {'total': 0, 'accepted': 0},
-            'ground': {'total': 0, 'accepted': 0}
-        },
+        'total_submissions': len(submissions),
+        'total_accepted': sum(1 for s in submissions if s.acceptance_state == AcceptanceState.ACCEPTED),
+        'total_declined': sum(1 for s in submissions if s.acceptance_state == AcceptanceState.DECLINED),
+        'total_pending': sum(1 for s in submissions if s.acceptance_state == AcceptanceState.PENDING),
+        'total_screenshots': sum(len(b.screenshots) for s in submissions for b in s.builds),
         'by_platform_type': {
-            'PC': {
-                'space': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0, 'labels': {label.id: {'count': 0, 'name': label.name, 'is_active': label.is_active} for label in all_labels}},
-                'ground': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0, 'labels': {label.id: {'count': 0, 'name': label.name, 'is_active': label.is_active} for label in all_labels}}
-            },
-            'Console': {
-                'space': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0, 'labels': {label.id: {'count': 0, 'name': label.name, 'is_active': label.is_active} for label in all_labels}},
-                'ground': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0, 'labels': {label.id: {'count': 0, 'name': label.name, 'is_active': label.is_active} for label in all_labels}}
-            }
+            'PC': {'space': {'total_builds': 0, 'accepted_builds': 0}, 'ground': {'total_builds': 0, 'accepted_builds': 0}},
+            'Console': {'space': {'total_builds': 0, 'accepted_builds': 0}, 'ground': {'total_builds': 0, 'accepted_builds': 0}}
         },
-        'target_per_platform_type': 75, # Target number of builds for each platform/type combo
-        'target_per_label': 50,         # Target number of screenshots for each label (space/ground)
+        'target_per_platform_type': 75,
+        'target_per_label': 50,
     }
+
+    for sub in submissions:
+        for build in sub.builds:
+            if build.platform in stats['by_platform_type'] and build.type in stats['by_platform_type'][build.platform]:
+                stats['by_platform_type'][build.platform][build.type]['total_builds'] += 1
+                if sub.acceptance_state == AcceptanceState.ACCEPTED:
+                    stats['by_platform_type'][build.platform][build.type]['accepted_builds'] += 1
     
-    # Process submissions
-    for submission in submissions:
-        stats['total_submissions'] += 1
-        if submission.acceptance_state == AcceptanceState.ACCEPTED:
-            stats['total_accepted'] += 1
-        elif submission.acceptance_state == AcceptanceState.DECLINED:
-            stats['total_declined'] += 1
-        else: # PENDING
-            stats['total_pending'] += 1
-        
-        for build in submission.builds:
-            # Ensure platform and type are valid keys
-            platform_key = build.platform if build.platform in stats['by_platform_type'] else None
-            type_key = build.type if platform_key and build.type in stats['by_platform_type'][platform_key] else None
+    # --- Pivot Table Stats (via SQL) ---
+    accepted_builds_subq = db.session.query(
+        Build.dataset_label_id,
+        Build.platform,
+        Build.type
+    ).join(Submission).filter(
+        Submission.acceptance_state == AcceptanceState.ACCEPTED,
+        Submission.is_withdrawn == False
+    ).subquery()
 
-            if platform_key and type_key:
-                stats['by_platform_type'][platform_key][type_key]['total_builds'] += 1
-                if submission.acceptance_state == AcceptanceState.ACCEPTED:
-                    stats['by_platform_type'][platform_key][type_key]['accepted_builds'] += 1
-                    # If the build is accepted and has a label, count it
-                    if build.dataset_label_id and build.dataset_label_id in stats['by_platform_type'][platform_key][type_key]['labels']:
-                        stats['by_platform_type'][platform_key][type_key]['labels'][build.dataset_label_id]['count'] += 1
+    # Define the pivot columns using case statements
+    pc_space = func.count(case([(and_(accepted_builds_subq.c.platform == 'PC', accepted_builds_subq.c.type == 'space'), 1)])).label('PC_space')
+    pc_ground = func.count(case([(and_(accepted_builds_subq.c.platform == 'PC', accepted_builds_subq.c.type == 'ground'), 1)])).label('PC_ground')
+    console_space = func.count(case([(and_(accepted_builds_subq.c.platform == 'Console', accepted_builds_subq.c.type == 'space'), 1)])).label('Console_space')
+    console_ground = func.count(case([(and_(accepted_builds_subq.c.platform == 'Console', accepted_builds_subq.c.type == 'ground'), 1)])).label('Console_ground')
 
-            # The original screenshot counting logic is now mostly redundant for the new view,
-            # but we can keep it for the overview stats.
-            for screenshot in build.screenshots:
-                stats['total_screenshots'] += 1
-                if screenshot.build and screenshot.build.type in stats['by_screenshot_type']:
-                    stats['by_screenshot_type'][screenshot.build.type]['total'] += 1
-                    if submission.acceptance_state == AcceptanceState.ACCEPTED:
-                        stats['by_screenshot_type'][screenshot.build.type]['accepted'] += 1
-                
-                if platform_key and type_key:
-                    stats['by_platform_type'][platform_key][type_key]['total_screenshots'] += 1
-                    if submission.acceptance_state == AcceptanceState.ACCEPTED:
-                        stats['by_platform_type'][platform_key][type_key]['accepted_screenshots'] += 1
+    # Main query to get all labels and their pivoted counts
+    label_counts_results = db.session.query(
+        DatasetLabel.id,
+        DatasetLabel.name,
+        DatasetLabel.is_active,
+        pc_space,
+        pc_ground,
+        console_space,
+        console_ground
+    ).outerjoin(
+        accepted_builds_subq, DatasetLabel.id == accepted_builds_subq.c.dataset_label_id
+    ).group_by(
+        DatasetLabel.id,
+        DatasetLabel.name,
+        DatasetLabel.is_active
+    ).order_by(
+        DatasetLabel.name
+    ).all()
+
+    # Reconstruct the pivot table structure for the template
+    pivot_columns = ['PC_space', 'PC_ground', 'Console_space', 'Console_ground']
+    label_pivot = {
+        'rows': {},
+        'column_totals': {col: 0 for col in pivot_columns},
+        'grand_total': 0
+    }
+
+    for row in label_counts_results:
+        row_total = row.PC_space + row.PC_ground + row.Console_space + row.Console_ground
+        label_pivot['rows'][row.id] = {
+            'name': row.name,
+            'is_active': row.is_active,
+            'counts': {
+                'PC_space': row.PC_space,
+                'PC_ground': row.PC_ground,
+                'Console_space': row.Console_space,
+                'Console_ground': row.Console_ground,
+            },
+            'row_total': row_total
+        }
+        # Aggregate totals
+        label_pivot['column_totals']['PC_space'] += row.PC_space
+        label_pivot['column_totals']['PC_ground'] += row.PC_ground
+        label_pivot['column_totals']['Console_space'] += row.Console_space
+        label_pivot['column_totals']['Console_ground'] += row.Console_ground
+        label_pivot['grand_total'] += row_total
+
+    stats['label_pivot'] = label_pivot
     
     return render_template('training_data_stats.html', 
                          stats=stats, 
