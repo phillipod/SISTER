@@ -57,8 +57,7 @@
 </div>
 {% endblock %}
 
-{% block styles %}
-{{ super() }}
+{% block additional_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_browser.css') }}">
 {% endblock %}
 
