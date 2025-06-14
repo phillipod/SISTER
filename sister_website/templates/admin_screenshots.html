@@ -11,7 +11,7 @@
 <div class="admin-container">
     <h1>Screenshot Browser</h1>
 
-    <div class="screenshot-browser-wrapper">
+    <div class="browser-controls">
         <!-- Filters across full width -->
         <div class="screenshot-filters admin-filters">
             <form id="filter-form" class="filters-grid">
@@ -42,8 +42,28 @@
                 </div>
             </form>
         </div>
+        <div class="table-toolbar">
+            <div class="toolbar-group">
+                <div class="filterable">
+                    <i id="tree-options-btn" class="fas fa-cogs toolbar-icon" title="Tree Display Options"></i>
+                    <div id="tree-options-popup" class="filter-popup">
+                        <fieldset>
+                            <legend>Group By</legend>
+                            <label><input type="checkbox" id="group-by-platform" checked> Platform</label>
+                            <label><input type="checkbox" id="group-by-type" checked> Type</label>
+                            <label><input type="checkbox" id="group-by-user"> User</label>
+                        </fieldset>
+                        <div class="popup-footer">
+                            <button id="apply-tree-options" class="btn btn-sm">Apply</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        <!-- Content area -->
+    <!-- Content area -->
+    <div class="screenshot-browser-wrapper">
         <div class="screenshot-browser-content">
             <div id="tree-pane" class="tree-container">
                 <p>Loading screenshots...</p>
