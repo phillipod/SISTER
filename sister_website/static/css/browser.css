@@ -62,6 +62,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    list-style: revert;
 }
 
 .tree-container summary:hover {
