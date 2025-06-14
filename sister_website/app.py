@@ -1009,6 +1009,20 @@ def get_email_log(log_id):
          "headers": json.loads(log.headers_json) if log.headers_json else {}
      })
 
+@app.route('/admin/api/link_log/<log_id>')
+def get_link_log(log_id):
+     # This endpoint should only be available to admins.
+     if not is_admin():
+         return jsonify({"error": "Unauthorized"}), 403
+     
+     log = LinkLog.query.get_or_404(log_id)
+     
+     return jsonify({
+         "ip_address": log.ip_address,
+         "user_agent": log.user_agent,
+         "clicked_at": log.clicked_at.isoformat(),
+         "token_used": log.token_used
+     })
 
 @app.route('/admin/screenshot/<int:screenshot_id>')
 def admin_screenshot_image(screenshot_id):
@@ -1803,12 +1817,12 @@ def public_email_log_view(log_id):
     return resp
 
 @app.route('/api/log-access-token/<log_id>')
-@login_required
 def get_log_access_token(log_id):
     """Generate a short-lived token for viewing a specific email log."""
     log = EmailLog.query.get_or_404(log_id)
 
     # Verify that the current user has permission to view this log.
+    # This check now correctly handles both admins and authenticated users without a decorator.
     if not (is_admin() or (current_user.is_authenticated and log.submission.email == current_user.email)):
         return jsonify({"error": "Unauthorized"}), 403
 
