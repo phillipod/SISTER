@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% import "_form_helpers.html" as forms %}
+
+{% block title %}User Settings{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h1>User Settings</h1>
+    
+    <div class="settings-container">
+        <form method="POST" action="{{ url_for('user_settings') }}" class="settings-form">
+            {{ form.hidden_tag() }}
+            
+            <div class="settings-section">
+                <h2>Password Settings</h2>
+                <p>To change your password, enter your current password and your new password below.</p>
+                
+                <div class="form-group">
+                    {{ forms.render_field(form.current_password, {'class': 'form-control'}) }}
+                </div>
+                
+                <div class="form-group">
+                    {{ forms.render_field(form.new_password, {'class': 'form-control', 'placeholder': 'Leave blank to keep current password'}) }}
+                </div>
+                
+                <div class="form-group">
+                    {{ forms.render_field(form.confirm_password, {'class': 'form-control', 'placeholder': 'Leave blank to keep current password'}) }}
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <h2>Contributor Recognition Program</h2>
+                <p>By participating in the contributor recognition program, you allow us to acknowledge your contributions in the project's CONTRIBUTORS.md file. Your contribution text will be manually reviewed before being added.</p>
+                
+                <div class="form-group">
+                    {{ forms.render_field(form.contributor_recognition_enabled) }}
+                    <label for="{{ form.contributor_recognition_enabled.id }}">{{ form.contributor_recognition_enabled.label.text }}</label>
+                </div>
+                
+                <div class="form-group contributor-text-field" {% if not form.contributor_recognition_enabled.data %}style="display: none;"{% endif %}>
+                    {{ forms.render_field(form.contributor_recognition_text, {'class': 'form-control', 'rows': 3}) }}
+                    <small class="form-text text-muted">
+                        Examples: "John Doe", "Jane Smith (GitHub: @jsmith)", "Anonymous contributor", etc.
+                        {% if current_user.contributor_recognition_verified %}
+                            <span class="verification-status verified">✓ Verified</span>
+                        {% elif current_user.contributor_recognition_enabled %}
+                            <span class="verification-status pending">⏳ Pending verification</span>
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+            
+            <div class="form-group-actions">
+                {{ forms.render_field(form.submit, {'class': 'btn submit-btn'}) }}
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.settings-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.settings-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.settings-section h2 {
+    margin-top: 0;
+    color: #333;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 0.5rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.verification-status {
+    font-weight: bold;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+
+.verification-status.verified {
+    color: #155724;
+    background-color: #d4edda;
+}
+
+.verification-status.pending {
+    color: #856404;
+    background-color: #fff3cd;
+}
+
+.form-group-actions {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.submit-btn {
+    background-color: #007bff;
+    color: white;
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.submit-btn:hover {
+    background-color: #0056b3;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkbox = document.getElementById('{{ form.contributor_recognition_enabled.id }}');
+    const textField = document.querySelector('.contributor-text-field');
+    
+    checkbox.addEventListener('change', function() {
+        if (this.checked) {
+            textField.style.display = 'block';
+        } else {
+            textField.style.display = 'none';
+        }
+    });
+});
+</script>
+
+{% endblock %} 
