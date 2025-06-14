@@ -1,16 +1,10 @@
-console.log('DOMContentLoading');
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM fully loaded and parsed.');
-
     // Logic for submit button spinner
     const form = document.getElementById('uploadForm');
     const submitButton = document.getElementById('submitBtn');
     if (form && submitButton) {
-        console.log('Submit button and form found.');
         form.addEventListener('submit', function(event) {
-            console.log('Form submission initiated.');
             if (!form.checkValidity()) {
-                console.log('Form is invalid, submission blocked.');
                 return;
             }
             const buttonText = submitButton.querySelector('.button-text');
@@ -19,7 +13,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             submitButton.classList.add('submitting');
             submitButton.disabled = true;
-            console.log('Spinner activated and button disabled.');
         });
     } else {
         console.error('Submit button or form not found!');
@@ -29,12 +22,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let buildIndexCounter = 1; // Start from 1 since build 0 is already on the page
     const addBuildButton = document.getElementById('addBuildBtn');
     if (addBuildButton) {
-        console.log('Add build button found.');
         addBuildButton.addEventListener('click', function() {
-            console.log('Add build button clicked.');
             const container = document.getElementById('buildsContainer');
             const buildIndex = buildIndexCounter++; // Use and increment the counter
-            console.log(`Creating new build section with index: ${buildIndex}`);
 
             const buildSection = document.createElement('div');
             buildSection.className = 'build-section';
@@ -80,14 +70,11 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             
             container.appendChild(buildSection);
-            console.log('New build section appended to container.');
             
             // Add event listener to the new remove button
             const removeButton = buildSection.querySelector('.remove-build-btn');
             if (removeButton) {
-                console.log('Remove button found for new build section.');
                 removeButton.addEventListener('click', function() {
-                    console.log(`Removing build section with index: ${buildIndex}`);
                     buildSection.remove();
                 });
             } else {
