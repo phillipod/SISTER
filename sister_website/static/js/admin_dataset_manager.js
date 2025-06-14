@@ -1,4 +1,25 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.querySelector('.filter-form');
+    if (filterForm) {
+        const filterInputs = filterForm.querySelectorAll('.filter-popup .form-control');
+        let debounceTimer;
+
+        function submitForm() {
+            filterForm.submit();
+        }
+
+        filterInputs.forEach(input => {
+            if (input.tagName.toLowerCase() === 'select') {
+                input.addEventListener('change', submitForm);
+            } else if (input.type === 'text') {
+                input.addEventListener('keyup', () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(submitForm, 500); // 500ms debounce
+                });
+            }
+        });
+    }
+
     // New code for filter popups
     document.querySelectorAll('.filterable .filter-icon').forEach(trigger => {
         trigger.addEventListener('click', function(event) {

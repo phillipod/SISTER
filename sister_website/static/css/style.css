@@ -1960,7 +1960,8 @@ footer {
     color: #ccc;
 }
 
-.filter-icon:hover {
+.filter-icon:hover,
+.filter-icon.active-filter {
     color: #007bff;
 }
 
@@ -2000,5 +2001,20 @@ footer {
 
 .filter-popup-buttons .btn {
     margin-left: 5px;
+}
+
+.clear-filter-cell {
+    width: 40px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.clear-filter-cell a {
+    color: #6c757d;
+    font-size: 1.2em;
+}
+
+.clear-filter-cell a:hover {
+    color: #dc3545;
 }
 

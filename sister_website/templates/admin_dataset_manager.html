@@ -7,31 +7,31 @@
     <h1>{{ title }}</h1>
 
     <form method="get" action="{{ url_for('dataset_manager') }}" class="filter-form">
-        <div class="filter-buttons-top">
-            <button type="submit" class="btn btn-primary">Apply Filters</button>
-            <a href="{{ url_for('dataset_manager') }}" class="btn btn-secondary">Clear All Filters</a>
-        </div>
-
         <div class="admin-users-list">
             <table class="user-table">
                 <thead>
                     <tr>
+                        <th class="clear-filter-cell">
+                            <a href="{{ url_for('dataset_manager') }}" title="Clear All Filters">
+                                <i class="fas fa-eraser"></i>
+                            </a>
+                        </th>
                         <th class="filterable">
-                            Build ID <i class="fas fa-filter filter-icon"></i>
+                            Build ID <i class="fas fa-filter filter-icon {% if filters.build_id %}active-filter{% endif %}"></i>
                             <div class="filter-popup">
                                 <label for="build_id">Filter by Build ID</label>
                                 <input type="text" name="build_id" id="build_id" value="{{ filters.build_id }}" class="form-control">
                             </div>
                         </th>
                         <th class="filterable">
-                            Submission Email <i class="fas fa-filter filter-icon"></i>
+                            Submission Email <i class="fas fa-filter filter-icon {% if filters.submission_email %}active-filter{% endif %}"></i>
                             <div class="filter-popup">
                                 <label for="submission_email">Filter by Submission Email</label>
                                 <input type="text" name="submission_email" id="submission_email" value="{{ filters.submission_email }}" class="form-control">
                             </div>
                         </th>
                         <th class="filterable">
-                            Platform <i class="fas fa-filter filter-icon"></i>
+                            Platform <i class="fas fa-filter filter-icon {% if filters.platform %}active-filter{% endif %}"></i>
                             <div class="filter-popup">
                                 <label for="platform">Filter by Platform</label>
                                 <select name="platform" id="platform" class="form-control">
@@ -42,7 +42,7 @@
                             </div>
                         </th>
                         <th class="filterable">
-                            Type <i class="fas fa-filter filter-icon"></i>
+                            Type <i class="fas fa-filter filter-icon {% if filters.type %}active-filter{% endif %}"></i>
                             <div class="filter-popup">
                                 <label for="type">Filter by Type</label>
                                 <select name="type" id="type" class="form-control">
@@ -54,7 +54,7 @@
                         </th>
                         <th>Submitted At</th>
                         <th class="filterable">
-                            Dataset Label <i class="fas fa-filter filter-icon"></i>
+                            Dataset Label <i class="fas fa-filter filter-icon {% if filters.labels %}active-filter{% endif %}"></i>
                             <div class="filter-popup">
                                 <label for="labels">Filter by Dataset Label</label>
                                 <select name="labels" id="labels" class="form-control" multiple size="10">
@@ -72,6 +72,7 @@
                 <tbody>
                     {% for build in builds %}
                     <tr data-build-id="{{ build.id }}">
+                        <td></td>
                         <td><a href="{{ url_for('browse_screenshots', build_id=build.id) }}">{{ build.id[:8] }}...</a></td>
                         <td>{{ build.submission.email }}</td>
                         <td>{{ build.platform }}</td>
@@ -90,7 +91,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" style="text-align: center;">No accepted builds found.</td>
+                        <td colspan="7" style="text-align: center;">No accepted builds found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
