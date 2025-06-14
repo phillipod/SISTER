@@ -405,6 +405,10 @@
     flex-grow: 1;
 }
 
+.screenshot-filters {
+    flex-grow: 1;
+}
+
 /* Styles for the screenshot grid view */
 #preview-grid {
     display: grid;
