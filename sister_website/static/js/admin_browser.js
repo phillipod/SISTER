@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const scriptTag = document.getElementById('admin-browser-script');
     let initialBuildId = scriptTag ? scriptTag.dataset.buildId : null;
-    console.log('[Debug] Admin Browser Script Loaded. Initial Build ID:', initialBuildId);
 
     const filters = {
         platform: document.getElementById('platform-filter'),
@@ -80,7 +79,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // After rendering, check if we need to scroll to a specific build
         if (initialBuildId) {
-            console.log('[Debug] buildAndRenderTree: Attempting to scroll to Build ID:', initialBuildId);
             scrollToBuild(initialBuildId);
             // Clear the ID after the first use to prevent re-scrolling on filter change
             initialBuildId = null; 
@@ -154,12 +152,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function scrollToBuild(buildId) {
-        console.log('[Debug] scrollToBuild: Function called for Build ID:', buildId);
         // Find the element for the build. We added a 'data-build-id' attribute for this.
         const buildElement = treePane.querySelector(`details[data-build-id="${buildId}"]`);
         
         if (buildElement) {
-            console.log('[Debug] scrollToBuild: Found build element:', buildElement);
             // Scroll the element into view
             buildElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -170,7 +166,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Trigger a click on the summary to show the screenshot previews
             const summary = buildElement.querySelector('summary');
             if (summary) {
-                console.log('[Debug] scrollToBuild: Found summary element. Clicking to show screenshots.');
                 summary.click();
             } else {
                 console.log('[Debug] scrollToBuild: Could not find summary element to click.');
@@ -186,16 +181,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleGroupClick(e) {
-        console.log('[Debug] handleGroupClick: Event triggered.', e.target);
         const idsCsv = e.target.dataset.groupScreenshots;
-        console.log('[Debug] handleGroupClick: Found screenshot IDs string:', idsCsv);
         if (!idsCsv) {
-            console.log('[Debug] handleGroupClick: No screenshot IDs found, exiting.');
             return;
         }
 
         const ids = idsCsv.split(',');
-        console.log('[Debug] handleGroupClick: Parsed screenshot IDs:', ids);
 
         // Remove single preview image and any previous grid
         previewImage.classList.add('hidden');
@@ -209,12 +200,19 @@ document.addEventListener('DOMContentLoaded', function() {
         grid.id = 'preview-grid';
         grid.classList.add('preview-grid');
 
-        console.log(`[Debug] handleGroupClick: Creating image grid for ${ids.length} images.`);
+        const isProgrammaticClick = !e.isTrusted;
 
         ids.forEach(id => {
             const img = document.createElement('img');
-            // Defer actual loading using data-src for lazy observer
-            img.dataset.src = `/admin/screenshot/${id}?t=${Date.now()}`;
+            
+            if (isProgrammaticClick) {
+                // Programmatic click (from scrollToBuild), load image directly
+                img.src = `/admin/screenshot/${id}?t=${Date.now()}`;
+            } else {
+                // Real user click, use lazy loading
+                img.dataset.src = `/admin/screenshot/${id}?t=${Date.now()}`;
+            }
+            
             img.classList.add('preview-grid-img');
             img.dataset.screenshotId = id;
             img.loading = 'lazy'; // native hint where supported
@@ -231,10 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
             grid.appendChild(img);
         });
 
-        document.getElementById('preview-pane').appendChild(grid);
-        console.log('[Debug] handleGroupClick: Appended grid to preview pane.');
-
-        // Render submission info for the group
+        document.getElementById('preview-pane').appendChild(grid);        // Render submission info for the group
         if (ids.length > 0) {
             const firstScreenshotId = ids[0];
             const link = treePane.querySelector(`a[data-screenshot-id="${firstScreenshotId}"]`);
@@ -247,8 +242,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Initialize lazy loading for the newly added grid
-        initLazyLoad(grid);
+        // Initialize lazy loading for the newly added grid, but only if it wasn't a programmatic click
+        if (!isProgrammaticClick) {
+            initLazyLoad(grid);
+        }
     }
 
     function handleScreenshotClick(e) {
