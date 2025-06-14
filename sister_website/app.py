@@ -1811,8 +1811,8 @@ def public_email_log_view(log_id):
     resp = make_response(body_html)
     
     # This response sets its own specific headers and is ignored by the global hook.
-    # This CSP allows inline styles AND specifies that only the main site can frame it.
-    resp.headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors https://sister.sto-tools.org;"
+    # This CSP allows inline styles and all images, AND specifies that only the main site can frame it.
+    resp.headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'; img-src *; frame-ancestors https://sister.sto-tools.org;"
     # We do NOT set X-Frame-Options, allowing the CSP to be the source of truth for framing.
     return resp
 
