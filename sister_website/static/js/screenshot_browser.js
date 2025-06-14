@@ -241,7 +241,6 @@ class ScreenshotBrowser {
         e.preventDefault();
         const logId = e.target.dataset.logId;
         const logType = e.target.dataset.logType; // 'email' or 'link'
-        let urlToRevoke = null;
         
         try {
             const response = await fetch(`/admin/api/${logType}_log/${logId}`);
@@ -250,23 +249,12 @@ class ScreenshotBrowser {
             
             let content = '';
             if (logType === 'email') {
-                // To prevent CSP violations from inline styles in emails, we render the body
-                // inside a sandboxed iframe with its own origin created from a Blob URL.
-                const iframeStyles = `<style>
-                    body { font-family: sans-serif; color: #333; margin: 1rem; } 
-                    pre { white-space: pre-wrap; word-wrap: break-word; font-size: 14px; }
-                </style>`;
-                const bodyContent = log.body_html || `<pre>${log.body_text || 'No content'}</pre>`;
-                const finalHtml = `<!DOCTYPE html><html><head>${iframeStyles}</head><body>${bodyContent}</body></html>`;
-
-                const blob = new Blob([finalHtml], { type: 'text/html' });
-                urlToRevoke = URL.createObjectURL(blob);
-                
+                const viewerUrl = `https://logviewer.sto-tools.org/log/${logId}`;
                 content = `
                     <p><strong>From:</strong> ${log.from_address || log.from}</p>
                     <p><strong>To:</strong> ${log.to_address || log.to}</p>
                     <p><strong>Subject:</strong> ${log.subject}</p><hr>
-                    <iframe class="email-body-iframe" src="${urlToRevoke}" sandbox></iframe>`;
+                    <iframe class="email-body-iframe" src="${viewerUrl}" sandbox></iframe>`;
             } else { // link log
                 content = `<ul>
                     <li><strong>IP Address:</strong> ${log.ip_address}</li>
@@ -274,12 +262,9 @@ class ScreenshotBrowser {
                     <li><strong>Clicked At:</strong> ${new Date(log.clicked_at).toLocaleString()}</li>
                 </ul>`;
             }
-            this.showModal(`${logType.charAt(0).toUpperCase() + logType.slice(1)} Details`, content, urlToRevoke);
+            this.showModal(`${logType.charAt(0).toUpperCase() + logType.slice(1)} Details`, content);
         } catch (error) {
             this.showModal('Error', `<p class="error-message">${error.message}</p>`);
-            if (urlToRevoke) {
-                URL.revokeObjectURL(urlToRevoke); // Clean up on error too
-            }
         }
     }
     

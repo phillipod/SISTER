@@ -15,6 +15,7 @@ from flask import (
     jsonify,
     current_app,
     send_file,
+    make_response,
 )
 from flask_migrate import Migrate
 from flask_caching import Cache
@@ -1752,4 +1753,31 @@ def user_submissions_data():
 def test_flash():
     flash('This is a test flash message.', 'info')
     return redirect(url_for('home'))
+
+# ────────────────────────────────────────────────────────────────────────────────
+# Email log viewer (served from logviewer.sto-tools.org)
+# ────────────────────────────────────────────────────────────────────────────────
+@app.route('/log/<log_id>')
+def public_email_log_view(log_id):
+    """Return raw email HTML/Text for embedding in an iframe on the logviewer sub-domain."""
+    log = EmailLog.query.get_or_404(log_id)
+
+    # Access control: allow admin or the owner of the submission
+    if not (is_admin() or (current_user.is_authenticated and log.submission.email == current_user.email)):
+        return "Unauthorized", 403
+
+    body_html = log.body_html or ""
+    body_text = log.body_text or "(no text body)"
+
+    if not body_html:
+        # Wrap plain text in <pre> for readability
+        body_html = f"<pre>{body_text}</pre>"
+
+    from flask import make_response
+    resp = make_response(body_html)
+    # Relaxed CSP: allow inline styles but nothing else (no scripts, no external fetches)
+    resp.headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'"
+    # Permit framing (needed because X-Frame-Options DENY is global)
+    resp.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    return resp
 
