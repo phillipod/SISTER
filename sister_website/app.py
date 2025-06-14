@@ -154,7 +154,6 @@ def create_admin_command():
         print(f"Admin user '{default_user}' created successfully.")
 
 # Global variables
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 ALLOWED_MIME_TYPES = {'image/png', 'image/jpeg'}
 
 # Cache for ForwardEmail MX IP addresses
@@ -195,10 +194,6 @@ def get_forwardemail_ips():
             current_app.logger.error(f"Failed to fetch ForwardEmail IP list: {e}")
     return _forwardemail_ips
 
-
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def allowed_mime(file_storage):
     """Checks if the file's MIME type is allowed and returns the MIME type if so."""
@@ -252,15 +247,10 @@ def save_screenshot(file, filename_base=None):
         current_app.logger.warning(f"save_screenshot: No file object provided.")
         return None
 
-    # Check file extension first as a basic sanity check
-    if not allowed_file(file.filename):
-        current_app.logger.warning(f"save_screenshot: File extension not allowed for {file.filename}.")
-        return None
-
-    # Now check MIME type from file content, which is more reliable
+    # Check MIME type from file content, which is the single source of truth
     detected_mime_type = allowed_mime(file)
     if not detected_mime_type:
-        current_app.logger.warning(f"save_screenshot: MIME type not allowed or could not be determined for {file.filename}.")
+        current_app.logger.warning(f"save_screenshot: MIME type not allowed or could not be determined for {filename_for_log}.")
         return None
 
     # Determine extension from the validated MIME type
