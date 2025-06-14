@@ -19,12 +19,33 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Logic for adding and removing builds
-    let buildIndexCounter = 1; // Start from 1 since build 0 is already on the page
+    const container = document.getElementById('buildsContainer');
+    let buildIndexCounter = container.children.length; // Initialize based on current number of builds
+
+    function reindexBuilds() {
+        const buildSections = container.querySelectorAll('.build-section');
+        buildSections.forEach((section, index) => {
+            section.setAttribute('data-build-index', index);
+
+            // Update header for additional builds (index 0 is the primary build)
+            const header = section.querySelector('h3');
+            if (index > 0) {
+                header.textContent = `Additional Build #${index}`;
+            }
+
+            // Update name attributes for all inputs inside
+            section.querySelector('input[name^="build_platform_"]').name = `build_platform_${index}`;
+            section.querySelector('input[name^="build_type_"]').name = `build_type_${index}`;
+            section.querySelector('input[name^="screenshots_"]').name = `screenshots_${index}`;
+        });
+        // Reset the counter to the new total number of builds
+        buildIndexCounter = buildSections.length;
+    }
+
     const addBuildButton = document.getElementById('addBuildBtn');
     if (addBuildButton) {
         addBuildButton.addEventListener('click', function() {
-            const container = document.getElementById('buildsContainer');
-            const buildIndex = buildIndexCounter++; // Use and increment the counter
+            const buildIndex = buildIndexCounter; // Use the current counter
 
             const buildSection = document.createElement('div');
             buildSection.className = 'build-section';
@@ -71,17 +92,20 @@ document.addEventListener('DOMContentLoaded', function() {
             
             container.appendChild(buildSection);
             
-            // Add event listener to the new remove button
-            const removeButton = buildSection.querySelector('.remove-build-btn');
-            if (removeButton) {
-                removeButton.addEventListener('click', function() {
-                    buildSection.remove();
-                });
-            } else {
-                 console.error('Could not find remove button for new build section.');
-            }
+            buildIndexCounter++; // Increment for the next potential addition
         });
     } else {
         console.error('Add build button not found!');
     }
+
+    // Use event delegation for remove buttons. One listener handles all remove buttons.
+    container.addEventListener('click', function(event) {
+        if (event.target.classList.contains('remove-build-btn')) {
+            const buildSectionToRemove = event.target.closest('.build-section');
+            if (buildSectionToRemove) {
+                buildSectionToRemove.remove();
+                reindexBuilds(); // Re-index everything after a removal
+            }
+        }
+    });
 }); 
