@@ -205,17 +205,17 @@ document.addEventListener('DOMContentLoaded', function() {
         ids.forEach(id => {
             const img = document.createElement('img');
             
+            img.classList.add('preview-grid-img');
+            img.dataset.screenshotId = id;
+
             if (isProgrammaticClick) {
                 // Programmatic click (from scrollToBuild), load image directly
                 img.src = `/admin/screenshot/${id}?t=${Date.now()}`;
             } else {
                 // Real user click, use lazy loading
                 img.dataset.src = `/admin/screenshot/${id}?t=${Date.now()}`;
+                img.loading = 'lazy'; // native hint where supported
             }
-            
-            img.classList.add('preview-grid-img');
-            img.dataset.screenshotId = id;
-            img.loading = 'lazy'; // native hint where supported
 
             // When a tile is clicked, trigger the corresponding tree link click
             img.addEventListener('click', () => {
