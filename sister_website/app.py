@@ -1598,7 +1598,7 @@ def get_build_audit_log(build_id):
 def set_security_headers(resp):
     # If the request is for the logviewer, its route handles its own headers.
     # We do nothing here to avoid overwriting them.
-    if 'logviewer' in request.host:
+    if request.endpoint == 'public_email_log_view':
         return resp
 
     # For the main site (sister.sto-tools.org)
@@ -1607,13 +1607,17 @@ def set_security_headers(resp):
     csp = {
         'default-src': "'self'",
         'script-src': "'self' https://cdn.jsdelivr.net",
-        'style-src': "'self' https://cdnjs.cloudflare.com", # Reverted to secure default
+        'style-src': "'self' https://cdnjs.cloudflare.com",
         'font-src': "'self' https://cdnjs.cloudflare.com",
         'frame-src': "blob: https://logviewer.sto-tools.org",
         'child-src': "blob: https://logviewer.sto-tools.org",
+        'object-src': "'none'",
+        'base-uri': "'self'",
+        'form-action': "'self'",
+        'upgrade-insecure-requests': ""
     }
-    csp_string = "; ".join([f"{key} {value}" for key, value in csp.items()])
-    resp.headers.setdefault('Content-Security-Policy', csp_string)
+    csp_string = "; ".join([f"{key} {value}" for key, value in csp.items() if value is not None])
+    resp.headers.setdefault('Content-Security-Policy', csp_string.strip())
     return resp
 
 # Invalidate admin sessions if the user no longer exists or is locked
@@ -1871,10 +1875,6 @@ def public_email_log_view(log_id):
     from flask import make_response
     resp = make_response(body_html)
     
-    # This response sets its own specific headers and is ignored by the global hook.
-    # This CSP allows inline styles and all images, AND specifies that only the main site can frame it.
-    resp.headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'; img-src *; frame-ancestors https://sister.sto-tools.org;"
-    # We do NOT set X-Frame-Options, allowing the CSP to be the source of truth for framing.
     return resp
 
 @app.route('/api/log-access-token/<log_id>')

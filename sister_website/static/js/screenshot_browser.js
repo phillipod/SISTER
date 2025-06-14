@@ -273,7 +273,12 @@ class ScreenshotBrowser {
     }
     
     async handleViewLog(e) {
+        // Check if the clicked element is a log link. If not, do nothing.
+        if (!e.target.matches('a.view-log-link')) {
+            return;
+        }
         e.preventDefault();
+
         const logId = e.target.dataset.logId;
         const logType = e.target.dataset.logType; // 'email' or 'link'
         
