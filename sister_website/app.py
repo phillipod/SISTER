@@ -39,6 +39,7 @@ from .models import (
     AdminUser,
     AcceptanceState,
     DatasetLabel,
+    BuildAuditLog
 )
 from .forms import UploadForm, LoginForm, AdminUserForm, ChangePasswordForm, DatasetLabelForm
 from .email_utils import (
@@ -1436,16 +1437,85 @@ def set_build_dataset_label(build_id):
     data = request.get_json()
     label_id = data.get('label_id')
 
-    if label_id:
-        label = DatasetLabel.query.get(label_id)
-        if not label or not label.is_active:
+    old_label_id = build.dataset_label_id
+    new_label_id = label_id if label_id else None
+
+    if old_label_id == new_label_id:
+        return jsonify({'success': True, 'message': 'No change detected.'})
+
+    old_label_name = DatasetLabel.query.get(old_label_id).name if old_label_id else "None"
+    
+    if new_label_id:
+        label = DatasetLabel.query.get(new_label_id)
+        if not label:
             return jsonify({'error': 'Invalid or inactive label'}), 400
-        build.dataset_label_id = label_id
+        build.dataset_label_id = new_label_id
+        new_label_name = label.name
     else:
         build.dataset_label_id = None
+        new_label_name = "None"
     
+    # Audit log
+    audit_log = BuildAuditLog(
+        build_id=build.id,
+        admin_user_id=session['admin_user_id'],
+        field_changed='dataset_label',
+        old_value=old_label_name,
+        new_value=new_label_name
+    )
+    db.session.add(audit_log)
     db.session.commit()
     return jsonify({'success': True, 'label_id': build.dataset_label_id})
+
+@app.route('/admin/api/builds/<build_id>/update-details', methods=['POST'])
+def update_build_details(build_id):
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    build = Build.query.get_or_404(build_id)
+    data = request.get_json()
+    field = data.get('field')
+    value = data.get('value')
+
+    if field not in ['platform', 'type']:
+        return jsonify({'error': 'Invalid field specified'}), 400
+
+    old_value = getattr(build, field)
+
+    if old_value == value:
+        return jsonify({'success': True, 'message': 'No change detected.'})
+
+    setattr(build, field, value)
+
+    # Audit log
+    audit_log = BuildAuditLog(
+        build_id=build.id,
+        admin_user_id=session['admin_user_id'],
+        field_changed=field,
+        old_value=old_value,
+        new_value=value
+    )
+    db.session.add(audit_log)
+    db.session.commit()
+
+    return jsonify({'success': True, f'{field}_updated': True})
+
+@app.route('/admin/api/builds/<build_id>/audit-log')
+def get_build_audit_log(build_id):
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    logs = BuildAuditLog.query.filter_by(build_id=build_id).order_by(BuildAuditLog.changed_at.desc()).all()
+    
+    result = [{
+        'changed_at': log.changed_at.strftime('%Y-%m-%d %H:%M:%S UTC'),
+        'admin_user': log.admin_user.username,
+        'field_changed': log.field_changed.replace('_', ' ').title(),
+        'old_value': log.old_value,
+        'new_value': log.new_value
+    } for log in logs]
+
+    return jsonify(result)
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Global response hardening

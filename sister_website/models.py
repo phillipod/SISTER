@@ -110,10 +110,27 @@ class AdminUser(db.Model):
 class DatasetLabel(db.Model):
     __tablename__ = 'dataset_label'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), unique=True, nullable=False)
+    name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    builds = db.relationship('Build', backref='dataset_label', lazy=True)
 
     def __repr__(self):
         return f'<DatasetLabel {self.name}>'
+
+class BuildAuditLog(db.Model):
+    __tablename__ = 'build_audit_log'
+    id = db.Column(db.Integer, primary_key=True)
+    build_id = db.Column(db.String(36), db.ForeignKey('build.id'), nullable=False)
+    admin_user_id = db.Column(db.Integer, db.ForeignKey('admin_user.id'), nullable=False)
+    changed_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    field_changed = db.Column(db.String(50), nullable=False)
+    old_value = db.Column(db.String(255), nullable=True)
+    new_value = db.Column(db.String(255), nullable=True)
+
+    admin_user = db.relationship('AdminUser', backref=db.backref('audit_logs', lazy=True))
+    build = db.relationship('Build', backref=db.backref('audit_logs', lazy=True))
+
+    def __repr__(self):
+        return f'<BuildAuditLog {self.id} - Build {self.build_id}>'

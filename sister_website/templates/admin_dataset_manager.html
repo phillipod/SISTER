@@ -74,10 +74,23 @@
                 <tbody>
                     {% for build in builds %}
                     <tr data-build-id="{{ build.id }}">
-                        <td><a href="{{ url_for('browse_screenshots', build_id=build.id) }}">{{ build.id[:8] }}...</a></td>
+                        <td>
+                            <a href="{{ url_for('browse_screenshots', build_id=build.id) }}">{{ build.id[:8] }}...</a>
+                            <i class="fas fa-history audit-log-icon" data-build-id="{{ build.id }}" title="View Audit Log"></i>
+                        </td>
                         <td>{{ build.submission.email }}</td>
-                        <td>{{ build.platform }}</td>
-                        <td>{{ build.type }}</td>
+                        <td>
+                            <select class="form-control build-detail-select" data-build-id="{{ build.id }}" data-field="platform">
+                                <option value="PC" {% if build.platform == 'PC' %}selected{% endif %}>PC</option>
+                                <option value="Console" {% if build.platform == 'Console' %}selected{% endif %}>Console</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-control build-detail-select" data-build-id="{{ build.id }}" data-field="type">
+                                <option value="space" {% if build.type == 'space' %}selected{% endif %}>Space</option>
+                                <option value="ground" {% if build.type == 'ground' %}selected{% endif %}>Ground</option>
+                            </select>
+                        </td>
                         <td>{{ build.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>
                             <select class="form-control dataset-label-select" data-build-id="{{ build.id }}">
@@ -99,6 +112,31 @@
             </table>
         </div>
     </form>
+
+    <!-- Audit Log Modal -->
+    <div id="auditLogModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Build Audit Log</h2>
+            <p><strong>Build ID:</strong> <span id="modalBuildId"></span></p>
+            <div class="modal-body">
+                <table class="user-table" id="auditLogTable">
+                    <thead>
+                        <tr>
+                            <th>Changed At</th>
+                            <th>Admin</th>
+                            <th>Field</th>
+                            <th>Old Value</th>
+                            <th>New Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Log rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
     <div class="pagination">
         {% if pagination.has_prev %}
