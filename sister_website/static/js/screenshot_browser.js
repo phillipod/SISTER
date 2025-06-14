@@ -249,11 +249,21 @@ class ScreenshotBrowser {
             
             let content = '';
             if (logType === 'email') {
-                const body = log.body_html ? `<div class="email-body-html">${log.body_html}</div>` : `<pre class="email-body-text">${log.body_text || ''}</pre>`;
+                // To prevent CSP violations from inline styles in emails, we render the body
+                // inside a sandboxed iframe using srcdoc.
+                const iframeStyles = `<style>
+                    body { font-family: sans-serif; color: #333; margin: 1rem; } 
+                    pre { white-space: pre-wrap; word-wrap: break-word; font-size: 14px; }
+                </style>`;
+                const bodyContent = log.body_html || `<pre>${log.body_text || 'No content'}</pre>`;
+                const finalHtml = iframeStyles + bodyContent;
+                const escapedBody = finalHtml.replace(/"/g, '&quot;');
+                
                 content = `
-                    <p><strong>From:</strong> ${log.from_address}</p>
-                    <p><strong>To:</strong> ${log.to_address}</p>
-                    <p><strong>Subject:</strong> ${log.subject}</p><hr>${body}`;
+                    <p><strong>From:</strong> ${log.from_address || log.from}</p>
+                    <p><strong>To:</strong> ${log.to_address || log.to}</p>
+                    <p><strong>Subject:</strong> ${log.subject}</p><hr>
+                    <iframe class="email-body-iframe" srcdoc="${escapedBody}"></iframe>`;
             } else { // link log
                 content = `<ul>
                     <li><strong>IP Address:</strong> ${log.ip_address}</li>
