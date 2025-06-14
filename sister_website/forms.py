@@ -77,3 +77,37 @@ class DatasetLabelForm(FlaskForm):
         label = DatasetLabel.query.filter_by(name=name.data).first()
         if label:
             raise ValidationError('A label with this name already exists.')
+
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Send Reset Link')
+
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('New Password', validators=[
+        DataRequired(),
+        EqualTo('confirm_password', message='Passwords must match.')
+    ])
+    confirm_password = PasswordField('Confirm New Password', validators=[DataRequired()])
+    submit = SubmitField('Reset Password')
+
+
+class UserSettingsForm(FlaskForm):
+    current_password = PasswordField('Current Password', validators=[DataRequired()])
+    new_password = PasswordField('New Password', validators=[
+        EqualTo('confirm_password', message='Passwords must match.')
+    ])
+    confirm_password = PasswordField('Confirm New Password')
+    contributor_recognition_enabled = BooleanField('Participate in contributor recognition program')
+    contributor_recognition_text = TextAreaField(
+        'How would you like to be acknowledged? (optional)',
+        render_kw={'placeholder': 'e.g., Your Name, Your Name (username), Anonymous, etc.'}
+    )
+    submit = SubmitField('Save Settings')
+
+    def validate_new_password(self, new_password):
+        if new_password.data and not self.confirm_password.data:
+            raise ValidationError('Please confirm your new password.')
+        if not new_password.data and self.confirm_password.data:
+            raise ValidationError('Please enter a new password.')

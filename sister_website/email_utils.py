@@ -151,6 +151,38 @@ def send_verification_email(user_email, token):
         return False
 
 
+def send_password_reset_email(user_email, token):
+    try:
+        client = ForwardEmailClient(api_key=os.getenv('FORWARD_EMAIL_API_KEY'))
+
+        reset_url = url_for('reset_password', token=token, _external=True)
+
+        from_email = EmailAddress(
+            email=f"noreply@{os.getenv('FORWARD_EMAIL_DOMAIN', 'adhd.geek.nz')}",
+            name="SISTER Team"
+        )
+
+        html_content = render_template(
+            'email/password_reset_email.html',
+            reset_url=reset_url,
+            timestamp=datetime.utcnow()
+        )
+
+        message = EmailMessage(
+            from_email=from_email,
+            to=[user_email],
+            subject="SISTER - Password Reset Request",
+            html=html_content
+        )
+
+        client.send_email(message)
+        logger.info(f"Sent password reset email to: {user_email}")
+        return True
+    except Exception as e:
+        logger.error(f"Email sending error for password reset to {user_email}: {e}", exc_info=True)
+        return False
+
+
 def verify_webhook_signature(request_data, signature_header, secret_key):
     if not all([request_data, signature_header, secret_key]):
         return False

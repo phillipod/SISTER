@@ -18,7 +18,9 @@
                 {% if session.admin_user_id %}
                     <a href="{{ url_for('admin_dashboard') }}" class="admin-link">Admin</a>
                     <a href="{{ url_for('admin_logout') }}" class="admin-link">Logout</a>
-                {% elif not current_user.is_authenticated %}
+                {% elif current_user.is_authenticated %}
+                    <a href="{{ url_for('user_settings') }}" class="admin-link">Settings</a>
+                {% else %}
                     <a href="{{ url_for('admin_login') }}" class="admin-link">Admin Login</a>
                 {% endif %}
             </div>

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.mysql import LONGBLOB
@@ -102,6 +102,11 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String(256), nullable=False)
     email_verified = db.Column(db.Boolean, default=False, nullable=False)
     email_verification_token = db.Column(db.String(64), unique=True, nullable=True)
+    password_reset_token = db.Column(db.String(64), unique=True, nullable=True)
+    password_reset_token_expiry = db.Column(db.DateTime, nullable=True)
+    contributor_recognition_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    contributor_recognition_text = db.Column(db.Text, nullable=True)
+    contributor_recognition_verified = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -115,6 +120,21 @@ class User(db.Model, UserMixin):
         token = secrets.token_urlsafe(32)
         self.email_verification_token = token
         return token
+
+    def generate_password_reset_token(self):
+        token = secrets.token_urlsafe(32)
+        self.password_reset_token = token
+        self.password_reset_token_expiry = datetime.utcnow() + timedelta(hours=1)  # Token expires in 1 hour
+        return token
+
+    def is_password_reset_token_valid(self):
+        if not self.password_reset_token or not self.password_reset_token_expiry:
+            return False
+        return datetime.utcnow() < self.password_reset_token_expiry
+
+    def clear_password_reset_token(self):
+        self.password_reset_token = None
+        self.password_reset_token_expiry = None
 
     @property
     def submissions(self):

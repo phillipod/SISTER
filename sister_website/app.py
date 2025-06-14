@@ -47,12 +47,13 @@ from .models import (
     BuildAuditLog,
     User
 )
-from .forms import UploadForm, AdminLoginForm, AdminUserForm, ChangePasswordForm, DatasetLabelForm, RegistrationForm, UserLoginForm
+from .forms import UploadForm, AdminLoginForm, AdminUserForm, ChangePasswordForm, DatasetLabelForm, RegistrationForm, UserLoginForm, ForgotPasswordForm, ResetPasswordForm, UserSettingsForm
 from .email_utils import (
     send_consent_email,
     send_reply_confirmation_email,
     verify_webhook_signature,
-    send_verification_email
+    send_verification_email,
+    send_password_reset_email
 )
 # import magic # Removed, will use the one below with other Flask imports
 
@@ -1692,6 +1693,78 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('home'))
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and user.email_verified:
+            token = user.generate_password_reset_token()
+            db.session.commit()
+            send_password_reset_email(user.email, token)
+            flash('A password reset email has been sent to your email address.', 'info')
+        else:
+            # For security, we don't reveal if email exists or not
+            flash('If the email exists and is verified, a password reset email has been sent.', 'info')
+        return redirect(url_for('login'))
+    return render_template('forgot_password.html', form=form, active_page='forgot_password')
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    
+    user = User.query.filter_by(password_reset_token=token).first()
+    if not user or not user.is_password_reset_token_valid():
+        flash('The password reset link is invalid or has expired.', 'danger')
+        return redirect(url_for('forgot_password'))
+    
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        user.clear_password_reset_token()
+        db.session.commit()
+        flash('Your password has been reset. You can now log in with your new password.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('reset_password.html', form=form, active_page='reset_password')
+
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+def user_settings():
+    form = UserSettingsForm()
+    
+    # Pre-populate the form with current user data
+    if request.method == 'GET':
+        form.contributor_recognition_enabled.data = current_user.contributor_recognition_enabled
+        form.contributor_recognition_text.data = current_user.contributor_recognition_text
+    
+    if form.validate_on_submit():
+        # Verify current password
+        if not current_user.check_password(form.current_password.data):
+            flash('Current password is incorrect.', 'danger')
+            return render_template('user_settings.html', form=form, active_page='user_settings')
+        
+        # Update password if provided
+        if form.new_password.data:
+            current_user.set_password(form.new_password.data)
+            flash('Password updated successfully.', 'success')
+        
+        # Update contributor recognition settings
+        current_user.contributor_recognition_enabled = form.contributor_recognition_enabled.data
+        current_user.contributor_recognition_text = form.contributor_recognition_text.data if form.contributor_recognition_enabled.data else None
+        # Reset verification status if text changed
+        if current_user.contributor_recognition_text != form.contributor_recognition_text.data:
+            current_user.contributor_recognition_verified = False
+        
+        db.session.commit()
+        flash('Settings updated successfully.', 'success')
+        return redirect(url_for('user_settings'))
+    
+    return render_template('user_settings.html', form=form, active_page='user_settings')
 
 @app.route('/me/submissions')
 @login_required
