@@ -44,7 +44,6 @@ class Build(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     screenshots = db.relationship('Screenshot', backref='build', lazy=True)
     dataset_label_id = db.Column(db.Integer, db.ForeignKey('dataset_label.id'), nullable=True)
-    dataset_label = db.relationship('DatasetLabel', backref='builds')
 
     @property
     def is_accepted(self):
