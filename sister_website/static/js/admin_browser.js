@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         for (const submissionId in submissions) {
                             const subScreenshots = submissions[submissionId];
                             const firstSc = subScreenshots[0];
-                            const subLabel = `Submission ${firstSc.submission_id.substring(0, 8)} (${firstSc.email})`;
+                            const subLabel = `Submission ${firstSc.submission_id.substring(0, 8)}`;
                             
                             const subDetails = createDetails(subLabel);
                             subDetails.dataset.buildId = firstSc.build_id; // For scrolling
