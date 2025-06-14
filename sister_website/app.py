@@ -1565,6 +1565,7 @@ def set_security_headers(resp):
         'default-src': "'self'",
         'style-src': "'self' https://cdnjs.cloudflare.com",
         'font-src': "'self' https://cdnjs.cloudflare.com",
+        'frame-src': "blob:",
     }
     csp_string = "; ".join([f"{key} {value}" for key, value in csp.items()])
     resp.headers.setdefault('Content-Security-Policy', csp_string)
