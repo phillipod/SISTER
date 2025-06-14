@@ -3,39 +3,49 @@ class ScreenshotBrowser {
         this.config = config;
         this.treePane = document.getElementById(config.treePaneId);
         this.previewPane = document.getElementById(config.previewPaneId);
-        this.previewImage = document.getElementById(config.previewImageId);
-        this.previewPlaceholder = document.getElementById(config.previewPlaceholderId);
         this.submissionInfoPane = document.getElementById(config.submissionInfoPaneId);
         
-        this.data = [];
-        this.screenshotDataMap = {};
+        // This is the specific element where previews (grid or single) will be rendered.
+        this.previewContent = document.getElementById(config.previewContentId);
 
-        if (!this.treePane || !this.previewPane || !this.submissionInfoPane) {
+        if (!this.treePane || !this.previewPane || !this.submissionInfoPane || !this.previewContent) {
             console.error("ScreenshotBrowser: One or more essential container elements are missing.");
             return;
         }
-
-        this.initialize();
+        
+        this.data = null; // To store the raw data from the API
+        this.screenshotDataMap = {}; // For quick lookup of screenshot details
+        this.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     }
 
-    async initialize() {
+    async initialize(initialId = null) {
         try {
             const response = await fetch(this.config.dataUrl);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             
             this.data = await response.json();
-            this.buildScreenshotMap(this.data);
-            this.renderTree(this.data);
             
-            this.treePane.addEventListener('click', this.handleScreenshotClick.bind(this));
+            // Allow for a custom map builder, otherwise use default
+            if (this.config.mapBuilder) {
+                this.screenshotDataMap = this.config.mapBuilder(this.data);
+            } else {
+                this.buildScreenshotMap(this.data);
+            }
+            
+            this.renderTree();
+            this.treePane.addEventListener('click', this.handleTreeClick.bind(this));
+            
+            if (initialId) {
+                this.scrollToId(initialId);
+            }
         } catch (error) {
-            this.treePane.innerHTML = `<p class="error-message">Could not load data: ${error.message}</p>`;
+            this.previewPane.innerHTML = `<p class="error-message">Could not load data: ${error.message}</p>`;
             console.error('Error initializing browser:', error);
         }
     }
 
+    // Default map builder, suitable for the user submissions API structure
     buildScreenshotMap(data) {
-        this.screenshotDataMap = {};
         data.forEach(sub => {
             sub.builds.forEach(build => {
                 build.screenshots.forEach(sc => {
@@ -45,50 +55,105 @@ class ScreenshotBrowser {
         });
     }
 
-    renderTree(data) {
-        // This method will be slightly different between user and admin,
-        // so we can allow for a custom renderer.
-        if (this.config.treeRenderer) {
-            this.config.treeRenderer(data, this.treePane);
-        } else {
-            this.defaultTreeRenderer(data);
-        }
-    }
-
-    defaultTreeRenderer(data) {
-        if (data.length === 0) {
-            this.treePane.innerHTML = '<p>No submissions found.</p>';
+    renderTree() {
+        if (!this.config.treeRenderer) {
+            console.error("ScreenshotBrowser: No treeRenderer function provided in config.");
             return;
         }
-        // Generic tree rendering logic can be placed here if needed
-        // For now, we assume a custom renderer is provided.
+        this.config.treeRenderer(this.data, this.treePane);
     }
+    
+    handleTreeClick(event) {
+        const summary = event.target.closest('summary');
+        const link = event.target.closest('a.screenshot-link');
 
-    handleScreenshotClick(event) {
-        if (!event.target.classList.contains('screenshot-link')) return;
-        event.preventDefault();
-
-        const screenshotId = event.target.dataset.screenshotId;
-        const screenshotInfo = this.screenshotDataMap[screenshotId];
-
-        if (!screenshotInfo) return;
-
-        document.querySelectorAll('.screenshot-link.active').forEach(link => link.classList.remove('active'));
-        event.target.classList.add('active');
-
-        this.showScreenshotPreview(screenshotId);
-        this.renderSubmissionInfo(screenshotInfo.submission_details);
-    }
-
-    showScreenshotPreview(screenshotId) {
-        if(this.previewPlaceholder) this.previewPlaceholder.classList.add('hidden');
-        if(this.previewImage) {
-            this.previewImage.src = `/admin/screenshot/${screenshotId}`;
-            this.previewImage.classList.remove('hidden');
+        if (link) {
+            event.preventDefault();
+            this.handleScreenshotClick(link);
+            return;
         }
-        if(this.previewPane) this.previewPane.classList.add('active');
+
+        if (summary) {
+            // Let the default <details> toggle happen.
+            // Only act if it's a group summary.
+            if (summary.dataset.groupScreenshots) {
+                this.handleGroupClick(summary, !event.isTrusted);
+            }
+        }
     }
 
+    handleScreenshotClick(link) {
+        this.setActiveNode(link);
+        const screenshotId = link.dataset.screenshotId;
+        const screenshotInfo = this.screenshotDataMap[screenshotId];
+        
+        if (!screenshotInfo) {
+            console.error(`Could not find data for screenshot ID ${screenshotId}`);
+            return;
+        }
+        
+        this.renderSinglePreview(screenshotId);
+        this.renderSubmissionInfo(screenshotInfo.submission_details || screenshotInfo);
+    }
+    
+    handleGroupClick(summary, isProgrammatic = false) {
+        this.setActiveNode(summary);
+        const idsCsv = summary.dataset.groupScreenshots;
+        if (!idsCsv) return;
+
+        const ids = idsCsv.split(',');
+        this.renderGridPreview(ids, isProgrammatic);
+
+        if (ids.length > 0) {
+            const firstScreenshot = this.screenshotDataMap[ids[0]];
+            if (firstScreenshot) {
+                 this.renderSubmissionInfo(firstScreenshot.submission_details || firstScreenshot);
+            }
+        }
+    }
+
+    renderSinglePreview(screenshotId) {
+        this.previewContent.innerHTML = `
+            <img id="preview-image" alt="Screenshot Preview" src="/admin/screenshot/${screenshotId}?t=${Date.now()}" />
+        `;
+    }
+
+    renderGridPreview(ids, isProgrammatic) {
+        const grid = document.createElement('div');
+        grid.id = 'preview-grid';
+        grid.classList.add('preview-grid');
+
+        ids.forEach(id => {
+            const img = document.createElement('img');
+            img.classList.add('preview-grid-img');
+            img.dataset.screenshotId = id;
+            
+            // When a tile is clicked, trigger the corresponding tree link click
+            img.addEventListener('click', () => {
+                const link = this.treePane.querySelector(`a[data-screenshot-id="${id}"]`);
+                if (link) {
+                    link.scrollIntoView({behavior: 'smooth', block: 'center'});
+                    link.click();
+                }
+            });
+
+            if (isProgrammatic) {
+                img.src = `/admin/screenshot/${id}?t=${Date.now()}`;
+            } else {
+                img.dataset.src = `/admin/screenshot/${id}?t=${Date.now()}`;
+                img.loading = 'lazy';
+            }
+            grid.appendChild(img);
+        });
+        
+        this.previewContent.innerHTML = '';
+        this.previewContent.appendChild(grid);
+
+        if (!isProgrammatic) {
+            this.initLazyLoad(grid);
+        }
+    }
+    
     renderSubmissionInfo(info) {
         if (!info) {
             this.submissionInfoPane.innerHTML = '';
@@ -97,91 +162,175 @@ class ScreenshotBrowser {
 
         const state = info.is_withdrawn ? 'withdrawn' : info.acceptance_state;
         const stateText = state.charAt(0).toUpperCase() + state.slice(1);
-
-        let actionButtons = '';
-        // Action buttons logic can be customized via config if needed
-        if (state === 'pending') {
-            actionButtons = `
-                <a href="/api/accept-license/${info.acceptance_token}" class="btn btn-success">Accept License</a>
-                <a href="/api/decline-license/${info.acceptance_token}" class="btn btn-warning">Decline License</a>`;
-        } else if (state === 'accepted') {
-            actionButtons = `<a href="/api/withdraw-submission/${info.acceptance_token}" class="btn btn-danger">Withdraw Submission</a>`;
+        
+        let statusHtml = `<span class="status-badge status-${state}">${stateText}</span>`;
+        if (info.is_withdrawn && state !== 'withdrawn') {
+            statusHtml += ` <span class="status-badge status-withdrawn">Withdrawn</span>`;
         }
-
-        const timelineHtml = info.events.map(event => {
+        
+        let resendButtonHtml = '';
+        if (info.acceptance_state === 'pending' && !info.is_withdrawn) {
+            resendButtonHtml = `
+                <div class="resend-section">
+                    <button class="btn btn-secondary btn-sm resend-btn" data-submission-id="${info.id}">Resend Consent</button>
+                    <span class="resend-status"></span>
+                </div>`;
+        }
+        
+        const timelineHtml = (info.events || []).map(event => {
             const timestamp = new Date(event.timestamp).toLocaleString();
             let detailsHtml = '';
-            if (event.details) {
-                if (event.log_id && event.method === 'Email') {
-                    detailsHtml = `(<a href="#" class="view-email-log" data-log-id="${event.log_id}">View Email</a>)`;
-                } else if (event.details.ip_address) {
-                    detailsHtml = `(IP: ${event.details.ip_address})`;
-                }
+            if (event.log_id && (event.method === 'Email' || event.details?.subject)) {
+                 detailsHtml = `(<a href="#" class="view-log" data-log-type="email" data-log-id="${event.log_id}">View Email</a>)`;
+            } else if (event.log_id && (event.method === 'Link' || event.details?.ip_address)) {
+                 detailsHtml = `(<a href="#" class="view-log" data-log-type="link" data-log-id="${event.log_id}">Details</a>)`;
             }
-            return `<li><strong>${event.type}</strong> - ${timestamp} via ${event.method} ${detailsHtml}</li>`;
+            return `<li><strong>${event.type}</strong> - ${timestamp} via ${event.method || 'N/A'} ${detailsHtml}</li>`;
         }).join('');
 
         this.submissionInfoPane.innerHTML = `
-            <div class="submission-card">
-                <div class="submission-header">
-                    <h3>Submission Details</h3>
-                    <span class="status-badge status-${state}">${stateText}</span>
-                </div>
-                <div class="submission-body">
-                    <p><strong>Email:</strong> ${info.email}</p>
-                    <p><strong>Submission ID:</strong> ${info.id}</p>
-                    <div class="submission-actions">${actionButtons}</div>
-                    <h4>Timeline</h4>
-                    <ul class="timeline">${timelineHtml}</ul>
-                </div>
+            <div class="info-card">
+                <p><strong>License Status:</strong> ${statusHtml}</p>
+                <p><strong>Email:</strong> ${info.email}</p>
+                ${resendButtonHtml}
+                <h4>Timeline</h4>
+                <ul class="timeline">${timelineHtml}</ul>
             </div>`;
         
-        this.attachTimelineEventListeners();
+        this.attachInfoEventListeners();
     }
-
-    attachTimelineEventListeners() {
-        this.submissionInfoPane.querySelectorAll('.view-email-log').forEach(link => {
-            link.addEventListener('click', async (e) => {
-                e.preventDefault();
-                const logId = e.target.dataset.logId;
-                try {
-                    // The user browser needs access to the admin log endpoint, which is fine
-                    // as the endpoint itself is protected.
-                    const response = await fetch(`/admin/api/email_log/${logId}`);
-                    if (!response.ok) throw new Error('Failed to fetch email log.');
-                    const log = await response.json();
-                    const body = log.body_html ? `<div class="email-body-html">${log.body_html}</div>` : `<pre class="email-body-text">${log.body_text}</pre>`;
-                    const content = `
-                        <p><strong>From:</strong> ${log.from}</p>
-                        <p><strong>To:</strong> ${log.to}</p>
-                        <p><strong>Subject:</strong> ${log.subject}</p>
-                        <hr>
-                        ${body}
-                    `;
-                    this.showModal(`Email Log - ${new Date(log.received_at).toLocaleString()}`, content);
-                } catch (error) {
-                    this.showModal('Error', `<p class="error-message">${error.message}</p>`);
-                }
-            });
+    
+    attachInfoEventListeners() {
+        this.submissionInfoPane.querySelectorAll('.resend-btn').forEach(btn => {
+            btn.addEventListener('click', this.handleResendConsent.bind(this));
+        });
+        this.submissionInfoPane.querySelectorAll('.view-log').forEach(link => {
+            link.addEventListener('click', this.handleViewLog.bind(this));
         });
     }
+    
+    async handleResendConsent(e) {
+        const button = e.target;
+        const submissionId = button.dataset.submissionId;
+        const statusSpan = button.parentElement.querySelector('.resend-status');
 
+        if (!confirm('Are you sure you want to resend the consent email for this submission?')) return;
+
+        button.disabled = true;
+        statusSpan.textContent = 'Sending...';
+
+        try {
+            const response = await fetch(`/admin/api/resend-consent/${submissionId}`, {
+                method: 'POST',
+                headers: { 'X-CSRF-Token': this.csrfToken }
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Unknown error');
+            statusSpan.textContent = 'Sent!';
+        } catch (error) {
+            statusSpan.textContent = `Error: ${error.message}`;
+        } finally {
+             setTimeout(() => {
+                if(statusSpan) statusSpan.textContent = '';
+                button.disabled = false;
+            }, 5000);
+        }
+    }
+    
+    async handleViewLog(e) {
+        e.preventDefault();
+        const logId = e.target.dataset.logId;
+        const logType = e.target.dataset.logType; // 'email' or 'link'
+        
+        try {
+            const response = await fetch(`/admin/api/${logType}_log/${logId}`);
+            if (!response.ok) throw new Error(`Failed to fetch ${logType} log.`);
+            const log = await response.json();
+            
+            let content = '';
+            if (logType === 'email') {
+                const body = log.body_html ? `<div class="email-body-html">${log.body_html}</div>` : `<pre class="email-body-text">${log.body_text || ''}</pre>`;
+                content = `
+                    <p><strong>From:</strong> ${log.from_address}</p>
+                    <p><strong>To:</strong> ${log.to_address}</p>
+                    <p><strong>Subject:</strong> ${log.subject}</p><hr>${body}`;
+            } else { // link log
+                content = `<ul>
+                    <li><strong>IP Address:</strong> ${log.ip_address}</li>
+                    <li><strong>User Agent:</strong> ${log.user_agent}</li>
+                    <li><strong>Clicked At:</strong> ${new Date(log.clicked_at).toLocaleString()}</li>
+                </ul>`;
+            }
+            this.showModal(`${logType.charAt(0).toUpperCase() + logType.slice(1)} Details`, content);
+        } catch (error) {
+            this.showModal('Error', `<p class="error-message">${error.message}</p>`);
+        }
+    }
+    
     showModal(title, content) {
-        const modal = document.getElementById(this.config.modalId);
-        const modalTitle = modal.querySelector('.modal-title');
-        const modalBody = modal.querySelector('.modal-body');
-        const modalClose = modal.querySelector('.close-btn');
+        const existingModal = document.getElementById('details-modal');
+        if (existingModal) existingModal.remove();
 
-        if (!modal || !modalTitle || !modalBody || !modalClose) return;
+        const modal = document.createElement('div');
+        modal.id = 'details-modal';
+        modal.className = 'modal-backdrop';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>${title}</h2>
+                    <span class="close-btn">&times;</span>
+                </div>
+                <div class="modal-body">${content}</div>
+            </div>`;
+        
+        document.body.appendChild(modal);
 
-        modalTitle.textContent = title;
-        modalBody.innerHTML = content;
-        modal.style.display = 'block';
-
-        const closeModal = () => modal.style.display = 'none';
-        modalClose.onclick = closeModal;
-        window.onclick = (event) => {
-            if (event.target == modal) closeModal();
+        const closeModal = () => modal.remove();
+        modal.querySelector('.close-btn').onclick = closeModal;
+        modal.onclick = (event) => {
+            if (event.target === modal) closeModal();
         };
+    }
+
+    initLazyLoad(container) {
+        const lazyImages = [].slice.call(container.querySelectorAll("img[data-src]"));
+        if (!lazyImages.length || !('IntersectionObserver' in window)) return;
+        
+        const observer = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.removeAttribute('data-src');
+                    obs.unobserve(img);
+                }
+            });
+        }, { root: null, rootMargin: '200px', threshold: 0.01 });
+
+        lazyImages.forEach(img => observer.observe(img));
+    }
+    
+    scrollToId(id) {
+        const element = this.treePane.querySelector(`[data-build-id="${id}"]`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            element.classList.add('highlight');
+            
+            const summary = element.querySelector('summary');
+            if (summary) {
+                element.open = true;
+                summary.click();
+            }
+            
+            setTimeout(() => element.classList.remove('highlight'), 3000);
+        }
+    }
+
+    setActiveNode(element) {
+        this.treePane.querySelectorAll('.active-node').forEach(node => node.classList.remove('active-node'));
+        if (element) {
+             const parent = element.closest('details, li');
+             if(parent) parent.classList.add('active-node');
+        }
     }
 } 

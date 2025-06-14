@@ -5,119 +5,116 @@ document.addEventListener('DOMContentLoaded', function() {
         accepted: document.getElementById('accepted-filter')
     };
 
-    const adminTreeRenderer = (data, treePane) => {
-        const platformFilter = filters.platform.value;
-        const typeFilter = filters.type.value;
-        const acceptedFilter = filters.accepted.value;
-
-        // The data from the admin API is structured differently, so we process it.
-        // We will assume a flat list of screenshot objects, each with submission_details.
-        // First, let's flatten the complex data structure from the admin endpoint.
-        let allScreenshots = [];
-        for (const platform in data) {
-            for (const type in data[platform]) {
-                for (const date in data[platform][type]) {
-                    allScreenshots.push(...data[platform][type][date]);
-                }
-            }
-        }
-
-        // Apply filters
-        const filteredScreenshots = allScreenshots.filter(sc => {
-            if (platformFilter !== 'all' && sc.platform !== platformFilter) return false;
-            if (typeFilter !== 'all' && sc.type !== typeFilter) return false;
-            if (acceptedFilter === 'all') return true;
-            if (acceptedFilter === 'yes' && sc.acceptance_state === 'accepted') return true;
-            if (acceptedFilter === 'no' && sc.acceptance_state === 'declined') return true;
-            if (acceptedFilter === 'pending' && sc.acceptance_state === 'pending') return true;
-            return false;
-        });
-
-        // Group by Submission -> Build
-        const groupedData = filteredScreenshots.reduce((acc, sc) => {
-            if (!acc[sc.submission_id]) {
-                acc[sc.submission_id] = { ...sc.submission_details, builds: {} };
-            }
-            if (!acc[sc.submission_id].builds[sc.build_id]) {
-                acc[sc.submission_id].builds[sc.build_id] = { platform: sc.platform, type: sc.type, screenshots: [] };
-            }
-            acc[sc.submission_id].builds[sc.build_id].screenshots.push(sc);
-            return acc;
-        }, {});
-
-        // Render the filtered tree
-        treePane.innerHTML = '';
-        if (Object.keys(groupedData).length === 0) {
-            treePane.innerHTML = '<p>No screenshots match the current filters.</p>';
-            return;
-        }
-
-        let treeHtml = '';
-        for (const subId in groupedData) {
-            const sub = groupedData[subId];
-            treeHtml += `
-                <details open>
-                    <summary>Submission ${subId.substring(0, 8)} (${sub.email})</summary>
-                    <ul>
-                        ${Object.values(sub.builds).map(build => `
-                            <li>
-                                <details open>
-                                    <summary>${build.platform} - ${build.type}</summary>
-                                    <ul>
-                                        ${build.screenshots.map(sc => `
-                                            <li>
-                                                <a href="#" class="screenshot-link" data-screenshot-id="${sc.id}">${sc.filename}</a>
-                                            </li>
-                                        `).join('')}
-                                    </ul>
-                                </details>
-                            </li>
-                        `).join('')}
-                    </ul>
-                </details>
-            `;
-        }
-        treePane.innerHTML = treeHtml;
-    };
-    
-    const config = {
-        treePaneId: 'tree-pane',
-        previewPaneId: 'preview-pane',
-        previewImageId: 'preview-image',
-        previewPlaceholderId: 'preview-placeholder',
-        submissionInfoPaneId: 'submission-info',
-        modalId: 'log-modal',
-        dataUrl: '/admin/api/screenshots',
-        treeRenderer: adminTreeRenderer
-    };
-
-    const browser = new ScreenshotBrowser(config);
-    
-    // The main data object for the browser needs to be the one from the instance.
-    // We also need to adapt the buildScreenshotMap for the admin data structure.
-    browser.buildScreenshotMap = (data) => {
-        browser.screenshotDataMap = {};
+    const mapBuilder = (data) => {
+        const map = {};
         for (const platform in data) {
             for (const type in data[platform]) {
                 for (const date in data[platform][type]) {
                     data[platform][type][date].forEach(sc => {
-                        browser.screenshotDataMap[sc.id] = sc;
-                        // Attach submission details to each screenshot for consistency
-                        sc.submission_details = {
-                            id: sc.submission_id,
-                            email: sc.email,
-                            acceptance_state: sc.acceptance_state,
-                            is_withdrawn: sc.is_withdrawn,
-                            events: sc.events,
-                            acceptance_token: sc.acceptance_token // This might not be in admin view, but good to have
-                        };
+                        map[sc.id] = sc;
                     });
                 }
             }
         }
+        return map;
+    };
+
+    const adminTreeRenderer = (data, treePane) => {
+        const platformFilter = filters.platform.value;
+        const typeFilter = filters.type.value;
+        const acceptedFilter = filters.accepted.value;
+        
+        treePane.innerHTML = '';
+        let hasResults = false;
+
+        const createDetails = (summaryText) => {
+            const details = document.createElement('details');
+            details.open = true;
+            const summary = document.createElement('summary');
+            summary.textContent = summaryText;
+            details.appendChild(summary);
+            return details;
+        };
+        
+        for (const platform in data) {
+            if (platformFilter !== 'all' && platform !== platformFilter) continue;
+            const platformDetails = createDetails(platform);
+
+            for (const type in data[platform]) {
+                if (typeFilter !== 'all' && type !== typeFilter) continue;
+                const typeDetails = createDetails(type);
+
+                for (const date in data[platform][type]) {
+                    const screenshots = data[platform][type][date].filter(sc => {
+                        if (acceptedFilter === 'all') return true;
+                        return sc.acceptance_state === acceptedFilter;
+                    });
+
+                    if (screenshots.length > 0) {
+                        const dateDetails = createDetails(date);
+                        const submissions = screenshots.reduce((acc, sc) => {
+                            acc[sc.submission_id] = acc[sc.submission_id] || [];
+                            acc[sc.submission_id].push(sc);
+                            return acc;
+                        }, {});
+
+                        for (const submissionId in submissions) {
+                            const subScreenshots = submissions[submissionId];
+                            const firstSc = subScreenshots[0];
+                            const subLabel = `Submission ${firstSc.submission_id.substring(0, 8)} (${firstSc.email})`;
+                            
+                            const subDetails = createDetails(subLabel);
+                            subDetails.dataset.buildId = firstSc.build_id; // For scrolling
+                            
+                            const summary = subDetails.querySelector('summary');
+                            summary.dataset.groupScreenshots = subScreenshots.map(sc => sc.id).join(',');
+
+                            const scUl = document.createElement('ul');
+                            subScreenshots.forEach(sc => {
+                                const scLi = document.createElement('li');
+                                const link = document.createElement('a');
+                                link.href = '#';
+                                link.className = 'screenshot-link';
+                                link.textContent = sc.filename;
+                                link.dataset.screenshotId = sc.id;
+                                scLi.appendChild(link);
+                                scUl.appendChild(scLi);
+                            });
+
+                            subDetails.appendChild(scUl);
+                            dateDetails.appendChild(subDetails);
+                            hasResults = true;
+                        }
+                        typeDetails.appendChild(dateDetails);
+                    }
+                }
+                if (typeDetails.childElementCount > 1) platformDetails.appendChild(typeDetails);
+            }
+            if (platformDetails.childElementCount > 1) treePane.appendChild(platformDetails);
+        }
+
+        if (!hasResults) {
+            treePane.innerHTML = '<p>No screenshots match the current filters.</p>';
+        }
     };
     
+    const scriptTag = document.getElementById('admin-browser-script');
+    const initialBuildId = scriptTag ? scriptTag.dataset.buildId : null;
+
+    const config = {
+        treePaneId: 'tree-pane',
+        previewPaneId: 'preview-pane',
+        submissionInfoPaneId: 'submission-info',
+        previewContentId: 'preview-content',
+        dataUrl: '/admin/api/screenshots',
+        mapBuilder: mapBuilder,
+        treeRenderer: (data, treePane) => adminTreeRenderer(data, treePane)
+    };
+
+    const browser = new ScreenshotBrowser(config);
+    browser.initialize(initialBuildId);
+    
     Object.values(filters).forEach(filter => {
-        filter.addEventListener('change', () => browser.renderTree(browser.data));
+        filter.addEventListener('change', () => browser.renderTree());
     });
 });
