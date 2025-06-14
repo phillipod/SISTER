@@ -32,7 +32,7 @@ import requests
 from sqlalchemy import or_
 from sqlalchemy import case, func, and_
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from itsdangerous import URLSafeTimedSerializer as Serializer
 
 from .models import (
     db,
@@ -1775,7 +1775,8 @@ def public_email_log_view(log_id):
 
     s = Serializer(current_app.config['SECRET_KEY'])
     try:
-        data = s.loads(token)
+        # The token is valid for 60 seconds from its creation time.
+        data = s.loads(token, max_age=60)
     except Exception: # Catches SignatureExpired, BadSignature, etc.
         return "Invalid or expired token", 403
 
@@ -1811,7 +1812,7 @@ def get_log_access_token(log_id):
     if not (is_admin() or (current_user.is_authenticated and log.submission.email == current_user.email)):
         return jsonify({"error": "Unauthorized"}), 403
 
-    s = Serializer(current_app.config['SECRET_KEY'], expires_in=60) # Token is valid for 60 seconds
-    token = s.dumps({'log_id': str(log.id)}).decode('utf-8')
+    s = Serializer(current_app.config['SECRET_KEY'])
+    token = s.dumps({'log_id': str(log.id)})
     return jsonify({'token': token})
 

@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const platformFilter = filters.platform.value;
         const typeFilter = filters.type.value;
         const acceptedFilter = filters.accepted.value;
-        
+
         treePane.innerHTML = '';
         let hasResults = false;
 
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
             for (const type in data[platform]) {
                 if (typeFilter !== 'all' && type !== typeFilter) continue;
                 const typeDetails = createDetails(type);
-
+                    
                 for (const date in data[platform][type]) {
                     const screenshots = data[platform][type][date].filter(sc => {
                         if (acceptedFilter === 'all') return true;
@@ -69,24 +69,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             const summary = subDetails.querySelector('summary');
                             summary.dataset.groupScreenshots = subScreenshots.map(sc => sc.id).join(',');
 
-                            const scUl = document.createElement('ul');
+                        const scUl = document.createElement('ul');
                             subScreenshots.forEach(sc => {
-                                const scLi = document.createElement('li');
-                                const link = document.createElement('a');
+                            const scLi = document.createElement('li');
+                            const link = document.createElement('a');
                                 link.href = '#';
                                 link.className = 'screenshot-link';
-                                link.textContent = sc.filename;
-                                link.dataset.screenshotId = sc.id;
-                                scLi.appendChild(link);
-                                scUl.appendChild(scLi);
-                            });
+                            link.textContent = sc.filename;
+                            link.dataset.screenshotId = sc.id;
+                            scLi.appendChild(link);
+                            scUl.appendChild(scLi);
+                        });
 
                             subDetails.appendChild(scUl);
                             dateDetails.appendChild(subDetails);
                             hasResults = true;
-                        }
-                        typeDetails.appendChild(dateDetails);
                     }
+                    typeDetails.appendChild(dateDetails);
+                }
                 }
                 if (typeDetails.childElementCount > 1) platformDetails.appendChild(typeDetails);
             }
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const browser = new ScreenshotBrowser(config);
     browser.initialize(initialBuildId);
-    
+
     Object.values(filters).forEach(filter => {
         filter.addEventListener('change', () => browser.renderTree());
     });
