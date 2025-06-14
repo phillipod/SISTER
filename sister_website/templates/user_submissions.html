@@ -12,9 +12,6 @@
 
     <div class="table-toolbar">
         <div class="toolbar-group">
-            <i id="toggle-filters-btn" class="fas fa-filter toolbar-icon" title="Toggle Filters"></i>
-        </div>
-        <div class="toolbar-group">
             <div class="filterable">
                 <i id="tree-options-btn" class="fas fa-cogs toolbar-icon" title="Tree Display Options"></i>
                 <div id="tree-options-popup" class="filter-popup">
@@ -29,9 +26,12 @@
                 </div>
             </div>
         </div>
+        <div class="toolbar-group">
+            <i id="toggle-filters-btn" class="fas fa-filter toolbar-icon" title="Toggle Filters"></i>
+        </div>
     </div>
 
-    <div class="screenshot-filters browser-filters" style="display: none;">
+    <div class="screenshot-filters browser-filters hidden">
         <form id="filter-form" class="filters-grid">
             <div class="form-group">
                 <label for="platform-filter">Platform</label>

@@ -164,8 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     toggleFiltersBtn.addEventListener('click', () => {
-        const isHidden = filtersContainer.style.display === 'none';
-        filtersContainer.style.display = isHidden ? 'block' : 'none';
+        filtersContainer.classList.toggle('hidden');
     });
 
     openPopupBtn.addEventListener('click', (event) => {
