@@ -241,6 +241,7 @@ class ScreenshotBrowser {
         e.preventDefault();
         const logId = e.target.dataset.logId;
         const logType = e.target.dataset.logType; // 'email' or 'link'
+        let urlToRevoke = null;
         
         try {
             const response = await fetch(`/admin/api/${logType}_log/${logId}`);
@@ -250,20 +251,22 @@ class ScreenshotBrowser {
             let content = '';
             if (logType === 'email') {
                 // To prevent CSP violations from inline styles in emails, we render the body
-                // inside a sandboxed iframe using srcdoc.
+                // inside a sandboxed iframe with its own origin created from a Blob URL.
                 const iframeStyles = `<style>
                     body { font-family: sans-serif; color: #333; margin: 1rem; } 
                     pre { white-space: pre-wrap; word-wrap: break-word; font-size: 14px; }
                 </style>`;
                 const bodyContent = log.body_html || `<pre>${log.body_text || 'No content'}</pre>`;
-                const finalHtml = iframeStyles + bodyContent;
-                const escapedBody = finalHtml.replace(/"/g, '&quot;');
+                const finalHtml = `<!DOCTYPE html><html><head>${iframeStyles}</head><body>${bodyContent}</body></html>`;
+
+                const blob = new Blob([finalHtml], { type: 'text/html' });
+                urlToRevoke = URL.createObjectURL(blob);
                 
                 content = `
                     <p><strong>From:</strong> ${log.from_address || log.from}</p>
                     <p><strong>To:</strong> ${log.to_address || log.to}</p>
                     <p><strong>Subject:</strong> ${log.subject}</p><hr>
-                    <iframe class="email-body-iframe" srcdoc="${escapedBody}"></iframe>`;
+                    <iframe class="email-body-iframe" src="${urlToRevoke}"></iframe>`;
             } else { // link log
                 content = `<ul>
                     <li><strong>IP Address:</strong> ${log.ip_address}</li>
@@ -271,13 +274,16 @@ class ScreenshotBrowser {
                     <li><strong>Clicked At:</strong> ${new Date(log.clicked_at).toLocaleString()}</li>
                 </ul>`;
             }
-            this.showModal(`${logType.charAt(0).toUpperCase() + logType.slice(1)} Details`, content);
+            this.showModal(`${logType.charAt(0).toUpperCase() + logType.slice(1)} Details`, content, urlToRevoke);
         } catch (error) {
             this.showModal('Error', `<p class="error-message">${error.message}</p>`);
+            if (urlToRevoke) {
+                URL.revokeObjectURL(urlToRevoke); // Clean up on error too
+            }
         }
     }
     
-    showModal(title, content) {
+    showModal(title, content, urlToRevoke = null) {
         const existingModal = document.getElementById('details-modal');
         if (existingModal) existingModal.remove();
 
@@ -295,7 +301,12 @@ class ScreenshotBrowser {
         
         document.body.appendChild(modal);
 
-        const closeModal = () => modal.remove();
+        const closeModal = () => {
+            modal.remove();
+            if (urlToRevoke) {
+                URL.revokeObjectURL(urlToRevoke);
+            }
+        };
         modal.querySelector('.close-btn').onclick = closeModal;
         modal.onclick = (event) => {
             if (event.target === modal) closeModal();
