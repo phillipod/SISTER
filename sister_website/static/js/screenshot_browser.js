@@ -219,28 +219,25 @@ class ScreenshotBrowser {
             return `<li><strong>${event.type}</strong> - ${timestamp} via ${event.method || 'N/A'} ${detailsHtml}</li>`;
         }).join('');
 
-        this.submissionInfoPane.innerHTML = `
-            <div class="info-card">
-                <p><strong>License Status:</strong> ${statusHtml}</p>
-                <p><strong>Email:</strong> ${info.email}</p>
-                ${actionButtonsHtml}
-                ${resendButtonHtml}
-                <h4>Timeline</h4>
-                <ul class="timeline">${timelineHtml}</ul>
-            </div>`;
-        
-        this.attachInfoEventListeners();
-    }
-    
-    attachInfoEventListeners() {
-        this.submissionInfoPane.querySelectorAll('.resend-btn').forEach(btn => {
+        const container = document.createElement('div');
+        container.className = 'info-card';
+        container.innerHTML = `
+            <p><strong>License Status:</strong> ${statusHtml}</p>
+            <p><strong>Email:</strong> ${info.email}</p>
+            ${actionButtonsHtml}
+            ${resendButtonHtml}
+            <h4>Timeline</h4>
+            <ul class="timeline">${timelineHtml}</ul>
+        `;
+
+        this.submissionInfoPane.innerHTML = '';
+        this.submissionInfoPane.appendChild(container);
+
+        // Attach event listeners for any actions within the info pane
+        container.querySelector('.events-list')?.addEventListener('click', this.handleViewLog.bind(this));
+        container.querySelector('.license-actions')?.addEventListener('click', this.handleLicenseAction.bind(this));
+        container.querySelectorAll('.resend-btn').forEach(btn => {
             btn.addEventListener('click', this.handleResendConsent.bind(this));
-        });
-        this.submissionInfoPane.querySelectorAll('.view-log').forEach(link => {
-            link.addEventListener('click', this.handleViewLog.bind(this));
-        });
-        this.submissionInfoPane.querySelectorAll('.action-btn').forEach(btn => {
-            btn.addEventListener('click', this.handleLicenseAction.bind(this));
         });
     }
     
@@ -273,14 +270,12 @@ class ScreenshotBrowser {
     }
     
     async handleViewLog(e) {
-        // Check if the clicked element is a log link. If not, do nothing.
-        if (!e.target.matches('a.view-log-link')) {
-            return;
-        }
+        const link = e.target.closest('a.view-log-link');
+        if (!link) return;
+        
         e.preventDefault();
-
-        const logId = e.target.dataset.logId;
-        const logType = e.target.dataset.logType; // 'email' or 'link'
+        const logId = link.dataset.logId;
+        const logType = link.dataset.logType; // 'email' or 'link'
         
         try {
             if (logType === 'email') {
@@ -308,25 +303,26 @@ class ScreenshotBrowser {
                 
                 this.showModal('Email Details', content);
 
-            } else { // Handle link log (which doesn't need a token)
+            } else if (logType === 'link') {
                 const logUrl = this.api.linkLog.replace('{log_id}', logId);
-                const response = await fetch(logUrl);
-                if (!response.ok) throw new Error(`Failed to fetch ${logType} log.`);
-                const log = await response.json();
-                
-                const content = `<ul>
-                    <li><strong>IP Address:</strong> ${log.ip_address}</li>
-                    <li><strong>User Agent:</strong> ${log.user_agent}</li>
-                    <li><strong>Clicked At:</strong> ${new Date(log.clicked_at).toLocaleString()}</li>
-                </ul>`;
+                const logRes = await fetch(logUrl);
 
-                this.showModal('Link Details', content);
+                if (!logRes.ok) throw new Error('Could not get log details.');
+                const log = await logRes.json();
+                
+                const content = `
+                    <p><strong>IP Address:</strong> ${log.ip_address || 'N/A'}</p>
+                    <p><strong>User Agent:</strong> ${log.user_agent || 'N/A'}</p>
+                    <p><strong>Clicked At:</strong> ${new Date(log.clicked_at).toLocaleString()}</p>`;
+                
+                this.showModal('Link Click Details', content);
             }
         } catch (error) {
-            this.showModal('Error', `<p class="error-message">${error.message}</p>`);
+            console.error('Error fetching log details:', error);
+            this.showModal('Error', `<p>Could not load log details: ${error.message}</p>`);
         }
     }
-    
+
     showModal(title, content) {
         const existingModal = document.getElementById('details-modal');
         if (existingModal) existingModal.remove();
