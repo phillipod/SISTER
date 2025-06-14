@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 screenshotData = data;
                 buildAndRenderTree();
-                resetPreview();
             })
             .catch(error => {
                 treePane.innerHTML = `<div class="error-message">${error.message}</div>`;
@@ -194,7 +193,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('[Debug] handleGroupClick: Could not find the preview-content container!');
             return;
         }
-        console.log('[Debug] handleGroupClick: Found preview-content container. Clearing its innerHTML.');
         previewContent.innerHTML = ''; 
 
         const grid = document.createElement('div');
@@ -230,10 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
             grid.appendChild(img);
         });
 
-        console.log('[Debug] handleGroupClick: Grid created. It has', grid.childElementCount, 'images.');
-        console.log('[Debug] handleGroupClick: Appending grid to preview-content.');
         previewContent.appendChild(grid);
-        console.log('[Debug] handleGroupClick: After append, preview-content innerHTML is:', previewContent.innerHTML);
 
         // Render submission info for the group
         if (ids.length > 0) {
