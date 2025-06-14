@@ -524,7 +524,7 @@ class HashIndex:
             
             target_hash = hasher(masked, size=size, grayscale=grayscale)
         except Exception as e:
-            raise HashIndexFindError("Failed to prepare image for hashing") from e
+            raise HashIndexError("Failed to prepare image for hashing") from e
 
         # print(f"Target hash: {target_hash}, max_distance: {max_distance}, top_n: {top_n}")
         return str(target_hash)

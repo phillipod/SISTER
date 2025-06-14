@@ -186,10 +186,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleGroupClick(e) {
+        console.log('[Debug] handleGroupClick: Event triggered.', e.target);
         const idsCsv = e.target.dataset.groupScreenshots;
-        if (!idsCsv) return;
+        console.log('[Debug] handleGroupClick: Found screenshot IDs string:', idsCsv);
+        if (!idsCsv) {
+            console.log('[Debug] handleGroupClick: No screenshot IDs found, exiting.');
+            return;
+        }
 
         const ids = idsCsv.split(',');
+        console.log('[Debug] handleGroupClick: Parsed screenshot IDs:', ids);
 
         // Remove single preview image and any previous grid
         previewImage.classList.add('hidden');
@@ -202,6 +208,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const grid = document.createElement('div');
         grid.id = 'preview-grid';
         grid.classList.add('preview-grid');
+
+        console.log(`[Debug] handleGroupClick: Creating image grid for ${ids.length} images.`);
 
         ids.forEach(id => {
             const img = document.createElement('img');
@@ -224,6 +232,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         document.getElementById('preview-pane').appendChild(grid);
+        console.log('[Debug] handleGroupClick: Appended grid to preview pane.');
 
         // Render submission info for the group
         if (ids.length > 0) {
