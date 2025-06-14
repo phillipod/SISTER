@@ -5,18 +5,12 @@ document.addEventListener('DOMContentLoaded', function() {
         accepted: document.getElementById('accepted-filter')
     };
 
-    const groupBy = {
-        platform: document.getElementById('group-by-platform'),
-        type: document.getElementById('group-by-type'),
-        user: document.getElementById('group-by-user')
-    };
-
     const popup = document.getElementById('tree-options-popup');
     const openPopupBtn = document.getElementById('tree-options-btn');
-    const applyBtn = document.getElementById('apply-tree-options');
 
     const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
     const filtersContainer = document.querySelector('.screenshot-filters');
+    const groupByFieldset = document.getElementById('group-by-fieldset');
 
     const mapBuilder = (data) => {
         const map = {};
@@ -47,9 +41,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const groupOrder = [];
-        if (groupBy.platform.checked) groupOrder.push('platform');
-        if (groupBy.type.checked) groupOrder.push('type');
-        if (groupBy.user.checked) groupOrder.push('email');
+        const groupByCheckboxes = groupByFieldset.querySelectorAll('input[type="checkbox"]');
+        groupByCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                groupOrder.push(checkbox.dataset.groupKey);
+            }
+        });
         groupOrder.push('date');
 
         const hierarchicalData = {};
@@ -163,6 +160,18 @@ document.addEventListener('DOMContentLoaded', function() {
         filter.addEventListener('change', () => browser.renderTree());
     });
 
+    // Initialize SortableJS for drag-and-drop grouping
+    new Sortable(groupByFieldset, {
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        onEnd: () => browser.renderTree()
+    });
+
+    // Add listeners to checkboxes to re-render on check/uncheck
+    groupByFieldset.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', () => browser.renderTree());
+    });
+
     toggleFiltersBtn.addEventListener('click', () => {
         filtersContainer.classList.toggle('hidden');
     });
@@ -170,11 +179,6 @@ document.addEventListener('DOMContentLoaded', function() {
     openPopupBtn.addEventListener('click', (event) => {
         event.stopPropagation();
         popup.classList.toggle('active');
-    });
-
-    applyBtn.addEventListener('click', () => {
-        popup.classList.remove('active');
-        browser.renderTree();
     });
 
     document.addEventListener('click', (event) => {

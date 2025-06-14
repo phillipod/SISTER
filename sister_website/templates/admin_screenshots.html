@@ -16,15 +16,12 @@
             <div class="filterable">
                 <i id="tree-options-btn" class="fas fa-cogs toolbar-icon" title="Tree Display Options"></i>
                 <div id="tree-options-popup" class="filter-popup">
-                    <fieldset>
+                    <fieldset id="group-by-fieldset">
                         <legend>Group By</legend>
-                        <label><input type="checkbox" id="group-by-platform" checked> Platform</label>
-                        <label><input type="checkbox" id="group-by-type" checked> Type</label>
-                        <label><input type="checkbox" id="group-by-user"> User</label>
+                        <label class="draggable-label"><input type="checkbox" data-group-key="platform" checked> Platform</label>
+                        <label class="draggable-label"><input type="checkbox" data-group-key="type" checked> Type</label>
+                        <label class="draggable-label"><input type="checkbox" data-group-key="user"> User</label>
                     </fieldset>
-                    <div class="popup-footer">
-                        <button id="apply-tree-options" class="btn btn-sm">Apply</button>
-                    </div>
                 </div>
             </div>
         </div>

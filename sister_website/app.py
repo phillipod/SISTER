@@ -1606,6 +1606,7 @@ def set_security_headers(resp):
 
     csp = {
         'default-src': "'self'",
+        'script-src': "'self' https://cdn.jsdelivr.net",
         'style-src': "'self' https://cdnjs.cloudflare.com", # Reverted to secure default
         'font-src': "'self' https://cdnjs.cloudflare.com",
         'frame-src': "blob: https://logviewer.sto-tools.org",

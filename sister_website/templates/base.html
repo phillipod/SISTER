@@ -8,7 +8,23 @@
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/icon_128x128.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     {% block additional_styles %}{% endblock %}
+    <style>
+        .sortable-ghost {
+            opacity: 0.4;
+            background-color: #c8ebfb;
+        }
+        .draggable-label {
+            cursor: move;
+            cursor: -webkit-grab;
+            cursor: grab;
+        }
+        .draggable-label:active {
+            cursor: -webkit-grabbing;
+            cursor: grabbing;
+        }
+    </style>
 </head>
 <body>
     <div class="container">

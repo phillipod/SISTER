@@ -1,7 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const groupByPlatformCheckbox = document.getElementById('group-by-platform');
-    const groupByTypeCheckbox = document.getElementById('group-by-type');
-
     const filters = {
         platform: document.getElementById('platform-filter'),
         type: document.getElementById('type-filter'),
@@ -10,10 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const popup = document.getElementById('tree-options-popup');
     const openPopupBtn = document.getElementById('tree-options-btn');
-    const applyBtn = document.getElementById('apply-tree-options');
 
     const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
     const filtersContainer = document.querySelector('.screenshot-filters');
+    const groupByFieldset = document.getElementById('group-by-fieldset');
 
     // This map builder is for the user data structure, which is a flat list of submissions.
     const userMapBuilder = (data) => {
@@ -60,11 +57,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const groupOrder = [];
-        if (groupByPlatformCheckbox.checked) groupOrder.push('platform');
-        if (groupByTypeCheckbox.checked) groupOrder.push('type');
+        const groupByCheckboxes = groupByFieldset.querySelectorAll('input[type="checkbox"]');
+        groupByCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                groupOrder.push(checkbox.dataset.groupKey);
+            }
+        });
         groupOrder.push('date'); // Date is always a grouping level.
 
-        // 1. Transform the flat submission list into a dynamic hierarchical structure.
+        // 2. Transform the flat submission list into a dynamic hierarchical structure.
         const hierarchicalData = {};
         filteredData.forEach(sub => {
             const dateStr = new Date(sub.created_at).toISOString().split('T')[0];
@@ -104,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        // 2. Render the tree from the hierarchical data.
+        // 3. Render the tree from the hierarchical data.
         const createDetails = (summaryText, parentElement, allScreenshots) => {
             const details = document.createElement('details');
             details.open = true;
@@ -200,6 +201,18 @@ document.addEventListener('DOMContentLoaded', () => {
         filter.addEventListener('change', () => browser.renderTree());
     });
 
+    // Initialize SortableJS for drag-and-drop grouping
+    new Sortable(groupByFieldset, {
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        onEnd: () => browser.renderTree()
+    });
+
+    // Add listeners to checkboxes to re-render on check/uncheck
+    groupByFieldset.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', () => browser.renderTree());
+    });
+
     toggleFiltersBtn.addEventListener('click', () => {
         filtersContainer.classList.toggle('hidden');
     });
@@ -207,11 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
     openPopupBtn.addEventListener('click', (event) => {
         event.stopPropagation();
         popup.classList.toggle('active');
-    });
-
-    applyBtn.addEventListener('click', () => {
-        popup.classList.remove('active');
-        browser.renderTree();
     });
 
     document.addEventListener('click', (event) => {
@@ -222,11 +230,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     popup.addEventListener('click', (event) => {
         event.stopPropagation();
-    });
-
-    [groupByPlatformCheckbox, groupByTypeCheckbox].forEach(checkbox => {
-        checkbox.addEventListener('change', () => {
-            browser.renderTree();
-        });
     });
 });
