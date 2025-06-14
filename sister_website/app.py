@@ -1310,7 +1310,7 @@ def admin_dataset_labels():
         return redirect(url_for('admin_dataset_labels'))
     
     labels = DatasetLabel.query.order_by(DatasetLabel.name).all()
-    return render_template('admin_dataset_labels.html', form=form, labels=labels, title="Manage Dataset Labels")
+    return render_template('admin_dataset_labels.html', form=form, labels=labels, title="Manage Dataset Labels", active_page='admin_dataset_labels')
 
 @app.route('/admin/dataset-labels/edit/<int:label_id>', methods=['GET', 'POST'])
 def edit_dataset_label(label_id):
@@ -1334,7 +1334,7 @@ def edit_dataset_label(label_id):
         flash('Dataset label updated successfully.', 'success')
         return redirect(url_for('admin_dataset_labels'))
     
-    return render_template('admin_edit_dataset_label.html', form=form, label=label, title="Edit Dataset Label")
+    return render_template('admin_edit_dataset_label.html', form=form, label=label, title="Edit Dataset Label", active_page='admin_dataset_labels')
 
 @app.route('/admin/dataset-labels/toggle-active/<int:label_id>', methods=['POST'])
 def toggle_dataset_label_active(label_id):
@@ -1368,7 +1368,8 @@ def dataset_manager():
         builds=builds_pagination.items,
         pagination=builds_pagination,
         labels=active_labels,
-        title="Dataset Manager"
+        title="Dataset Manager",
+        active_page='dataset_manager'
     )
 
 @app.route('/admin/api/builds/<build_id>/set-label', methods=['POST'])
