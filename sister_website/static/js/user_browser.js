@@ -4,12 +4,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const filters = {
         platform: document.getElementById('platform-filter'),
-        type: document.getElementById('type-filter')
+        type: document.getElementById('type-filter'),
+        accepted: document.getElementById('accepted-filter')
     };
 
     const popup = document.getElementById('tree-options-popup');
     const openPopupBtn = document.getElementById('tree-options-btn');
     const applyBtn = document.getElementById('apply-tree-options');
+
+    const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
+    const filtersContainer = document.querySelector('.screenshot-filters');
 
     // This map builder is for the user data structure, which is a flat list of submissions.
     const userMapBuilder = (data) => {
@@ -32,8 +36,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Filter data based on dropdowns
         const platformFilter = filters.platform.value;
         const typeFilter = filters.type.value;
+        const acceptedFilter = filters.accepted.value;
 
-        const filteredData = data.map(sub => {
+        const filteredData = data.filter(sub => {
+            // Filter by license status first
+            return acceptedFilter === 'all' || sub.acceptance_state === acceptedFilter;
+        }).map(sub => {
+            // Then filter the builds within the matching submissions
             const newSub = {...sub, builds: []};
             sub.builds.forEach(build => {
                 const platformMatch = platformFilter === 'all' || build.platform === platformFilter;
@@ -189,6 +198,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Re-render tree when a filter is changed
     Object.values(filters).forEach(filter => {
         filter.addEventListener('change', () => browser.renderTree());
+    });
+
+    toggleFiltersBtn.addEventListener('click', () => {
+        const isHidden = filtersContainer.style.display === 'none';
+        filtersContainer.style.display = isHidden ? 'block' : 'none';
     });
 
     openPopupBtn.addEventListener('click', (event) => {

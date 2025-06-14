@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const openPopupBtn = document.getElementById('tree-options-btn');
     const applyBtn = document.getElementById('apply-tree-options');
 
+    const toggleFiltersBtn = document.getElementById('toggle-filters-btn');
+    const filtersContainer = document.querySelector('.screenshot-filters');
+
     const mapBuilder = (data) => {
         const map = {};
         if (!data) return map;
@@ -158,6 +161,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     Object.values(filters).forEach(filter => {
         filter.addEventListener('change', () => browser.renderTree());
+    });
+
+    toggleFiltersBtn.addEventListener('click', () => {
+        const isHidden = filtersContainer.style.display === 'none';
+        filtersContainer.style.display = isHidden ? 'block' : 'none';
     });
 
     openPopupBtn.addEventListener('click', (event) => {
