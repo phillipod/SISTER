@@ -266,7 +266,7 @@ class ScreenshotBrowser {
                     <p><strong>From:</strong> ${log.from_address || log.from}</p>
                     <p><strong>To:</strong> ${log.to_address || log.to}</p>
                     <p><strong>Subject:</strong> ${log.subject}</p><hr>
-                    <iframe class="email-body-iframe" src="${urlToRevoke}"></iframe>`;
+                    <iframe class="email-body-iframe" src="${urlToRevoke}" sandbox></iframe>`;
             } else { // link log
                 content = `<ul>
                     <li><strong>IP Address:</strong> ${log.ip_address}</li>
