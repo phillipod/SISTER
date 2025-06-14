@@ -106,9 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // 3. Render the tree from the hierarchical data.
-        const createDetails = (summaryText, parentElement, allScreenshots) => {
+        const createDetails = (summaryText, parentElement, allScreenshots, depth = 0) => {
             const details = document.createElement('details');
             details.open = true;
+            details.classList.add(`tree-depth-${depth}`);
             const summary = document.createElement('summary');
             const summarySpan = document.createElement('span');
             summarySpan.textContent = summaryText;
@@ -123,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return details;
         };
 
-        const renderNode = (node, parentElement) => {
+        const renderNode = (node, parentElement, depth = 0) => {
             for (const key in node) {
                 const childNode = node[key];
                 if (Array.isArray(childNode)) { // Leaf nodes (screenshot arrays)
@@ -138,9 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const subScreenshots = submissions[subId];
                         const firstSc = subScreenshots[0];
                         const subLabel = `Submission ${firstSc.submission_id.substring(0, 8)}`;
-                        const subDetails = createDetails(subLabel, parentElement, subScreenshots);
+                        const subDetails = createDetails(subLabel, parentElement, subScreenshots, depth + 1);
                         
                         const scUl = document.createElement('ul');
+                        scUl.classList.add(`tree-depth-${depth + 2}`);
                         subScreenshots.forEach(sc => {
                             const scLi = document.createElement('li');
                             const link = document.createElement('a');
@@ -155,8 +157,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } else { // It's a grouping node
                     const allScreenshotsInGroup = getAllScreenshots(childNode);
-                    const details = createDetails(key, parentElement, allScreenshotsInGroup);
-                    renderNode(childNode, details);
+                    const details = createDetails(key, parentElement, allScreenshotsInGroup, depth);
+                    renderNode(childNode, details, depth + 1);
                 }
             }
         };

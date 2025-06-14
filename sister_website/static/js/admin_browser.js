@@ -66,9 +66,10 @@ document.addEventListener('DOMContentLoaded', function() {
             currentLevel[sc.submission_id].push(sc);
         });
 
-        const createDetails = (summaryText, parentElement, allScreenshots) => {
+        const createDetails = (summaryText, parentElement, allScreenshots, depth = 0) => {
             const details = document.createElement('details');
             details.open = true;
+            details.classList.add(`tree-depth-${depth}`);
             const summary = document.createElement('summary');
             const summarySpan = document.createElement('span');
             summarySpan.textContent = summaryText;
@@ -83,23 +84,24 @@ document.addEventListener('DOMContentLoaded', function() {
             return details;
         };
 
-        const renderNode = (node, parentElement) => {
+        const renderNode = (node, parentElement, depth = 0) => {
             for (const key in node) {
                 const childNode = node[key];
                 
                 const isSubmissionContainer = Object.values(childNode).every(val => Array.isArray(val));
 
                 if (isSubmissionContainer) {
-                    const dateDetails = createDetails(key, parentElement, getAllScreenshots(childNode));
+                    const dateDetails = createDetails(key, parentElement, getAllScreenshots(childNode), depth);
                      for (const subId in childNode) {
                         const subScreenshots = childNode[subId];
                         if (subScreenshots.length > 0) {
                             const firstSc = subScreenshots[0];
                             const subLabel = `Submission ${firstSc.submission_id.substring(0, 8)}`;
-                            const subDetails = createDetails(subLabel, dateDetails, subScreenshots);
+                            const subDetails = createDetails(subLabel, dateDetails, subScreenshots, depth + 1);
                             subDetails.dataset.buildId = firstSc.build_id;
 
                             const scUl = document.createElement('ul');
+                            scUl.classList.add(`tree-depth-${depth + 2}`);
                             subScreenshots.forEach(sc => {
                                 const scLi = document.createElement('li');
                                 const link = document.createElement('a');
@@ -114,8 +116,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 } else {
-                    const details = createDetails(key, parentElement, getAllScreenshots(childNode));
-                    renderNode(childNode, details);
+                    const details = createDetails(key, parentElement, getAllScreenshots(childNode), depth);
+                    renderNode(childNode, details, depth + 1);
                 }
             }
         };

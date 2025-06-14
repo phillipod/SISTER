@@ -100,8 +100,29 @@
 
 .tree-container ul {
     list-style: none;
-    padding-left: 1rem;
+    padding-left: 0;
     margin-top: 0.5rem;
+}
+
+/* Consistent indentation based on logical depth, not HTML nesting */
+.tree-container .tree-depth-0 {
+    padding-left: 0;
+}
+
+.tree-container .tree-depth-1 {
+    padding-left: 1rem;
+}
+
+.tree-container .tree-depth-2 {
+    padding-left: 2rem;
+}
+
+.tree-container .tree-depth-3 {
+    padding-left: 3rem;
+}
+
+.tree-container .tree-depth-4 {
+    padding-left: 4rem;
 }
 
 .tree-container a {
