@@ -234,14 +234,14 @@ class ScreenshotBrowser {
         this.submissionInfoPane.appendChild(container);
 
         // Attach event listeners for any actions within the info pane
-        container.querySelector('.events-list')?.addEventListener('click', this.handleViewLog.bind(this));
-        container.querySelector('.license-actions')?.addEventListener('click', this.handleLicenseAction.bind(this));
-        container.querySelectorAll('.resend-btn').forEach(btn => {
-            btn.addEventListener('click', this.handleResendConsent.bind(this));
-        });
+        this.submissionInfoPane.addEventListener('click', this.handleViewLog.bind(this));
+        this.submissionInfoPane.addEventListener('click', this.handleLicenseAction.bind(this));
+        this.submissionInfoPane.addEventListener('click', this.handleResendConsent.bind(this));
     }
     
     async handleResendConsent(e) {
+        if (!e.target.matches('.resend-btn')) return;
+
         const button = e.target;
         const submissionId = button.dataset.submissionId;
         const statusSpan = button.parentElement.querySelector('.resend-status');
@@ -270,6 +270,8 @@ class ScreenshotBrowser {
     }
     
     async handleViewLog(e) {
+        if (!e.target.matches('a.view-log-link')) return;
+
         console.log('handleViewLog triggered.', e);
         const link = e.target.closest('a.view-log-link');
         console.log('Found link element:', link);
@@ -411,6 +413,8 @@ class ScreenshotBrowser {
     }
 
     async handleLicenseAction(e) {
+        if (!e.target.matches('.action-btn')) return;
+
         const button = e.target;
         const action = button.dataset.action;
         const token = button.dataset.token;
