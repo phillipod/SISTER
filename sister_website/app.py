@@ -855,13 +855,7 @@ def admin_screenshots_data():
         if not sub.builds:
             continue
         
-        # We only care about the latest build for display purpose in the tree
-        latest_build = max(sub.builds, key=lambda b: b.created_at)
-
-        platform = latest_build.platform or "Unknown"
-        sc_type = latest_build.type or "Unknown"
-
-        # Events
+        # Events are at the submission level, so we prepare them once.
         events = []
         events.append({"type": "Submitted", "timestamp": sub.created_at.isoformat(), "method": "Web Form"})
         
@@ -911,25 +905,29 @@ def admin_screenshots_data():
 
         events.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')))
 
+        # Now, iterate over all builds within the submission
+        for build in sub.builds:
+            platform = build.platform or "Unknown"
+            sc_type = build.type or "Unknown"
 
-        screenshots_info = [{
-            'id': sc.id,
-            'filename': sc.filename,
-            'build_id': str(latest_build.id),
-            'submission_id': str(sub.id),
-            'submission_created': sub.created_at.isoformat(),
-            'is_accepted': sub.is_accepted,
-            'acceptance_state': sub.acceptance_state.value,
-            'is_withdrawn': sub.is_withdrawn,
-            'email': sub.email,
-            'events': events
-        } for sc in latest_build.screenshots]
+            screenshots_info = [{
+                'id': sc.id,
+                'filename': sc.filename,
+                'build_id': str(build.id),
+                'submission_id': str(sub.id),
+                'submission_created': sub.created_at.isoformat(),
+                'is_accepted': sub.is_accepted,
+                'acceptance_state': sub.acceptance_state.value,
+                'is_withdrawn': sub.is_withdrawn,
+                'email': sub.email,
+                'events': events
+            } for sc in build.screenshots]
 
-        if not screenshots_info:
-            continue
+            if not screenshots_info:
+                continue
 
-        date_str = sub.created_at.strftime('%Y-%m-%d')
-        data_structured.setdefault(platform, {}).setdefault(sc_type, {}).setdefault(date_str, []).extend(screenshots_info)
+            date_str = sub.created_at.strftime('%Y-%m-%d')
+            data_structured.setdefault(platform, {}).setdefault(sc_type, {}).setdefault(date_str, []).extend(screenshots_info)
         
     return jsonify(data_structured)
 
