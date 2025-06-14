@@ -141,12 +141,33 @@ class ScreenshotBrowser {
             img.classList.add('preview-grid-img');
             img.dataset.screenshotId = id;
             
-            // When a tile is clicked, trigger the corresponding tree link click
+            // When a tile is clicked, scroll to build and then select the screenshot
             img.addEventListener('click', () => {
-                const link = this.treePane.querySelector(`a[data-screenshot-id="${id}"]`);
-                if (link) {
-                    link.scrollIntoView({behavior: 'smooth', block: 'center'});
-                    link.click();
+                const screenshotInfo = this.screenshotDataMap[id];
+                if (screenshotInfo) {
+                    // Extract build_id from screenshot data
+                    const buildId = screenshotInfo.build_id || 
+                                   (screenshotInfo.submission_details && screenshotInfo.submission_details.build_id);
+                    
+                    if (buildId) {
+                        // First scroll to and expand the build
+                        this.scrollToId(buildId);
+                        
+                        // Then after a brief delay, select the specific screenshot
+                        setTimeout(() => {
+                            const link = this.treePane.querySelector(`a[data-screenshot-id="${id}"]`);
+                            if (link) {
+                                link.click();
+                            }
+                        }, 500); // Wait for scroll animation to complete
+                    } else {
+                        // Fallback to original behavior if no build_id found
+                        const link = this.treePane.querySelector(`a[data-screenshot-id="${id}"]`);
+                        if (link) {
+                            link.scrollIntoView({behavior: 'smooth', block: 'center'});
+                            link.click();
+                        }
+                    }
                 }
             });
 
