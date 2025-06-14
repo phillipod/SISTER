@@ -270,10 +270,10 @@ class ScreenshotBrowser {
     }
     
     async handleViewLog(e) {
-        if (!e.target.matches('a.view-log-link')) return;
+        if (!e.target.matches('a.view-log')) return;
 
         console.log('handleViewLog triggered.', e);
-        const link = e.target.closest('a.view-log-link');
+        const link = e.target.closest('a.view-log');
         console.log('Found link element:', link);
         if (!link) return;
         
