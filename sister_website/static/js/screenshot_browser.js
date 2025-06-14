@@ -64,20 +64,22 @@ class ScreenshotBrowser {
     }
     
     handleTreeClick(event) {
-        const summary = event.target.closest('summary');
         const link = event.target.closest('a.screenshot-link');
-
         if (link) {
             event.preventDefault();
             this.handleScreenshotClick(link);
             return;
         }
 
+        // The user might click the summary, the span, or the twisty.
+        // We find the parent summary first, then look for the span with data inside it.
+        const summary = event.target.closest('summary');
         if (summary) {
-            // Let the default <details> toggle happen.
-            // Only act if it's a group summary.
-            if (summary.dataset.groupScreenshots) {
-                this.handleGroupClick(summary, !event.isTrusted);
+            const dataSpan = summary.querySelector('span[data-group-screenshots]');
+            if (dataSpan) {
+                // Let the default <details> toggle happen.
+                // Pass the span with the data to the handler.
+                this.handleGroupClick(dataSpan, !event.isTrusted);
             }
         }
     }
@@ -96,9 +98,9 @@ class ScreenshotBrowser {
         this.renderSubmissionInfo(screenshotInfo.submission_details || screenshotInfo);
     }
     
-    handleGroupClick(summary, isProgrammatic = false) {
-        this.setActiveNode(summary);
-        const idsCsv = summary.dataset.groupScreenshots;
+    handleGroupClick(dataElement, isProgrammatic = false) {
+        this.setActiveNode(dataElement);
+        const idsCsv = dataElement.dataset.groupScreenshots;
         if (!idsCsv) return;
 
         const ids = idsCsv.split(',');

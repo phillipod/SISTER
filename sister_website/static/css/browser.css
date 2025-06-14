@@ -54,7 +54,12 @@
     margin-bottom: 0.5rem;
 }
 
+/*
+  The summary is a flex container to align our custom twisty and the text span.
+  We hide the default browser marker.
+*/
 .tree-container summary {
+    list-style: none; /* Remove default marker */
     cursor: pointer;
     font-weight: bold;
     padding: 0.25rem;
@@ -62,13 +67,31 @@
     display: flex;
     align-items: center;
 }
+.tree-container summary::-webkit-details-marker {
+    display: none; /* Hide for Safari/Chrome */
+}
+.tree-container summary:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-color);
+}
 
+/* Custom twisty using a pseudo-element */
+.tree-container summary::before {
+    content: '►';
+    font-size: 0.8em;
+    margin-right: 0.5rem;
+    transition: transform 0.15s ease-in-out;
+}
+.tree-container details[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+/* The span contains the actual label and status, and fills the remaining space */
 .tree-container summary > span {
     display: flex;
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    margin-left: 0.5rem;
 }
 
 .tree-container summary:hover {
