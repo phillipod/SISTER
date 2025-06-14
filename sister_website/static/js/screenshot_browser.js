@@ -243,32 +243,47 @@ class ScreenshotBrowser {
         const logType = e.target.dataset.logType; // 'email' or 'link'
         
         try {
-            const response = await fetch(`/admin/api/${logType}_log/${logId}`);
-            if (!response.ok) throw new Error(`Failed to fetch ${logType} log.`);
-            const log = await response.json();
-            
-            let content = '';
             if (logType === 'email') {
-                const viewerUrl = `https://logviewer.sto-tools.org/log/${logId}`;
-                content = `
+                // Fetch the access token and log metadata in parallel for efficiency
+                const [tokenRes, logRes] = await Promise.all([
+                    fetch(`/api/log-access-token/${logId}`),
+                    fetch(`/admin/api/email_log/${logId}`)
+                ]);
+
+                if (!tokenRes.ok) throw new Error('Could not get access token.');
+                if (!logRes.ok) throw new Error('Could not get log details.');
+                
+                const { token } = await tokenRes.json();
+                const log = await logRes.json();
+                
+                const viewerUrl = `https://logviewer.sto-tools.org/log/${logId}?token=${token}`;
+                const content = `
                     <p><strong>From:</strong> ${log.from_address || log.from}</p>
                     <p><strong>To:</strong> ${log.to_address || log.to}</p>
                     <p><strong>Subject:</strong> ${log.subject}</p><hr>
                     <iframe class="email-body-iframe" src="${viewerUrl}" sandbox></iframe>`;
-            } else { // link log
-                content = `<ul>
+                
+                this.showModal('Email Details', content);
+
+            } else { // Handle link log (which doesn't need a token)
+                const response = await fetch(`/admin/api/link_log/${logId}`);
+                if (!response.ok) throw new Error(`Failed to fetch ${logType} log.`);
+                const log = await response.json();
+                
+                const content = `<ul>
                     <li><strong>IP Address:</strong> ${log.ip_address}</li>
                     <li><strong>User Agent:</strong> ${log.user_agent}</li>
                     <li><strong>Clicked At:</strong> ${new Date(log.clicked_at).toLocaleString()}</li>
                 </ul>`;
+
+                this.showModal('Link Details', content);
             }
-            this.showModal(`${logType.charAt(0).toUpperCase() + logType.slice(1)} Details`, content);
         } catch (error) {
             this.showModal('Error', `<p class="error-message">${error.message}</p>`);
         }
     }
     
-    showModal(title, content, urlToRevoke = null) {
+    showModal(title, content) {
         const existingModal = document.getElementById('details-modal');
         if (existingModal) existingModal.remove();
 
@@ -288,9 +303,6 @@ class ScreenshotBrowser {
 
         const closeModal = () => {
             modal.remove();
-            if (urlToRevoke) {
-                URL.revokeObjectURL(urlToRevoke);
-            }
         };
         modal.querySelector('.close-btn').onclick = closeModal;
         modal.onclick = (event) => {

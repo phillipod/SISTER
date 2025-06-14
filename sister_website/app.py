@@ -32,6 +32,7 @@ import requests
 from sqlalchemy import or_
 from sqlalchemy import case, func, and_
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 
 from .models import (
     db,
@@ -1767,12 +1768,22 @@ def test_flash():
 # ────────────────────────────────────────────────────────────────────────────────
 @app.route('/log/<log_id>')
 def public_email_log_view(log_id):
-    """Return raw email HTML/Text for embedding in an iframe on the logviewer sub-domain."""
-    log = EmailLog.query.get_or_404(log_id)
+    """Return raw email HTML/Text, validating access with a short-lived token."""
+    token = request.args.get('token')
+    if not token:
+        return "Missing token", 401
 
-    # Access control: allow admin or the owner of the submission
-    if not (is_admin() or (current_user.is_authenticated and log.submission.email == current_user.email)):
-        return "Unauthorized", 403
+    s = Serializer(current_app.config['SECRET_KEY'])
+    try:
+        data = s.loads(token)
+    except Exception: # Catches SignatureExpired, BadSignature, etc.
+        return "Invalid or expired token", 403
+
+    if str(data.get('log_id')) != str(log_id):
+        return "Token is not valid for this resource", 403
+
+    log = EmailLog.query.get_or_404(log_id)
+    # The token validation is sufficient and replaces the previous session-based access control.
 
     body_html = log.body_html or ""
     body_text = log.body_text or "(no text body)"
@@ -1789,4 +1800,18 @@ def public_email_log_view(log_id):
     resp.headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors https://sister.sto-tools.org;"
     # We do NOT set X-Frame-Options, allowing the CSP to be the source of truth for framing.
     return resp
+
+@app.route('/api/log-access-token/<log_id>')
+@login_required
+def get_log_access_token(log_id):
+    """Generate a short-lived token for viewing a specific email log."""
+    log = EmailLog.query.get_or_404(log_id)
+
+    # Verify that the current user has permission to view this log.
+    if not (is_admin() or (current_user.is_authenticated and log.submission.email == current_user.email)):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    s = Serializer(current_app.config['SECRET_KEY'], expires_in=60) # Token is valid for 60 seconds
+    token = s.dumps({'log_id': str(log.id)}).decode('utf-8')
+    return jsonify({'token': token})
 
