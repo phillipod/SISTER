@@ -1651,3 +1651,52 @@ def user_submissions():
     submissions = current_user.submissions
     return render_template('user_submissions.html', submissions=submissions, active_page='user_submissions')
 
+@app.route('/api/me/submissions_data')
+@login_required
+def user_submissions_data():
+    """
+    Provides submission data for the logged-in user in a format
+    suitable for the user-facing screenshot browser.
+    """
+    submissions = Submission.query.options(
+        db.joinedload(Submission.builds).joinedload(Build.screenshots),
+        db.joinedload(Submission.email_logs),
+        db.joinedload(Submission.link_logs)
+    ).filter_by(email=current_user.email).order_by(Submission.created_at.desc()).all()
+
+    data_structured = []
+
+    for sub in submissions:
+        submission_info = {
+            'id': sub.id,
+            'created_at': sub.created_at.isoformat(),
+            'acceptance_state': sub.acceptance_state.value,
+            'is_withdrawn': sub.is_withdrawn,
+            'acceptance_token': sub.acceptance_token,
+            'builds': [],
+            'email_logs': [{'subject': log.subject, 'received_at': log.received_at.isoformat()} for log in sub.email_logs],
+            'link_logs': [{'ip_address': log.ip_address, 'clicked_at': log.clicked_at.isoformat()} for log in sub.link_logs]
+        }
+        
+        for build in sub.builds:
+            build_info = {
+                'id': build.id,
+                'platform': build.platform,
+                'type': build.type,
+                'screenshots': [{
+                    'id': sc.id,
+                    'filename': sc.filename
+                } for sc in build.screenshots]
+            }
+            submission_info['builds'].append(build_info)
+        
+        data_structured.append(submission_info)
+        
+    return jsonify(data_structured)
+
+# --------------------- DIAGNOSTIC ROUTES ---------------------
+@app.route('/test-flash')
+def test_flash():
+    flash('This is a test flash message.', 'info')
+    return redirect(url_for('home'))
+
