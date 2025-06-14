@@ -1938,3 +1938,67 @@ footer {
     margin: 1rem 0;
 }
 
+/* ---------------------------------------------------------------------------- */
+/* Admin Dataset Manager Page Specific Styles
+/* ---------------------------------------------------------------------------- */
+
+.filter-form .filter-buttons-top {
+    margin-bottom: 1rem;
+}
+
+.user-table th.filterable {
+    position: relative;
+    padding-right: 30px; /* space for icon */
+}
+
+.filter-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #ccc;
+}
+
+.filter-icon:hover {
+    color: #007bff;
+}
+
+.filter-popup {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    background-color: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    padding: 15px;
+    min-width: 250px;
+    border-radius: 4px;
+}
+
+.filter-popup.active {
+    display: block;
+}
+
+.filter-popup label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.filter-popup .form-control {
+    width: 100%;
+}
+
+.filter-popup-buttons {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.filter-popup-buttons .btn {
+    margin-left: 5px;
+}
+
