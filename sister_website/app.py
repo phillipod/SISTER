@@ -688,10 +688,10 @@ def training_data_stats():
     ).subquery()
 
     # Define the pivot columns using case statements
-    pc_space = func.count(case([(and_(accepted_builds_subq.c.platform == 'PC', accepted_builds_subq.c.type == 'space'), 1)])).label('PC_space')
-    pc_ground = func.count(case([(and_(accepted_builds_subq.c.platform == 'PC', accepted_builds_subq.c.type == 'ground'), 1)])).label('PC_ground')
-    console_space = func.count(case([(and_(accepted_builds_subq.c.platform == 'Console', accepted_builds_subq.c.type == 'space'), 1)])).label('Console_space')
-    console_ground = func.count(case([(and_(accepted_builds_subq.c.platform == 'Console', accepted_builds_subq.c.type == 'ground'), 1)])).label('Console_ground')
+    pc_space = func.count(case((and_(accepted_builds_subq.c.platform == 'PC', accepted_builds_subq.c.type == 'space'), 1))).label('PC_space')
+    pc_ground = func.count(case((and_(accepted_builds_subq.c.platform == 'PC', accepted_builds_subq.c.type == 'ground'), 1))).label('PC_ground')
+    console_space = func.count(case((and_(accepted_builds_subq.c.platform == 'Console', accepted_builds_subq.c.type == 'space'), 1))).label('Console_space')
+    console_ground = func.count(case((and_(accepted_builds_subq.c.platform == 'Console', accepted_builds_subq.c.type == 'ground'), 1))).label('Console_ground')
 
     # Main query to get all labels and their pivoted counts
     label_counts_results = db.session.query(
