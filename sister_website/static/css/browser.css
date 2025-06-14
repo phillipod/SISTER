@@ -396,6 +396,12 @@
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 8px;
     padding: 8px;
+    width: 100%;
+}
+
+#preview-content.has-grid {
+    justify-content: flex-start;
+    align-items: flex-start;
 }
 
 .preview-grid-img {

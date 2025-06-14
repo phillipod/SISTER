@@ -123,6 +123,7 @@ class ScreenshotBrowser {
     }
 
     renderSinglePreview(screenshotId) {
+        this.previewContent.classList.remove('has-grid');
         const imageUrl = this.api.screenshotImage.replace('{sc_id}', screenshotId);
         this.previewContent.innerHTML = `
             <img id="preview-image" alt="Screenshot Preview" src="${imageUrl}?t=${Date.now()}" />
@@ -130,6 +131,7 @@ class ScreenshotBrowser {
     }
 
     renderGridPreview(ids, isProgrammatic) {
+        this.previewContent.classList.add('has-grid');
         const grid = document.createElement('div');
         grid.id = 'preview-grid';
         grid.classList.add('preview-grid');
