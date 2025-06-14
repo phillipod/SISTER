@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     for (const buildId in data[platform][type][date]) {
                         const buildGroup = data[platform][type][date][buildId];
                         const { screenshots, build_id, submission_id, email } = buildGroup;
-                        const buildLabel = `Build ${build_id.substring(0, 8)} (Submission ${submission_id.substring(0, 8)})`;
+                        const buildLabel = `Submission ${submission_id.substring(0, 8)}`;
                         
                         const buildScreenshotIds = screenshots.map(sc => sc.id);
                         const buildDetails = createDetails(buildLabel, buildScreenshotIds);
