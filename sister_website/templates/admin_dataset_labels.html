@@ -15,10 +15,10 @@
             <form method="POST" action="{{ url_for('admin_dataset_labels') }}">
                 {{ form.hidden_tag() }}
                 <div class="mb-3">
-                    {{ render_field(form.name, class="form-control") }}
+                    {{ render_field(form.name, attrs={'class': 'form-control'}) }}
                 </div>
                 <div class="mb-3">
-                    {{ render_field(form.description, class="form-control", rows=3) }}
+                    {{ render_field(form.description, attrs={'class': 'form-control', 'rows': 3}) }}
                 </div>
                 {{ form.submit(class="btn btn-primary") }}
             </form>

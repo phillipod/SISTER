@@ -1,7 +1,7 @@
-{% macro render_field(field, **kwargs) %}
+{% macro render_field(field, attrs={}) %}
     <div class="form-group">
         {{ field.label(class="form-label") }}
-        {{ field(**kwargs) }}
+        {{ field(**attrs) }}
         {% if field.errors %}
             <div class="invalid-feedback d-block">
                 {% for error in field.errors %}
