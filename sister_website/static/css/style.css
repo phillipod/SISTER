@@ -1610,16 +1610,15 @@ footer {
 }
 
 .admin-browser-main, .admin-users-form {
-    flex: 2;
-    min-width: 300px;
+    flex: 1; /* take up remaining space */
 }
 
-.admin-filters {
-    background-color: #ffffff;
+.browser-filters {
+    background-color: #f8f9fa;
     padding: 15px;
-    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
     margin-bottom: 20px;
-    border: 1px solid var(--border-color);
 }
 
 .tree-container {
@@ -1709,33 +1708,33 @@ footer {
 .error-message {
     color: var(--danger-color);
     background-color: #f8d7da;
-    padding: 10px;
     border: 1px solid #f5c6cb;
+    padding: 10px;
     border-radius: 4px;
+    margin-top: 10px;
 }
 
 /* Forms */
-.admin-filters label, .admin-users-form label {
+.browser-filters label, .admin-users-form label {
     display: block;
     margin-bottom: 5px;
-    font-weight: 500;
-    color: var(--primary-color);
+    font-weight: bold;
+    color: #495057;
 }
 
-.admin-filters select, .form-input {
+.browser-filters select, .form-input {
     width: 100%;
-    padding: 10px;
-    background-color: #fff;
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
+    padding: 8px;
+    border: 1px solid #ced4da;
     border-radius: 4px;
-    box-sizing: border-box;
-    font-size: 1rem;
+    box-sizing: border-box; /* Important */
+    background-color: #fff;
 }
-.admin-filters select:focus, .form-input:focus {
-    outline: none;
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+
+.browser-filters select:focus, .form-input:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
 }
 
 .input-error {
