@@ -1455,7 +1455,12 @@ def set_build_dataset_label(build_id):
 @app.after_request
 def set_security_headers(resp):
     resp.headers.setdefault('X-Frame-Options', 'DENY')
-    resp.headers.setdefault('Content-Security-Policy', "default-src 'self'")
+    csp = {
+        'default-src': "'self'",
+        'style-src': "'self' https://cdnjs.cloudflare.com",
+    }
+    csp_string = "; ".join([f"{key} {value}" for key, value in csp.items()])
+    resp.headers.setdefault('Content-Security-Policy', csp_string)
     return resp
 
 # Invalidate admin sessions if the user no longer exists or is locked
