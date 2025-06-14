@@ -1800,6 +1800,17 @@ def user_link_log(log_id):
         "clicked_at": log.clicked_at.isoformat()
     })
 
+@app.route('/me/screenshot/<int:screenshot_id>')
+@login_required
+def user_screenshot_image(screenshot_id):
+    sc = Screenshot.query.get_or_404(screenshot_id)
+    # Security check: ensure the screenshot belongs to the current user.
+    if sc.build.submission.email != current_user.email:
+        return "Unauthorized", 403
+        
+    mime = 'image/png' if sc.filename.lower().endswith('png') else 'image/jpeg'
+    return send_file(BytesIO(sc.data), mimetype=mime)
+
 # --------------------- DIAGNOSTIC ROUTES ---------------------
 @app.route('/test-flash')
 def test_flash():
