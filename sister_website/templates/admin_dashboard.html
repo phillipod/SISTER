@@ -6,18 +6,30 @@
 <div class="admin-container">
     <h1>Admin Dashboard</h1>
     <p>Welcome to the admin area. From here you can manage submissions and users.</p>
-    <div class="admin-links">
-        <a href="{{ url_for('browse_screenshots') }}" class="admin-link-item">
-            Screenshot Browser
+    <div class="admin-tools-grid">
+        <a href="{{ url_for('browse_screenshots') }}" class="admin-tool-card">
+            <div class="card-body">
+                <h5 class="card-title">Screenshot Browser</h5>
+                <p class="card-text">Browse, review, and manage individual screenshots.</p>
+            </div>
         </a>
-        <a href="{{ url_for('admin_dataset_labels') }}" class="admin-link-item">
-            Dataset Label Management
+        <a href="{{ url_for('admin_dataset_labels') }}" class="admin-tool-card">
+            <div class="card-body">
+                <h5 class="card-title">Dataset Label Management</h5>
+                <p class="card-text">Create, edit, and manage dataset labels.</p>
+            </div>
         </a>
-        <a href="{{ url_for('dataset_manager') }}" class="admin-link-item">
-            Dataset Manager
+        <a href="{{ url_for('dataset_manager') }}" class="admin-tool-card">
+            <div class="card-body">
+                <h5 class="card-title">Dataset Manager</h5>
+                <p class="card-text">Organize and label datasets of screenshots.</p>
+            </div>
         </a>
-        <a href="{{ url_for('admin_users') }}" class="admin-link-item">
-            User Management
+        <a href="{{ url_for('admin_users') }}" class="admin-tool-card">
+            <div class="card-body">
+                <h5 class="card-title">User Management</h5>
+                <p class="card-text">Manage administrator accounts.</p>
+            </div>
         </a>
     </div>
 </div>
