@@ -165,6 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Trigger a click on the summary to show the screenshot previews
             const summary = buildElement.querySelector('summary');
             if (summary) {
+                setActiveNode(summary); // Set this node as active
                 summary.click();
             } else {
                 console.log('[Debug] scrollToBuild: Could not find summary element to click.');
@@ -180,6 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleGroupClick(e) {
+        setActiveNode(e.target);
         const idsCsv = e.target.dataset.groupScreenshots;
         if (!idsCsv) {
             return;
@@ -249,6 +251,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleScreenshotClick(e) {
         e.preventDefault();
+        setActiveNode(e.target);
+
         const target = e.target;
         const info = JSON.parse(target.dataset.info);
         
@@ -268,6 +272,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Make sure info card is visible
         screenshotInfo.classList.remove('hidden');
+    }
+
+    function setActiveNode(element) {
+        // Remove 'active-node' from any currently active element
+        const currentActive = document.querySelectorAll('.active-node');
+        currentActive.forEach(node => {
+            node.classList.remove('active-node');
+        });
+
+        if (!element) return;
+
+        // Add 'active-node' to the new element or its relevant parent
+        if (element.tagName === 'SUMMARY') {
+            element.parentElement.classList.add('active-node'); // Highlight the <details> tag
+        } else if (element.tagName === 'A') {
+            element.parentElement.classList.add('active-node'); // Highlight the <li>
+        }
     }
 
     function renderScreenshotInfo(info) {
