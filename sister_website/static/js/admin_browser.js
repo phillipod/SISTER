@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         screenshots.forEach(sc => {
                             const scLi = document.createElement('li');
                             const link = document.createElement('a');
-                            link.href = '#';
+                            link.href = 'javascript:void(0);';
                             link.textContent = sc.filename;
                             link.dataset.screenshotId = sc.id;
                             link.dataset.info = JSON.stringify(sc);
