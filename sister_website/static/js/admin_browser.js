@@ -57,18 +57,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
 
                     if (filteredScreenshots.length > 0) {
-                        const builds = filteredScreenshots.reduce((acc, sc) => {
-                            acc[sc.build_id] = acc[sc.build_id] || {
+                        const submissions = filteredScreenshots.reduce((acc, sc) => {
+                            acc[sc.submission_id] = acc[sc.submission_id] || {
                                 screenshots: [],
                                 build_id: sc.build_id,
                                 submission_id: sc.submission_id,
-                                email: sc.email // Store email for display
+                                email: sc.email
                             };
-                            acc[sc.build_id].screenshots.push(sc);
+                            acc[sc.submission_id].screenshots.push(sc);
                             return acc;
                         }, {});
 
-                        treeData[platform][type][date] = builds;
+                        treeData[platform][type][date] = submissions;
                         hasResults = true;
                     }
                 }
@@ -99,14 +99,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const typeDetails = createDetails(type);
                 for (const date in data[platform][type]) {
                     const dateDetails = createDetails(date);
-                    for (const buildId in data[platform][type][date]) {
-                        const buildGroup = data[platform][type][date][buildId];
-                        const { screenshots, build_id, submission_id, email } = buildGroup;
-                        const buildLabel = `Submission ${submission_id.substring(0, 8)}`;
+                    for (const submissionId in data[platform][type][date]) {
+                        const submissionGroup = data[platform][type][date][submissionId];
+                        const { screenshots, build_id, submission_id } = submissionGroup;
+                        const submissionLabel = `Submission ${submission_id.substring(0, 8)}`;
                         
-                        const buildScreenshotIds = screenshots.map(sc => sc.id);
-                        const buildDetails = createDetails(buildLabel, buildScreenshotIds);
-                        buildDetails.dataset.buildId = build_id; // Set build_id attribute
+                        const submissionScreenshotIds = screenshots.map(sc => sc.id);
+                        const submissionDetails = createDetails(submissionLabel, submissionScreenshotIds);
+                        submissionDetails.dataset.buildId = build_id;
 
                         const scUl = document.createElement('ul');
                         scUl.className = 'list-unstyled pl-3';
@@ -122,8 +122,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             scLi.appendChild(link);
                             scUl.appendChild(scLi);
                         });
-                        buildDetails.appendChild(scUl);
-                        dateDetails.appendChild(buildDetails);
+                        submissionDetails.appendChild(scUl);
+                        dateDetails.appendChild(submissionDetails);
                     }
                     typeDetails.appendChild(dateDetails);
                 }
