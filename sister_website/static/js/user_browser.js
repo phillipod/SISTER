@@ -28,6 +28,23 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const userTreeRenderer = (data, treePane) => {
+        // Capture current open/closed state before clearing
+        const openStates = {};
+        const captureOpenStates = (element, path = []) => {
+            const details = element.querySelectorAll('details');
+            details.forEach(detail => {
+                const summary = detail.querySelector('summary > span');
+                if (summary) {
+                    const text = summary.textContent.trim();
+                    const currentPath = [...path, text];
+                    const pathKey = currentPath.join('|');
+                    openStates[pathKey] = detail.open;
+                    captureOpenStates(detail, currentPath);
+                }
+            });
+        };
+        captureOpenStates(treePane);
+
         treePane.innerHTML = '';
 
         // 1. Filter data based on dropdowns
@@ -106,9 +123,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         // 3. Render the tree from the hierarchical data.
-        const createDetails = (summaryText, parentElement, allScreenshots, depth = 0) => {
+        const createDetails = (summaryText, parentElement, allScreenshots, depth = 0, parentPath = []) => {
             const details = document.createElement('details');
-            details.open = true;
+            const currentPath = [...parentPath, summaryText];
+            const pathKey = currentPath.join('|');
+            
+            // Restore previous open state if available, otherwise default based on depth
+            if (pathKey in openStates) {
+                details.open = openStates[pathKey];
+            } else {
+                details.open = depth < 3; // Default: open for shallow levels, closed for deep ones
+            }
+            
             details.classList.add(`tree-depth-${depth}`);
             const summary = document.createElement('summary');
             const summarySpan = document.createElement('span');
@@ -121,10 +147,10 @@ document.addEventListener('DOMContentLoaded', () => {
             summary.appendChild(summarySpan);
             details.appendChild(summary);
             parentElement.appendChild(details);
-            return details;
+            return { element: details, path: currentPath };
         };
 
-        const renderNode = (node, parentElement, depth = 0) => {
+        const renderNode = (node, parentElement, depth = 0, parentPath = []) => {
             for (const key in node) {
                 const childNode = node[key];
                 if (Array.isArray(childNode)) { // Leaf nodes (screenshot arrays)
@@ -139,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const subScreenshots = submissions[subId];
                         const firstSc = subScreenshots[0];
                         const subLabel = `Submission ${firstSc.submission_id.substring(0, 8)}`;
-                        const subDetails = createDetails(subLabel, parentElement, subScreenshots, depth + 1);
+                        const subDetailsResult = createDetails(subLabel, parentElement, subScreenshots, depth + 1, parentPath);
                         
                         const scUl = document.createElement('ul');
                         scUl.classList.add(`tree-depth-${depth + 2}`);
@@ -153,12 +179,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             scLi.appendChild(link);
                             scUl.appendChild(scLi);
                         });
-                        subDetails.appendChild(scUl);
+                        subDetailsResult.element.appendChild(scUl);
                     }
                 } else { // It's a grouping node
                     const allScreenshotsInGroup = getAllScreenshots(childNode);
-                    const details = createDetails(key, parentElement, allScreenshotsInGroup, depth);
-                    renderNode(childNode, details, depth + 1);
+                    const detailsResult = createDetails(key, parentElement, allScreenshotsInGroup, depth, parentPath);
+                    renderNode(childNode, detailsResult.element, depth + 1, detailsResult.path);
                 }
             }
         };

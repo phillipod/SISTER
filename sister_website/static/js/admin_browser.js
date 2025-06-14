@@ -26,6 +26,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const typeFilter = filters.type.value;
         const acceptedFilter = filters.accepted.value;
 
+        // Capture current open/closed state before clearing
+        const openStates = {};
+        const captureOpenStates = (element, path = []) => {
+            const details = element.querySelectorAll('details');
+            details.forEach(detail => {
+                const summary = detail.querySelector('summary > span');
+                if (summary) {
+                    const text = summary.textContent.trim();
+                    const currentPath = [...path, text];
+                    const pathKey = currentPath.join('|');
+                    openStates[pathKey] = detail.open;
+                    captureOpenStates(detail, currentPath);
+                }
+            });
+        };
+        captureOpenStates(treePane);
+
         treePane.innerHTML = '';
         
         const filteredData = data.filter(sc => {
@@ -66,9 +83,18 @@ document.addEventListener('DOMContentLoaded', function() {
             currentLevel[sc.submission_id].push(sc);
         });
 
-        const createDetails = (summaryText, parentElement, allScreenshots, depth = 0) => {
+        const createDetails = (summaryText, parentElement, allScreenshots, depth = 0, parentPath = []) => {
             const details = document.createElement('details');
-            details.open = true;
+            const currentPath = [...parentPath, summaryText];
+            const pathKey = currentPath.join('|');
+            
+            // Restore previous open state if available, otherwise default based on depth
+            if (pathKey in openStates) {
+                details.open = openStates[pathKey];
+            } else {
+                details.open = depth < 3; // Default: open for shallow levels, closed for deep ones
+            }
+            
             details.classList.add(`tree-depth-${depth}`);
             const summary = document.createElement('summary');
             const summarySpan = document.createElement('span');
@@ -81,24 +107,24 @@ document.addEventListener('DOMContentLoaded', function() {
             summary.appendChild(summarySpan);
             details.appendChild(summary);
             parentElement.appendChild(details);
-            return details;
+            return { element: details, path: currentPath };
         };
 
-        const renderNode = (node, parentElement, depth = 0) => {
+        const renderNode = (node, parentElement, depth = 0, parentPath = []) => {
             for (const key in node) {
                 const childNode = node[key];
                 
                 const isSubmissionContainer = Object.values(childNode).every(val => Array.isArray(val));
 
                 if (isSubmissionContainer) {
-                    const dateDetails = createDetails(key, parentElement, getAllScreenshots(childNode), depth);
+                    const dateDetailsResult = createDetails(key, parentElement, getAllScreenshots(childNode), depth, parentPath);
                      for (const subId in childNode) {
                         const subScreenshots = childNode[subId];
                         if (subScreenshots.length > 0) {
                             const firstSc = subScreenshots[0];
                             const subLabel = `Submission ${firstSc.submission_id.substring(0, 8)}`;
-                            const subDetails = createDetails(subLabel, dateDetails, subScreenshots, depth + 1);
-                            subDetails.dataset.buildId = firstSc.build_id;
+                            const subDetailsResult = createDetails(subLabel, dateDetailsResult.element, subScreenshots, depth + 1, dateDetailsResult.path);
+                            subDetailsResult.element.dataset.buildId = firstSc.build_id;
 
                             const scUl = document.createElement('ul');
                             scUl.classList.add(`tree-depth-${depth + 2}`);
@@ -112,12 +138,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                 scLi.appendChild(link);
                                 scUl.appendChild(scLi);
                             });
-                            subDetails.appendChild(scUl);
+                            subDetailsResult.element.appendChild(scUl);
                         }
                     }
                 } else {
-                    const details = createDetails(key, parentElement, getAllScreenshots(childNode), depth);
-                    renderNode(childNode, details, depth + 1);
+                    const detailsResult = createDetails(key, parentElement, getAllScreenshots(childNode), depth, parentPath);
+                    renderNode(childNode, detailsResult.element, depth + 1, detailsResult.path);
                 }
             }
         };
