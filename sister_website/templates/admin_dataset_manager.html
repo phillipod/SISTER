@@ -3,80 +3,59 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid admin-page">
-    <h1 class="mb-4">{{ title }}</h1>
+<div class="admin-container">
+    <h1>{{ title }}</h1>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Build ID</th>
-                            <th>Submission Email</th>
-                            <th>Platform</th>
-                            <th>Type</th>
-                            <th>Submitted At</th>
-                            <th>Dataset Label</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for build in builds %}
-                        <tr data-build-id="{{ build.id }}">
-                            <td><a href="{{ url_for('browse_screenshots', build_id=build.id) }}">{{ build.id[:8] }}...</a></td>
-                            <td>{{ build.submission.email }}</td>
-                            <td>{{ build.platform }}</td>
-                            <td>{{ build.type }}</td>
-                            <td>{{ build.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                            <td>
-                                <select class="form-select dataset-label-select" data-build-id="{{ build.id }}">
-                                    <option value="">-- No Label --</option>
-                                    {% for label in labels %}
-                                    <option value="{{ label.id }}" {% if build.dataset_label_id == label.id %}selected{% endif %}>
-                                        {{ label.name }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="6" class="text-center">No accepted builds found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card-footer">
-            <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center">
-                    {% if pagination.has_prev %}
-                    <li class="page-item"><a class="page-link" href="{{ url_for('dataset_manager', page=pagination.prev_num) }}">Previous</a></li>
-                    {% else %}
-                    <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
-                    {% endif %}
+    <div class="admin-users-list">
+        <table class="user-table">
+            <thead>
+                <tr>
+                    <th>Build ID</th>
+                    <th>Submission Email</th>
+                    <th>Platform</th>
+                    <th>Type</th>
+                    <th>Submitted At</th>
+                    <th>Dataset Label</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for build in builds %}
+                <tr data-build-id="{{ build.id }}">
+                    <td><a href="{{ url_for('browse_screenshots', build_id=build.id) }}">{{ build.id[:8] }}...</a></td>
+                    <td>{{ build.submission.email }}</td>
+                    <td>{{ build.platform }}</td>
+                    <td>{{ build.type }}</td>
+                    <td>{{ build.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        <select class="form-control dataset-label-select" data-build-id="{{ build.id }}">
+                            <option value="">-- No Label --</option>
+                            {% for label in labels %}
+                            <option value="{{ label.id }}" {% if build.dataset_label_id == label.id %}selected{% endif %}>
+                                {{ label.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center;">No accepted builds found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-                    {% for page_num in pagination.iter_pages() %}
-                        {% if page_num %}
-                            {% if pagination.page == page_num %}
-                            <li class="page-item active"><a class="page-link" href="#">{{ page_num }}</a></li>
-                            {% else %}
-                            <li class="page-item"><a class="page-link" href="{{ url_for('dataset_manager', page=page_num) }}">{{ page_num }}</a></li>
-                            {% endif %}
-                        {% else %}
-                            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
-                        {% endif %}
-                    {% endfor %}
+    <div class="pagination">
+        {% if pagination.has_prev %}
+            <a href="{{ url_for('dataset_manager', page=pagination.prev_num) }}" class="btn btn-secondary">« Previous</a>
+        {% endif %}
 
-                    {% if pagination.has_next %}
-                    <li class="page-item"><a class="page-link" href="{{ url_for('dataset_manager', page=pagination.next_num) }}">Next</a></li>
-                    {% else %}
-                    <li class="page-item disabled"><a class="page-link" href="#">Next</a></li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+
+        {% if pagination.has_next %}
+            <a href="{{ url_for('dataset_manager', page=pagination.next_num) }}" class="btn btn-secondary">Next »</a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
@@ -86,11 +65,18 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const selectors = document.querySelectorAll('.dataset-label-select');
+    let initialValue = null;
+
     selectors.forEach(select => {
+        select.addEventListener('focus', function() {
+            // Store the value when the user clicks on the select
+            initialValue = this.value;
+        });
+
         select.addEventListener('change', function() {
             const buildId = this.dataset.buildId;
             const labelId = this.value;
-            const csrfToken = '{{ csrf_token() }}';
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
             fetch(`/admin/api/builds/${buildId}/set-label`, {
                 method: 'POST',
@@ -108,19 +94,17 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(data => {
                 if (data.success) {
-                    // Maybe show a small success indicator next to the select
-                    console.log('Label updated for build ' + buildId);
+                    this.style.borderColor = 'green';
+                    setTimeout(() => { this.style.borderColor = '' }, 2000);
                 } else {
                     alert('Error updating label: ' + (data.error || 'Unknown error'));
-                    // Revert selection on failure
-                    select.value = '{{ build.dataset_label_id or "" }}';
+                    this.value = initialValue; // Revert on failure
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 alert('An unexpected error occurred while updating the label.');
-                // Revert selection on failure
-                select.value = '{{ build.dataset_label_id or "" }}';
+                this.value = initialValue; // Revert on failure
             });
         });
     });
