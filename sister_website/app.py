@@ -27,6 +27,7 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from io import BytesIO
 import requests
+from sqlalchemy import or_
 
 from .models import (
     db,
@@ -1355,24 +1356,75 @@ def dataset_manager():
         return redirect(url_for('admin_login'))
 
     page = request.args.get('page', 1, type=int)
-    per_page = 50 # Or get from request.args
+    per_page = 50
 
-    # Query for accepted builds
+    # Filter parameters
+    build_id_filter = request.args.get('build_id', '')
+    submission_email_filter = request.args.get('submission_email', '')
+    platform_filter = request.args.get('platform', '')
+    type_filter = request.args.get('type', '')
+    label_ids_filter = request.args.getlist('labels') # For multi-select
+
+    # Base query for accepted builds
     builds_query = Build.query.join(Submission).filter(
         Submission.acceptance_state == AcceptanceState.ACCEPTED
     )
 
-    builds_pagination = builds_query.paginate(page=page, per_page=per_page, error_out=False)
+    # Apply filters
+    if build_id_filter:
+        builds_query = builds_query.filter(Build.id.ilike(f"%{build_id_filter}%"))
+    if submission_email_filter:
+        builds_query = builds_query.filter(Submission.email.ilike(f"%{submission_email_filter}%"))
+    if platform_filter:
+        builds_query = builds_query.filter(Build.platform == platform_filter)
+    if type_filter:
+        builds_query = builds_query.filter(Build.type == type_filter)
     
-    active_labels = DatasetLabel.query.filter_by(is_active=True).order_by(DatasetLabel.name).all()
+    if label_ids_filter:
+        if "none" in label_ids_filter:
+            # User wants to see builds with no label, potentially along with others
+            label_conditions = [Build.dataset_label_id == None]
+            # Get actual integer IDs, filtering out "none"
+            numeric_label_ids = [int(id) for id in label_ids_filter if id.isdigit()]
+            if numeric_label_ids:
+                label_conditions.append(Build.dataset_label_id.in_(numeric_label_ids))
+            builds_query = builds_query.filter(or_(*label_conditions))
+        else:
+            # Only numeric IDs are selected
+            numeric_label_ids = [int(id) for id in label_ids_filter if id.isdigit()]
+            if numeric_label_ids:
+                builds_query = builds_query.filter(Build.dataset_label_id.in_(numeric_label_ids))
+
+    builds_pagination = builds_query.order_by(Build.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    
+    all_labels = DatasetLabel.query.order_by(DatasetLabel.name).all()
+
+    # Preserve filters in pagination links
+    pagination_kwargs = {
+        'build_id': build_id_filter,
+        'submission_email': submission_email_filter,
+        'platform': platform_filter,
+        'type': type_filter,
+        'labels': label_ids_filter
+    }
+    # Remove empty keys
+    pagination_kwargs = {k: v for k, v in pagination_kwargs.items() if v}
 
     return render_template(
         'admin_dataset_manager.html',
         builds=builds_pagination.items,
         pagination=builds_pagination,
-        labels=active_labels,
+        labels=all_labels, # Pass all labels to template for dropdown
         title="Dataset Manager",
-        active_page='dataset_manager'
+        active_page='dataset_manager',
+        filters={
+            'build_id': build_id_filter,
+            'submission_email': submission_email_filter,
+            'platform': platform_filter,
+            'type': type_filter,
+            'labels': label_ids_filter
+        },
+        pagination_kwargs=pagination_kwargs
     )
 
 @app.route('/admin/api/builds/<build_id>/set-label', methods=['POST'])

@@ -6,6 +6,50 @@
 <div class="admin-container">
     <h1>{{ title }}</h1>
 
+    <form method="get" action="{{ url_for('dataset_manager') }}" class="filter-form">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="build_id">Build ID</label>
+                <input type="text" name="build_id" id="build_id" value="{{ filters.build_id }}" class="form-control">
+            </div>
+            <div class="filter-group">
+                <label for="submission_email">Submission Email</label>
+                <input type="text" name="submission_email" id="submission_email" value="{{ filters.submission_email }}" class="form-control">
+            </div>
+            <div class="filter-group">
+                <label for="platform">Platform</label>
+                <select name="platform" id="platform" class="form-control">
+                    <option value="">All</option>
+                    <option value="PC" {% if filters.platform == 'PC' %}selected{% endif %}>PC</option>
+                    <option value="Console" {% if filters.platform == 'Console' %}selected{% endif %}>Console</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="type">Type</label>
+                <select name="type" id="type" class="form-control">
+                    <option value="">All</option>
+                    <option value="space" {% if filters.type == 'space' %}selected{% endif %}>Space</option>
+                    <option value="ground" {% if filters.type == 'ground' %}selected{% endif %}>Ground</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="labels">Dataset Label</label>
+                <select name="labels" id="labels" class="form-control" multiple>
+                    <option value="none" {% if 'none' in filters.labels %}selected{% endif %}>-- No Label --</option>
+                    {% for label in labels %}
+                        <option value="{{ label.id }}" {% if label.id|string in filters.labels %}selected{% endif %}>
+                            {{ label.name }}{% if not label.is_active %} (inactive){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="filter-buttons">
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <a href="{{ url_for('dataset_manager') }}" class="btn btn-secondary">Clear</a>
+        </div>
+    </form>
+
     <div class="admin-users-list">
         <table class="user-table">
             <thead>
@@ -48,13 +92,13 @@
 
     <div class="pagination">
         {% if pagination.has_prev %}
-            <a href="{{ url_for('dataset_manager', page=pagination.prev_num) }}" class="btn btn-secondary">« Previous</a>
+            <a href="{{ url_for('dataset_manager', page=pagination.prev_num, **pagination_kwargs) }}" class="btn btn-secondary">« Previous</a>
         {% endif %}
 
         <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
 
         {% if pagination.has_next %}
-            <a href="{{ url_for('dataset_manager', page=pagination.next_num) }}" class="btn btn-secondary">Next »</a>
+            <a href="{{ url_for('dataset_manager', page=pagination.next_num, **pagination_kwargs) }}" class="btn btn-secondary">Next »</a>
         {% endif %}
     </div>
 </div>
