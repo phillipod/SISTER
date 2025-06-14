@@ -29,9 +29,12 @@
 }
 
 .active-node > summary,
-.active-node {
+.active-node > a {
     background-color: #e0e8f0; /* A light blue for active state */
     font-weight: bold;
+    display: block; /* Ensures the background color fills the line */
+    padding-left: 5px; /* Adds some indentation for clarity */
+    margin-left: -5px; /* Counteracts the padding to keep alignment */
 }
 
 /* Resend consent status message colors */
