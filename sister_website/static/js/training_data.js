@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Logic for adding and removing builds
-    let buildIndexCounter = 1; // Start from 1 since build 0 is already on the page
+    let buildIndexCounter = 0; // Start from 1 since build 0 is already on the page
     const addBuildButton = document.getElementById('addBuildBtn');
     if (addBuildButton) {
         addBuildButton.addEventListener('click', function() {
