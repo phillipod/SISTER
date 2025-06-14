@@ -188,13 +188,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const ids = idsCsv.split(',');
 
-        // Remove single preview image and any previous grid
-        previewImage.classList.add('hidden');
-        previewImage.src = '';
-        const existingGrid = document.getElementById('preview-grid');
-        if (existingGrid) existingGrid.remove();
-
-        previewPlaceholder.classList.add('hidden');
+        // Get the dedicated content container and clear it
+        const previewContent = document.getElementById('preview-content');
+        previewContent.innerHTML = ''; 
 
         const grid = document.createElement('div');
         grid.id = 'preview-grid';
@@ -229,15 +225,15 @@ document.addEventListener('DOMContentLoaded', function() {
             grid.appendChild(img);
         });
 
-        document.getElementById('preview-pane').appendChild(grid);        // Render submission info for the group
+        previewContent.appendChild(grid);
+
+        // Render submission info for the group
         if (ids.length > 0) {
             const firstScreenshotId = ids[0];
             const link = treePane.querySelector(`a[data-screenshot-id="${firstScreenshotId}"]`);
             if (link) {
                 const info = JSON.parse(link.dataset.info);
                 renderScreenshotInfo(info);
-                // Move the info box to appear after the grid
-                document.getElementById('preview-pane').appendChild(screenshotInfo);
                 screenshotInfo.classList.remove('hidden');
             }
         }
@@ -253,13 +249,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const target = e.target;
         const info = JSON.parse(target.dataset.info);
         
-        // Clear any existing grid preview
-        const existingGrid = document.getElementById('preview-grid');
-        if (existingGrid) existingGrid.remove();
+        // Get the dedicated content container and clear it
+        const previewContent = document.getElementById('preview-content');
+        previewContent.innerHTML = '';
 
-        previewImage.src = `/admin/screenshot/${target.dataset.screenshotId}?t=${Date.now()}`;
-        previewImage.classList.remove('hidden');
-        previewPlaceholder.classList.remove('hidden');
+        // Create a new image element for the single preview
+        const singleImage = document.createElement('img');
+        singleImage.id = 'preview-image';
+        singleImage.alt = 'Screenshot Preview';
+        singleImage.src = `/admin/screenshot/${target.dataset.screenshotId}?t=${Date.now()}`;
+        
+        previewContent.appendChild(singleImage);
 
         renderScreenshotInfo(info);
 
@@ -510,16 +510,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Hide preview image & grid, show placeholder
     function resetPreview() {
-        // Hide image
-        previewImage.classList.add('hidden');
-        previewImage.src = '';
-
-        // Remove any grid
-        const existingGrid = document.getElementById('preview-grid');
-        if (existingGrid) existingGrid.remove();
-
-        // Show placeholder and clear info
-        previewPlaceholder.classList.remove('hidden');
+        const previewContent = document.getElementById('preview-content');
+        // Restore the placeholder
+        previewContent.innerHTML = `
+            <div id="preview-placeholder">
+                <p>Select a screenshot to preview</p>
+            </div>
+            <img id="preview-image" alt="Screenshot Preview" class="hidden"/>
+        `;
+        
+        // Hide info card
         screenshotInfo.innerHTML = '';
         screenshotInfo.classList.add('hidden');
     }
