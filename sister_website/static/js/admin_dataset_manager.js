@@ -1,4 +1,39 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // New code for filter popups
+    document.querySelectorAll('.filterable .filter-icon').forEach(trigger => {
+        trigger.addEventListener('click', function(event) {
+            event.stopPropagation();
+            const popup = this.closest('.filterable').querySelector('.filter-popup');
+            
+            // Close other popups
+            document.querySelectorAll('.filter-popup.active').forEach(activePopup => {
+                if (activePopup !== popup) {
+                    activePopup.classList.remove('active');
+                }
+            });
+
+            // Toggle the current popup
+            popup.classList.toggle('active');
+        });
+    });
+
+    // Close popups when clicking anywhere else on the page
+    document.addEventListener('click', function(event) {
+        document.querySelectorAll('.filter-popup.active').forEach(popup => {
+            const filterableHeader = popup.closest('.filterable');
+            if (!filterableHeader.contains(event.target)) {
+                popup.classList.remove('active');
+            }
+        });
+    });
+
+    // Stop propagation for clicks inside the popup to prevent it from closing
+    document.querySelectorAll('.filter-popup').forEach(popup => {
+        popup.addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+    });
+
     const selectors = document.querySelectorAll('.dataset-label-select');
     let initialValue = null;
 

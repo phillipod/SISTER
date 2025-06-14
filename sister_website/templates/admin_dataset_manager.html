@@ -2,93 +2,157 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block styles %}
+{{ super() }}
+<style>
+    .filter-form .filter-buttons-top {
+        margin-bottom: 1rem;
+    }
+    .user-table th.filterable {
+        position: relative;
+        padding-right: 30px; /* space for icon */
+    }
+    .filter-icon {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #ccc;
+    }
+    .filter-icon:hover {
+        color: #007bff;
+    }
+    .filter-popup {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        background-color: white;
+        border: 1px solid #ccc;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        padding: 15px;
+        min-width: 250px;
+        border-radius: 4px;
+    }
+    .filter-popup.active {
+        display: block;
+    }
+    .filter-popup label {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 5px;
+    }
+    .filter-popup .form-control {
+        width: 100%;
+    }
+    .filter-popup-buttons {
+        margin-top: 10px;
+        display: flex;
+        justify-content: flex-end;
+    }
+    .filter-popup-buttons .btn {
+        margin-left: 5px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="admin-container">
     <h1>{{ title }}</h1>
 
     <form method="get" action="{{ url_for('dataset_manager') }}" class="filter-form">
-        <div class="filter-row">
-            <div class="filter-group">
-                <label for="build_id">Build ID</label>
-                <input type="text" name="build_id" id="build_id" value="{{ filters.build_id }}" class="form-control">
-            </div>
-            <div class="filter-group">
-                <label for="submission_email">Submission Email</label>
-                <input type="text" name="submission_email" id="submission_email" value="{{ filters.submission_email }}" class="form-control">
-            </div>
-            <div class="filter-group">
-                <label for="platform">Platform</label>
-                <select name="platform" id="platform" class="form-control">
-                    <option value="">All</option>
-                    <option value="PC" {% if filters.platform == 'PC' %}selected{% endif %}>PC</option>
-                    <option value="Console" {% if filters.platform == 'Console' %}selected{% endif %}>Console</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="type">Type</label>
-                <select name="type" id="type" class="form-control">
-                    <option value="">All</option>
-                    <option value="space" {% if filters.type == 'space' %}selected{% endif %}>Space</option>
-                    <option value="ground" {% if filters.type == 'ground' %}selected{% endif %}>Ground</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="labels">Dataset Label</label>
-                <select name="labels" id="labels" class="form-control" multiple>
-                    <option value="none" {% if 'none' in filters.labels %}selected{% endif %}>-- No Label --</option>
-                    {% for label in labels %}
-                        <option value="{{ label.id }}" {% if label.id|string in filters.labels %}selected{% endif %}>
-                            {{ label.name }}{% if not label.is_active %} (inactive){% endif %}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
+        <div class="filter-buttons-top">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <a href="{{ url_for('dataset_manager') }}" class="btn btn-secondary">Clear All Filters</a>
         </div>
-        <div class="filter-buttons">
-            <button type="submit" class="btn btn-primary">Filter</button>
-            <a href="{{ url_for('dataset_manager') }}" class="btn btn-secondary">Clear</a>
+
+        <div class="admin-users-list">
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th class="filterable">
+                            Build ID <i class="fas fa-filter filter-icon"></i>
+                            <div class="filter-popup">
+                                <label for="build_id">Filter by Build ID</label>
+                                <input type="text" name="build_id" id="build_id" value="{{ filters.build_id }}" class="form-control">
+                            </div>
+                        </th>
+                        <th class="filterable">
+                            Submission Email <i class="fas fa-filter filter-icon"></i>
+                            <div class="filter-popup">
+                                <label for="submission_email">Filter by Submission Email</label>
+                                <input type="text" name="submission_email" id="submission_email" value="{{ filters.submission_email }}" class="form-control">
+                            </div>
+                        </th>
+                        <th class="filterable">
+                            Platform <i class="fas fa-filter filter-icon"></i>
+                            <div class="filter-popup">
+                                <label for="platform">Filter by Platform</label>
+                                <select name="platform" id="platform" class="form-control">
+                                    <option value="">All</option>
+                                    <option value="PC" {% if filters.platform == 'PC' %}selected{% endif %}>PC</option>
+                                    <option value="Console" {% if filters.platform == 'Console' %}selected{% endif %}>Console</option>
+                                </select>
+                            </div>
+                        </th>
+                        <th class="filterable">
+                            Type <i class="fas fa-filter filter-icon"></i>
+                            <div class="filter-popup">
+                                <label for="type">Filter by Type</label>
+                                <select name="type" id="type" class="form-control">
+                                    <option value="">All</option>
+                                    <option value="space" {% if filters.type == 'space' %}selected{% endif %}>Space</option>
+                                    <option value="ground" {% if filters.type == 'ground' %}selected{% endif %}>Ground</option>
+                                </select>
+                            </div>
+                        </th>
+                        <th>Submitted At</th>
+                        <th class="filterable">
+                            Dataset Label <i class="fas fa-filter filter-icon"></i>
+                            <div class="filter-popup">
+                                <label for="labels">Filter by Dataset Label</label>
+                                <select name="labels" id="labels" class="form-control" multiple size="10">
+                                    <option value="none" {% if 'none' in filters.labels %}selected{% endif %}>-- No Label --</option>
+                                    {% for label in labels %}
+                                        <option value="{{ label.id }}" {% if label.id|string in filters.labels %}selected{% endif %}>
+                                            {{ label.name }}{% if not label.is_active %} (inactive){% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for build in builds %}
+                    <tr data-build-id="{{ build.id }}">
+                        <td><a href="{{ url_for('browse_screenshots', build_id=build.id) }}">{{ build.id[:8] }}...</a></td>
+                        <td>{{ build.submission.email }}</td>
+                        <td>{{ build.platform }}</td>
+                        <td>{{ build.type }}</td>
+                        <td>{{ build.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <select class="form-control dataset-label-select" data-build-id="{{ build.id }}">
+                                <option value="">-- No Label --</option>
+                                {% for label in labels %}
+                                <option value="{{ label.id }}" {% if build.dataset_label_id == label.id %}selected{% endif %}>
+                                    {{ label.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center;">No accepted builds found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </form>
-
-    <div class="admin-users-list">
-        <table class="user-table">
-            <thead>
-                <tr>
-                    <th>Build ID</th>
-                    <th>Submission Email</th>
-                    <th>Platform</th>
-                    <th>Type</th>
-                    <th>Submitted At</th>
-                    <th>Dataset Label</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for build in builds %}
-                <tr data-build-id="{{ build.id }}">
-                    <td><a href="{{ url_for('browse_screenshots', build_id=build.id) }}">{{ build.id[:8] }}...</a></td>
-                    <td>{{ build.submission.email }}</td>
-                    <td>{{ build.platform }}</td>
-                    <td>{{ build.type }}</td>
-                    <td>{{ build.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td>
-                        <select class="form-control dataset-label-select" data-build-id="{{ build.id }}">
-                            <option value="">-- No Label --</option>
-                            {% for label in labels %}
-                            <option value="{{ label.id }}" {% if build.dataset_label_id == label.id %}selected{% endif %}>
-                                {{ label.name }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" style="text-align: center;">No accepted builds found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
 
     <div class="pagination">
         {% if pagination.has_prev %}
