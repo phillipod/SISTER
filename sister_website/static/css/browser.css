@@ -470,6 +470,7 @@
     color: #999;
     font-size: 0.9em;
     flex-shrink: 0;
+    margin-left: auto;
 }
 
 .draggable-label:hover .drag-handle {
