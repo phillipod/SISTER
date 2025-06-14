@@ -13,16 +13,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             return `
             <details class="submission-node" open>
-                <summary data-group-screenshots="${submissionScreenshots.join(',')}" data-build-id="${sub.id}">
-                    Submission from ${new Date(sub.created_at).toLocaleDateString()}
-                    <span class="status-badge status-${state}">${stateText}</span>
+                <summary>
+                    <span data-group-screenshots="${submissionScreenshots.join(',')}" data-build-id="${sub.id}">
+                        Submission from ${new Date(sub.created_at).toLocaleDateString()}
+                        <span class="status-badge status-${state}">${stateText}</span>
+                    </span>
                 </summary>
                 <ul>
                     ${sub.builds.map(build => `
                         <li>
                             <details class="build-node" open>
-                                <summary data-group-screenshots="${build.screenshots.map(sc => sc.id).join(',')}" data-build-id="${build.id}">
-                                    ${build.platform} - ${build.type}
+                                <summary>
+                                    <span data-group-screenshots="${build.screenshots.map(sc => sc.id).join(',')}" data-build-id="${build.id}">
+                                        ${build.platform} - ${build.type}
+                                    </span>
                                 </summary>
                                 <ul>
                                     ${build.screenshots.map(sc => `

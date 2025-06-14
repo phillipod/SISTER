@@ -59,10 +59,12 @@
     font-weight: bold;
     padding: 0.25rem;
     border-radius: 4px;
+}
+
+.tree-container summary > span {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    list-style: revert;
 }
 
 .tree-container summary:hover {

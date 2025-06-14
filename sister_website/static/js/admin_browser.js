@@ -31,7 +31,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const details = document.createElement('details');
             details.open = true;
             const summary = document.createElement('summary');
-            summary.textContent = summaryText;
+            const summarySpan = document.createElement('span');
+            summarySpan.textContent = summaryText;
+            summary.appendChild(summarySpan);
             details.appendChild(summary);
             return details;
         };
@@ -67,7 +69,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             subDetails.dataset.buildId = firstSc.build_id; // For scrolling
                             
                             const summary = subDetails.querySelector('summary');
-                            summary.dataset.groupScreenshots = subScreenshots.map(sc => sc.id).join(',');
+                            const summarySpan = summary.querySelector('span');
+                            summarySpan.dataset.groupScreenshots = subScreenshots.map(sc => sc.id).join(',');
 
                         const scUl = document.createElement('ul');
                             subScreenshots.forEach(sc => {
