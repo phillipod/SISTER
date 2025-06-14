@@ -43,6 +43,8 @@ class Build(db.Model):
     type = db.Column(db.String(10), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     screenshots = db.relationship('Screenshot', backref='build', lazy=True)
+    dataset_label_id = db.Column(db.Integer, db.ForeignKey('dataset_label.id'), nullable=True)
+    dataset_label = db.relationship('DatasetLabel', backref='builds')
 
     @property
     def is_accepted(self):
@@ -104,3 +106,14 @@ class AdminUser(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+class DatasetLabel(db.Model):
+    __tablename__ = 'dataset_label'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), unique=True, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<DatasetLabel {self.name}>'

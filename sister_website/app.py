@@ -37,8 +37,9 @@ from .models import (
     LinkLog,
     AdminUser,
     AcceptanceState,
+    DatasetLabel,
 )
-from .forms import UploadForm, LoginForm, AdminUserForm, ChangePasswordForm
+from .forms import UploadForm, LoginForm, AdminUserForm, ChangePasswordForm, DatasetLabelForm
 from .email_utils import (
     send_consent_email,
     send_reply_confirmation_email,
@@ -820,14 +821,19 @@ def unlock_admin_user(user_id):
 @app.route('/admin/user/<int:user_id>/delete', methods=['POST'])
 def delete_admin_user(user_id):
     if not is_admin():
+        flash("You do not have permission to perform this action.", "danger")
         return redirect(url_for('admin_login'))
+
     user_to_delete = AdminUser.query.get_or_404(user_id)
-    if user_to_delete.id == session['admin_user_id']:
-        flash("You cannot delete your own account.", 'danger')
-    else:
-        db.session.delete(user_to_delete)
-        db.session.commit()
-        flash(f"User {user_to_delete.username} has been deleted.", 'success')
+    
+    # Prevent the user from deleting their own account
+    if user_to_delete.id == session.get('admin_user_id'):
+        flash("You cannot delete your own account.", "danger")
+        return redirect(url_for('admin_users'))
+    
+    db.session.delete(user_to_delete)
+    db.session.commit()
+    flash(f"User '{user_to_delete.username}' has been deleted.", "success")
     return redirect(url_for('admin_users'))
 
 
@@ -1289,6 +1295,101 @@ def resend_consent_email(submission_id):
     else:
         db.session.rollback()
         return jsonify({'error': 'Failed to send consent email'}), 500
+
+@app.route('/admin/dataset-labels', methods=['GET', 'POST'])
+def admin_dataset_labels():
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    
+    form = DatasetLabelForm()
+    if form.validate_on_submit():
+        new_label = DatasetLabel(name=form.name.data, description=form.description.data)
+        db.session.add(new_label)
+        db.session.commit()
+        flash('Dataset label created successfully.', 'success')
+        return redirect(url_for('admin_dataset_labels'))
+    
+    labels = DatasetLabel.query.order_by(DatasetLabel.name).all()
+    return render_template('admin/dataset_labels.html', form=form, labels=labels, title="Manage Dataset Labels")
+
+@app.route('/admin/dataset-labels/edit/<int:label_id>', methods=['GET', 'POST'])
+def edit_dataset_label(label_id):
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    
+    label = DatasetLabel.query.get_or_404(label_id)
+    form = DatasetLabelForm(obj=label)
+
+    # Custom validation to allow saving with the same name
+    if request.method == 'POST':
+        # Temporarily remove the validator if the name hasn't changed
+        original_name = label.name
+        if form.name.data == original_name:
+            form.name.validators = [v for v in form.name.validators if v.__class__.__name__ != 'validate_name']
+
+    if form.validate_on_submit():
+        label.name = form.name.data
+        label.description = form.description.data
+        db.session.commit()
+        flash('Dataset label updated successfully.', 'success')
+        return redirect(url_for('admin_dataset_labels'))
+    
+    return render_template('admin/edit_dataset_label.html', form=form, label=label, title="Edit Dataset Label")
+
+@app.route('/admin/dataset-labels/toggle-active/<int:label_id>', methods=['POST'])
+def toggle_dataset_label_active(label_id):
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    label = DatasetLabel.query.get_or_404(label_id)
+    label.is_active = not label.is_active
+    db.session.commit()
+    return jsonify({'success': True, 'is_active': label.is_active})
+
+@app.route('/admin/dataset-manager')
+def dataset_manager():
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+
+    page = request.args.get('page', 1, type=int)
+    per_page = 50 # Or get from request.args
+
+    # Query for accepted builds
+    builds_query = Build.query.join(Submission).filter(
+        Submission.acceptance_state == AcceptanceState.ACCEPTED
+    )
+
+    builds_pagination = builds_query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    active_labels = DatasetLabel.query.filter_by(is_active=True).order_by(DatasetLabel.name).all()
+
+    return render_template(
+        'admin/dataset_manager.html',
+        builds=builds_pagination.items,
+        pagination=builds_pagination,
+        labels=active_labels,
+        title="Dataset Manager"
+    )
+
+@app.route('/admin/api/builds/<build_id>/set-label', methods=['POST'])
+def set_build_dataset_label(build_id):
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    build = Build.query.get_or_404(build_id)
+    data = request.get_json()
+    label_id = data.get('label_id')
+
+    if label_id:
+        label = DatasetLabel.query.get(label_id)
+        if not label or not label.is_active:
+            return jsonify({'error': 'Invalid or inactive label'}), 400
+        build.dataset_label_id = label_id
+    else:
+        build.dataset_label_id = None
+    
+    db.session.commit()
+    return jsonify({'success': True, 'label_id': build.dataset_label_id})
 
 # ────────────────────────────────────────────────────────────────────────────────
 # Global response hardening

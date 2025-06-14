@@ -1,8 +1,8 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, FileField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, FileField, TextAreaField
 from wtforms.validators import DataRequired, Email, EqualTo, ValidationError
 
-from .models import AdminUser
+from .models import AdminUser, DatasetLabel
 
 
 class UploadForm(FlaskForm):
@@ -44,3 +44,15 @@ class AdminUserForm(FlaskForm):
         user = AdminUser.query.filter_by(username=username.data).first()
         if user:
             raise ValidationError('That username is already taken. Please choose a different one.')
+
+
+class DatasetLabelForm(FlaskForm):
+    name = StringField('Name', validators=[DataRequired()])
+    description = TextAreaField('Description')
+    submit = SubmitField('Save Label')
+
+    def validate_name(self, name):
+        # On edit, this check is slightly different, handled in the route
+        label = DatasetLabel.query.filter_by(name=name.data).first()
+        if label:
+            raise ValidationError('A label with this name already exists.')
