@@ -13,6 +13,14 @@
 <body>
     <div class="container">
         <header>
+            <div class="admin-actions">
+                {% if session.admin_user_id %}
+                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Admin</a>
+                    <a href="{{ url_for('admin_logout') }}" class="btn">Logout</a>
+                {% elif not current_user.is_authenticated %}
+                    <a href="{{ url_for('admin_login') }}" class="btn">Admin Login</a>
+                {% endif %}
+            </div>
             <div class="header-top">
                 <a href="{{ url_for('home') }}" class="github-link">
                     <img src="{{ url_for('static', filename='img/icon.png') }}" alt="SISTER Logo" class="logo">
@@ -36,13 +44,6 @@
                     {% else %}
                         <li><a href="{{ url_for('login') }}" class="{% if active_page == 'login' %}active{% endif %}">Login</a></li>
                         <li><a href="{{ url_for('register') }}" class="{% if active_page == 'register' %}active{% endif %}">Register</a></li>
-                    {% endif %}
-                    
-                    {% if session.admin_user_id %}
-                        <li><a href="{{ url_for('admin_dashboard') }}" class="{% if active_page.startswith('admin') %}active"{% endif %}">Admin</a></li>
-                        <li><a href="{{ url_for('admin_logout') }}">Logout</a></li>
-                    {% elif not current_user.is_authenticated %}
-                        <li><a href="{{ url_for('admin_login') }}" class="{% if active_page == 'admin_login' %}active{% endif %}">Admin Login</a></li>
                     {% endif %}
                 </ul>
             </nav>

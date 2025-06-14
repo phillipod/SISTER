@@ -2159,3 +2159,17 @@ footer {
     border-radius: 4px;
 }
 
+.admin-actions {
+    position: absolute;
+    top: 1.5rem;
+    right: 2rem;
+    z-index: 10;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.admin-actions .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
