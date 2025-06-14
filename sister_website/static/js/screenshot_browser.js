@@ -270,15 +270,19 @@ class ScreenshotBrowser {
     }
     
     async handleViewLog(e) {
+        console.log('handleViewLog triggered.', e);
         const link = e.target.closest('a.view-log-link');
+        console.log('Found link element:', link);
         if (!link) return;
         
         e.preventDefault();
         const logId = link.dataset.logId;
         const logType = link.dataset.logType; // 'email' or 'link'
+        console.log(`Log type: ${logType}, Log ID: ${logId}`);
         
         try {
             if (logType === 'email') {
+                console.log('Processing email log...');
                 const tokenUrl = this.api.logAccessToken.replace('{log_id}', logId);
                 const logUrl = this.api.emailLog.replace('{log_id}', logId);
 
@@ -287,12 +291,14 @@ class ScreenshotBrowser {
                     fetch(tokenUrl),
                     fetch(logUrl)
                 ]);
+                console.log('Token response:', tokenRes, 'Log response:', logRes);
 
                 if (!tokenRes.ok) throw new Error('Could not get access token.');
                 if (!logRes.ok) throw new Error('Could not get log details.');
                 
                 const { token } = await tokenRes.json();
                 const log = await logRes.json();
+                console.log('Email log data:', log);
                 
                 const viewerUrl = `https://logviewer.sto-tools.org/log/${logId}?token=${token}`;
                 const content = `
@@ -301,20 +307,25 @@ class ScreenshotBrowser {
                     <p><strong>Subject:</strong> ${log.subject}</p><hr>
                     <iframe class="email-body-iframe" src="${viewerUrl}" sandbox></iframe>`;
                 
+                console.log('Showing modal with email content.');
                 this.showModal('Email Details', content);
 
             } else if (logType === 'link') {
+                console.log('Processing link log...');
                 const logUrl = this.api.linkLog.replace('{log_id}', logId);
                 const logRes = await fetch(logUrl);
+                console.log('Link log response:', logRes);
 
                 if (!logRes.ok) throw new Error('Could not get log details.');
                 const log = await logRes.json();
+                console.log('Link log data:', log);
                 
                 const content = `
                     <p><strong>IP Address:</strong> ${log.ip_address || 'N/A'}</p>
                     <p><strong>User Agent:</strong> ${log.user_agent || 'N/A'}</p>
                     <p><strong>Clicked At:</strong> ${new Date(log.clicked_at).toLocaleString()}</p>`;
                 
+                console.log('Showing modal with link content.');
                 this.showModal('Link Click Details', content);
             }
         } catch (error) {
