@@ -201,35 +201,32 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def allowed_mime(file_storage):
-    """Checks if the file's MIME type is allowed."""
+    """Checks if the file's MIME type is allowed and returns the MIME type if so."""
     mime_type = None
-    is_allowed = False
     try:
         sample = file_storage.read(2048)  # Read a chunk for MIME detection
         mime_type = magic.from_buffer(sample, mime=True)
         current_app.logger.info(
             "Detected MIME type: %s for file: %s", mime_type, file_storage.filename
         )
-        is_allowed = mime_type in ALLOWED_MIME_TYPES
-        current_app.logger.info(
-            "MIME type %s is_allowed: %s", mime_type, is_allowed
-        )
+        if mime_type in ALLOWED_MIME_TYPES:
+            current_app.logger.info("MIME type %s is allowed.", mime_type)
+            return mime_type
+        
+        current_app.logger.warning("MIME type %s is not allowed.", mime_type)
+        return None
+
     except ImportError as ie:
-        current_app.logger.error(
-            "ImportError in allowed_mime: %s", ie, exc_info=True
-        )
-        # Fallback: If python-magic is not available, you might choose to skip MIME check or deny all.
-        # For security, denying is safer if MIME check is critical.
-        is_allowed = False  # Or True if you want to allow uploads if magic fails
+        current_app.logger.error("ImportError in allowed_mime: %s", ie, exc_info=True)
+        return None  # Fallback if python-magic is not available
     except Exception as e:
         current_app.logger.error(
             "Exception in allowed_mime for %s: %s", file_storage.filename, e,
             exc_info=True,
         )
-        is_allowed = False  # Default to not allowed if there's an error in checking
+        return None  # Default to not allowed if there's an error in checking
     finally:
         file_storage.seek(0)  # IMPORTANT: Reset stream for subsequent reads
-    return is_allowed
 
 
 def is_safe_url(target):
@@ -246,7 +243,7 @@ def is_admin():
     user = AdminUser.query.get(admin_id)
     return user is not None and not user.is_locked
 
-def save_screenshot(file):
+def save_screenshot(file, filename_base=None):
     """Saves a screenshot file, calculates its MD5, and creates a Screenshot record in memory without saving to disk."""
     filename_for_log = file.filename if file else "No file provided"
     current_app.logger.info(f"save_screenshot called for: {filename_for_log}")
@@ -255,43 +252,48 @@ def save_screenshot(file):
         current_app.logger.warning(f"save_screenshot: No file object provided.")
         return None
 
-    is_file_allowed = allowed_file(file.filename)
-    current_app.logger.info(f"save_screenshot: allowed_file({file.filename}) result: {is_file_allowed}")
-
-    if not is_file_allowed:
+    # Check file extension first as a basic sanity check
+    if not allowed_file(file.filename):
         current_app.logger.warning(f"save_screenshot: File extension not allowed for {file.filename}.")
         return None
 
-    # Now check MIME type only if file extension is okay
-    is_mime_allowed = allowed_mime(file)
-    current_app.logger.info(f"save_screenshot: allowed_mime({file.filename}) result: {is_mime_allowed}")
-
-    if not is_mime_allowed:
-        current_app.logger.warning(f"save_screenshot: MIME type not allowed for {file.filename}.")
+    # Now check MIME type from file content, which is more reliable
+    detected_mime_type = allowed_mime(file)
+    if not detected_mime_type:
+        current_app.logger.warning(f"save_screenshot: MIME type not allowed or could not be determined for {file.filename}.")
         return None
 
-    # Proceed with processing if both checks passed
-    if is_file_allowed and is_mime_allowed:
+    # Determine extension from the validated MIME type
+    extension_map = {'image/png': 'png', 'image/jpeg': 'jpg'}
+    extension = extension_map.get(detected_mime_type)
+
+    if not extension:
+        # This case should not be reached if ALLOWED_MIME_TYPES and extension_map are in sync
+        current_app.logger.error(f"Could not determine file extension for validated MIME type: {detected_mime_type}")
+        return None
+    
+    # Construct filename
+    if filename_base:
+        filename = f"{filename_base}.{extension}"
+    else:
+        # Fallback to a secured version of the original filename if no base is provided
         filename = secure_filename(file.filename)
             
-        try:
-            file_content = file.read()  # Read the content once
-            file.seek(0)  # Reset stream position in case it's used elsewhere, good practice.
+    try:
+        file_content = file.read()  # Read the content once
+        file.seek(0)  # Reset stream position in case it's used elsewhere, good practice.
 
-            md5_hash = hashlib.md5(file_content).hexdigest()
+        md5_hash = hashlib.md5(file_content).hexdigest()
 
-            new_screenshot = Screenshot(
-                filename=filename,
-                md5sum=md5_hash,
-                data=file_content,
-            )
-            return new_screenshot
-        except Exception as e:
-            current_app.logger.error(f"Error processing screenshot data for {filename}: {e}")
-            return None
-    # This part is reached if the initial checks (is_file_allowed and is_mime_allowed) failed earlier
-    current_app.logger.warning(f"save_screenshot: Returning None for {filename_for_log} due to failed pre-checks (extension or MIME).")
-    return None
+        new_screenshot = Screenshot(
+            filename=filename,
+            md5sum=md5_hash,
+            data=file_content,
+        )
+        return new_screenshot
+    except Exception as e:
+        current_app.logger.error(f"Error processing screenshot data for {filename}: {e}")
+        return None
 
 def generate_acceptance_token(submission_id, email):
     """Generate a secure token for email acceptance for a Submission"""
@@ -397,8 +399,9 @@ def training_data_submit():
             )
             
             saved_screenshots_for_this_build = []
-            for file_in_request in actual_screenshots_files:
-                screenshot = save_screenshot(file_in_request) 
+            for i, file_in_request in enumerate(actual_screenshots_files, 1):
+                new_filename_base = f"build_{build_index}_{i:02d}"
+                screenshot = save_screenshot(file_in_request, filename_base=new_filename_base) 
                 if screenshot:
                     saved_screenshots_for_this_build.append(screenshot)
                     has_screenshots = True # Set to True if at least one screenshot is saved across all builds
@@ -1321,3 +1324,4 @@ def verify_admin_session():
             flash('Please log in again.', 'warning')
             if request.path.startswith('/admin'):
                 return redirect(url_for('admin_login', next=request.path))
+
