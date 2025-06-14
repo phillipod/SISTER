@@ -62,34 +62,6 @@
                         {% endfor %}
                     </tbody>
                 </table>
-                {% for type, data in platform_data.items() %}
-                <div class="label-stats-container">
-                    <h5>Label Counts for Accepted {{ type|title }} Builds</h5>
-                    <table class="stats-table stats-table-sm">
-                        <thead>
-                            <tr>
-                                <th>Label Name</th>
-                                <th>Count</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% set found_labels = namespace(value=false) %}
-                            {% for label_id, label_data in data.labels.items()|sort(attribute='name') %}
-                                {% if label_data.count > 0 %}
-                                    {% set found_labels.value = true %}
-                                    <tr>
-                                        <td>{{ label_data.name }}{% if not label_data.is_active %} (inactive){% endif %}</td>
-                                        <td>{{ label_data.count }}</td>
-                                    </tr>
-                                {% endif %}
-                            {% endfor %}
-                            {% if not found_labels.value %}
-                                <tr><td colspan="2">No labeled builds for this type yet.</td></tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endfor %}
             {% else %}
                 <p>No platform data available.</p>
             {% endfor %}
