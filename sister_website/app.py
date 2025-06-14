@@ -1667,15 +1667,60 @@ def user_submissions_data():
     data_structured = []
 
     for sub in submissions:
+        # Build the same 'events' structure as the admin browser
+        events = []
+        events.append({"type": "Submitted", "timestamp": sub.created_at.isoformat(), "method": "Web Form"})
+        
+        def find_log_for_event(timestamp, method):
+            if method == 'link':
+                return min(sub.link_logs, key=lambda log: abs(log.clicked_at - timestamp), default=None)
+            elif method == 'email':
+                return min(sub.email_logs, key=lambda log: abs(log.received_at - timestamp), default=None)
+            return None
+
+        if sub.acceptance_state == AcceptanceState.ACCEPTED and sub.accepted_at:
+            log = find_log_for_event(sub.accepted_at, sub.acceptance_method)
+            details = {}
+            if log:
+                if sub.acceptance_method == 'link':
+                    details = {"log_id": log.id, "details": {"ip_address": log.ip_address, "user_agent": log.user_agent}}
+                elif sub.acceptance_method == 'email':
+                    details = {"log_id": log.id, "details": {"subject": log.subject, "from": log.from_address}}
+            events.append({"type": "Accepted", "timestamp": sub.accepted_at.isoformat(), "method": sub.acceptance_method.capitalize(), **details})
+        
+        elif sub.acceptance_state == AcceptanceState.DECLINED and sub.accepted_at:
+            log = find_log_for_event(sub.accepted_at, sub.acceptance_method)
+            details = {}
+            if log:
+                if sub.acceptance_method == 'link':
+                    details = {"log_id": log.id, "details": {"ip_address": log.ip_address, "user_agent": log.user_agent}}
+                elif sub.acceptance_method == 'email':
+                    details = {"log_id": log.id, "details": {"subject": log.subject, "from": log.from_address}}
+            events.append({"type": "Declined", "timestamp": sub.accepted_at.isoformat(), "method": sub.acceptance_method.capitalize(), **details})
+
+        if sub.is_withdrawn and sub.withdrawn_at:
+            log = find_log_for_event(sub.withdrawn_at, 'link')
+            details = {}
+            if log:
+                details = {"log_id": log.id, "details": {"ip_address": log.ip_address, "user_agent": log.user_agent}}
+            events.append({"type": "Withdrawn", "timestamp": sub.withdrawn_at.isoformat(), "method": "Link", **details})
+
+        for log in sub.email_logs:
+            is_decision_log = (sub.accepted_at and abs(log.received_at - sub.accepted_at) < timedelta(seconds=10))
+            if not is_decision_log:
+                 events.append({"type": "Email Received", "timestamp": log.received_at.isoformat(), "method": "Email", "log_id": log.id, "details": {"subject": log.subject, "from": log.from_address}})
+
+        events.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')))
+
         submission_info = {
             'id': sub.id,
             'created_at': sub.created_at.isoformat(),
             'acceptance_state': sub.acceptance_state.value,
             'is_withdrawn': sub.is_withdrawn,
             'acceptance_token': sub.acceptance_token,
-            'builds': [],
-            'email_logs': [{'subject': log.subject, 'received_at': log.received_at.isoformat()} for log in sub.email_logs],
-            'link_logs': [{'ip_address': log.ip_address, 'clicked_at': log.clicked_at.isoformat()} for log in sub.link_logs]
+            'email': sub.email,
+            'events': events,
+            'builds': []
         }
         
         for build in sub.builds:
@@ -1690,6 +1735,11 @@ def user_submissions_data():
             }
             submission_info['builds'].append(build_info)
         
+        # Add the full submission details to each screenshot for easy access on the frontend
+        for build in submission_info['builds']:
+            for sc in build['screenshots']:
+                sc['submission_details'] = submission_info
+
         data_structured.append(submission_info)
         
     return jsonify(data_structured)

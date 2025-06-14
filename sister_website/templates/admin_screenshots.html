@@ -55,14 +55,29 @@
         </div>
     </div>
 </div>
+
+<!-- Modal for displaying logs -->
+<div id="log-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modal-title">Log Details</h2>
+            <span class="close-btn">&times;</span>
+        </div>
+        <div class="modal-body" id="modal-body">
+            <!-- Log content will be inserted here -->
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block additional_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_browser.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/browser.css') }}">
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
+<script src="{{ url_for('static', filename='js/screenshot_browser.js') }}" defer></script>
 <script id="admin-browser-script" 
         src="{{ url_for('static', filename='js/admin_browser.js') }}"
         data-build-id="{{ build_id or '' }}"
