@@ -1615,7 +1615,7 @@ def verify_email(token):
         user.email_verification_token = None # Token should be single-use
         db.session.commit()
         flash('Your email has been verified! You can now log in.', 'success')
-        return redirect(url_for('login'))
+        return redirect(url_for('test_flash_target'))
     else:
         flash('The verification link is invalid or has expired.', 'danger')
         return redirect(url_for('home'))
