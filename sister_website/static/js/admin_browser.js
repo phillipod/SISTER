@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const scriptTag = document.getElementById('admin-browser-script');
-    const initialBuildId = scriptTag ? scriptTag.dataset.buildId : null;
+    let initialBuildId = scriptTag ? scriptTag.dataset.buildId : null;
 
     const filters = {
         platform: document.getElementById('platform-filter'),
@@ -80,6 +80,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // After rendering, check if we need to scroll to a specific build
         if (initialBuildId) {
             scrollToBuild(initialBuildId);
+            // Clear the ID after the first use to prevent re-scrolling on filter change
+            initialBuildId = null; 
         }
     }
 
@@ -241,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         previewImage.src = `/admin/screenshot/${target.dataset.screenshotId}?t=${Date.now()}`;
         previewImage.classList.remove('hidden');
-        previewPlaceholder.classList.add('hidden');
+        previewPlaceholder.classList.remove('hidden');
 
         renderScreenshotInfo(info);
 
