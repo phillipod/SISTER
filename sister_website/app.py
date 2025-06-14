@@ -24,6 +24,7 @@ import uuid  # Ensure uuid is imported for new models
 import magic
 import re
 from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 from io import BytesIO
 import requests
@@ -124,6 +125,9 @@ def create_app():
     Migrate(app, db)  # Initialize Flask-Migrate
     cache.init_app(app)
     csrf.init_app(app)
+
+    # Add ProxyFix to handle headers from a reverse proxy
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
     # Ensure upload directory exists
     os.makedirs(upload_folder, exist_ok=True)
@@ -1646,4 +1650,19 @@ def user_submissions():
     # ordered by creation date, so we can use it directly.
     submissions = current_user.submissions
     return render_template('user_submissions.html', submissions=submissions, active_page='user_submissions')
+
+# --------------------- DIAGNOSTIC ROUTES ---------------------
+@app.route('/test-flash')
+def test_flash():
+    """Diagnostic route to test the flash messaging system."""
+    flash('This is a test flash message.', 'info')
+    current_app.logger.info("Flashed a test message to the session.")
+    return redirect(url_for('test_flash_target'))
+
+@app.route('/test-flash-target')
+def test_flash_target():
+    """Target page for the flash message test."""
+    current_app.logger.info("Landed on flash test target page.")
+    return render_template('pages/test_flash_target.html')
+# -----------------------------------------------------------
 
