@@ -649,9 +649,13 @@ def extract_reply_text(email_body_text):
 @app.route('/training-data-stats')
 @cache.cached(timeout=900)  # Cache for 15 minutes
 def training_data_stats():
-    # Get all non-withdrawn submissions with their builds and screenshots
+    # Get all labels first, including deactivated ones, for the template
+    all_labels = DatasetLabel.query.order_by(DatasetLabel.name).all()
+    label_map = {label.id: label for label in all_labels}
+
+    # Get all non-withdrawn submissions with their builds
     submissions = Submission.query.options(
-        db.joinedload(Submission.builds).joinedload(Build.screenshots)
+        db.joinedload(Submission.builds)
     ).filter(Submission.is_withdrawn == False).all()
     
     # Initialize stats
@@ -667,12 +671,12 @@ def training_data_stats():
         },
         'by_platform_type': {
             'PC': {
-                'space': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0},
-                'ground': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0}
+                'space': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0, 'labels': {label.id: {'count': 0, 'name': label.name, 'is_active': label.is_active} for label in all_labels}},
+                'ground': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0, 'labels': {label.id: {'count': 0, 'name': label.name, 'is_active': label.is_active} for label in all_labels}}
             },
             'Console': {
-                'space': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0},
-                'ground': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0}
+                'space': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0, 'labels': {label.id: {'count': 0, 'name': label.name, 'is_active': label.is_active} for label in all_labels}},
+                'ground': {'total_builds': 0, 'accepted_builds': 0, 'total_screenshots': 0, 'accepted_screenshots': 0, 'labels': {label.id: {'count': 0, 'name': label.name, 'is_active': label.is_active} for label in all_labels}}
             }
         },
         'target_per_platform_type': 75, # Target number of builds for each platform/type combo
@@ -698,25 +702,23 @@ def training_data_stats():
                 stats['by_platform_type'][platform_key][type_key]['total_builds'] += 1
                 if submission.acceptance_state == AcceptanceState.ACCEPTED:
                     stats['by_platform_type'][platform_key][type_key]['accepted_builds'] += 1
+                    # If the build is accepted and has a label, count it
+                    if build.dataset_label_id and build.dataset_label_id in stats['by_platform_type'][platform_key][type_key]['labels']:
+                        stats['by_platform_type'][platform_key][type_key]['labels'][build.dataset_label_id]['count'] += 1
 
+            # The original screenshot counting logic is now mostly redundant for the new view,
+            # but we can keep it for the overview stats.
             for screenshot in build.screenshots:
                 stats['total_screenshots'] += 1
-                # Stats for screenshot types (labels), derived from build
-                # Ensure build relationship is loaded. The query in training_data_stats should handle this.
-                # Submission.query.options(db.joinedload(Submission.builds).joinedload(Build.screenshots))
                 if screenshot.build and screenshot.build.type in stats['by_screenshot_type']:
                     stats['by_screenshot_type'][screenshot.build.type]['total'] += 1
                     if submission.acceptance_state == AcceptanceState.ACCEPTED:
                         stats['by_screenshot_type'][screenshot.build.type]['accepted'] += 1
                 
-                # Aggregate screenshot counts within platform/type as well
                 if platform_key and type_key:
                     stats['by_platform_type'][platform_key][type_key]['total_screenshots'] += 1
                     if submission.acceptance_state == AcceptanceState.ACCEPTED:
                         stats['by_platform_type'][platform_key][type_key]['accepted_screenshots'] += 1
-    
-    # Ensure by_type is a standard dict for the template, which it already is now
-    # No conversion needed if initialized as a dict with predefined keys
     
     return render_template('training_data_stats.html', 
                          stats=stats, 
