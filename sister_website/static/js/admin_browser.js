@@ -55,18 +55,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
 
                     if (filteredScreenshots.length > 0) {
-                        const submissions = filteredScreenshots.reduce((acc, sc) => {
-                            const submissionKey = `${sc.submission_id}_${sc.build_id}`;
-                            acc[submissionKey] = acc[submissionKey] || {
+                        const builds = filteredScreenshots.reduce((acc, sc) => {
+                            acc[sc.build_id] = acc[sc.build_id] || {
                                 screenshots: [],
                                 build_id: sc.build_id,
-                                submission_id: sc.submission_id
+                                submission_id: sc.submission_id,
+                                email: sc.email // Store email for display
                             };
-                            acc[submissionKey].screenshots.push(sc);
+                            acc[sc.build_id].screenshots.push(sc);
                             return acc;
                         }, {});
 
-                        treeData[platform][type][date] = submissions;
+                        treeData[platform][type][date] = builds;
                         hasResults = true;
                     }
                 }
@@ -95,14 +95,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const typeDetails = createDetails(type);
                 for (const date in data[platform][type]) {
                     const dateDetails = createDetails(date);
-                    for (const submissionKey in data[platform][type][date]) {
-                        const submissionGroup = data[platform][type][date][submissionKey];
-                        const { screenshots, build_id, submission_id } = submissionGroup;
-                        const submissionLabel = `Build ${build_id.substring(0, 8)} (Submission ${submission_id.substring(0, 8)})`;
+                    for (const buildId in data[platform][type][date]) {
+                        const buildGroup = data[platform][type][date][buildId];
+                        const { screenshots, build_id, submission_id, email } = buildGroup;
+                        const buildLabel = `Build ${build_id.substring(0, 8)} (Submission ${submission_id.substring(0, 8)})`;
                         
-                        const submissionScreenshotIds = screenshots.map(sc => sc.id);
-                        const submissionDetails = createDetails(submissionLabel, submissionScreenshotIds);
-                        submissionDetails.dataset.buildId = build_id; // Set build_id attribute
+                        const buildScreenshotIds = screenshots.map(sc => sc.id);
+                        const buildDetails = createDetails(buildLabel, buildScreenshotIds);
+                        buildDetails.dataset.buildId = build_id; // Set build_id attribute
 
                         const scUl = document.createElement('ul');
                         scUl.className = 'list-unstyled pl-3';
@@ -118,8 +118,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             scLi.appendChild(link);
                             scUl.appendChild(scLi);
                         });
-                        submissionDetails.appendChild(scUl);
-                        dateDetails.appendChild(submissionDetails);
+                        buildDetails.appendChild(scUl);
+                        dateDetails.appendChild(buildDetails);
                     }
                     typeDetails.appendChild(dateDetails);
                 }
