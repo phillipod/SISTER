@@ -56,8 +56,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     if (filteredScreenshots.length > 0) {
                         const submissions = filteredScreenshots.reduce((acc, sc) => {
-                            acc[sc.submission_id] = acc[sc.submission_id] || [];
-                            acc[sc.submission_id].push(sc);
+                            const submissionKey = `${sc.submission_id}_${sc.build_id}`;
+                            acc[submissionKey] = acc[submissionKey] || {
+                                screenshots: [],
+                                build_id: sc.build_id,
+                                submission_id: sc.submission_id
+                            };
+                            acc[submissionKey].screenshots.push(sc);
                             return acc;
                         }, {});
 
@@ -68,6 +73,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         renderTree(treeData, hasResults);
+        
+        // After rendering, check if we need to scroll to a specific build
+        if (initialBuildId) {
+            scrollToBuild(initialBuildId);
+        }
     }
 
     function renderTree(data, hasResults) {
@@ -85,12 +95,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const typeDetails = createDetails(type);
                 for (const date in data[platform][type]) {
                     const dateDetails = createDetails(date);
-                    for (const submissionId in data[platform][type][date]) {
-                        const screenshots = data[platform][type][date][submissionId];
-                        const submissionLabel = `Submission ${submissionId.substring(0, 8)}`;
+                    for (const submissionKey in data[platform][type][date]) {
+                        const submissionGroup = data[platform][type][date][submissionKey];
+                        const { screenshots, build_id, submission_id } = submissionGroup;
+                        const submissionLabel = `Build ${build_id.substring(0, 8)} (Submission ${submission_id.substring(0, 8)})`;
                         
                         const submissionScreenshotIds = screenshots.map(sc => sc.id);
-                    const submissionDetails = createDetails(submissionLabel, submissionScreenshotIds);
+                        const submissionDetails = createDetails(submissionLabel, submissionScreenshotIds);
+                        submissionDetails.dataset.buildId = build_id; // Set build_id attribute
 
                         const scUl = document.createElement('ul');
                         scUl.className = 'list-unstyled pl-3';
@@ -468,6 +480,30 @@ document.addEventListener('DOMContentLoaded', function() {
         previewPlaceholder.style.display = 'block';
         screenshotInfo.innerHTML = '';
         screenshotInfo.style.display = 'none';
+    }
+
+    function scrollToBuild(buildId) {
+        // Find the element for the build. We added a 'data-build-id' attribute for this.
+        const buildElement = treePane.querySelector(`details[data-build-id="${buildId}"]`);
+        if (buildElement) {
+            // Scroll the element into view
+            buildElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Optionally, open the details and highlight it
+            buildElement.open = true;
+            buildElement.classList.add('highlight'); // Add a class for styling
+            
+            // Trigger a click on the summary to show the screenshot previews
+            const summary = buildElement.querySelector('summary');
+            if (summary) {
+                summary.click();
+            }
+
+            // Remove the highlight after a few seconds
+            setTimeout(() => {
+                buildElement.classList.remove('highlight');
+            }, 3000);
+        }
     }
 
     Object.values(filters).forEach(filter => {

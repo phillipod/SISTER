@@ -55,7 +55,22 @@
 </div>
 {% endblock %}
 
+{% block styles %}
+{{ super() }}
+<style>
+    .highlight {
+        background-color: #f0e68c; /* Khaki */
+        border: 1px solid #c8b868;
+        border-radius: 5px;
+    }
+</style>
+{% endblock %}
+
 {% block scripts %}
 {{ super() }}
+<script>
+    // Pass build_id from Flask template to JavaScript
+    const initialBuildId = "{{ build_id or '' }}";
+</script>
 <script src="{{ url_for('static', filename='js/admin_browser.js') }}"></script>
 {% endblock %}

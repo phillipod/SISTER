@@ -841,7 +841,10 @@ def delete_admin_user(user_id):
 def browse_screenshots():
     if not is_admin():
         return redirect(url_for('admin_login', next=request.path))
-    return render_template('admin_screenshots.html', active_page='admin_screenshots')
+    
+    build_id = request.args.get('build_id')
+    
+    return render_template('admin_screenshots.html', active_page='admin_screenshots', build_id=build_id)
 
 
 @app.route('/admin/api/screenshots')
