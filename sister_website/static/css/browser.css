@@ -393,8 +393,8 @@
 /* Styles for the screenshot grid view */
 #preview-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
     padding: 8px;
     width: 100%;
 }
@@ -406,7 +406,7 @@
 
 .preview-grid-img {
     width: 100%;
-    height: 100px;
+    height: 200px;
     object-fit: cover;
     border-radius: 4px;
     cursor: pointer;
