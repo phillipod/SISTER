@@ -1361,6 +1361,7 @@ def dataset_manager():
 
     # Filter parameters
     build_id_filter = request.args.get('build_id', '')
+    submission_id_filter = request.args.get('submission_id', '')
     submission_email_filter = request.args.get('submission_email', '')
     platform_filter = request.args.get('platform', '')
     type_filter = request.args.get('type', '')
@@ -1374,6 +1375,8 @@ def dataset_manager():
     # Apply filters
     if build_id_filter:
         builds_query = builds_query.filter(Build.id.ilike(f"%{build_id_filter}%"))
+    if submission_id_filter:
+        builds_query = builds_query.filter(Build.submission_id.ilike(f"%{submission_id_filter}%"))
     if submission_email_filter:
         builds_query = builds_query.filter(Submission.email.ilike(f"%{submission_email_filter}%"))
     if platform_filter:
@@ -1403,6 +1406,7 @@ def dataset_manager():
     # Preserve filters in pagination links
     pagination_kwargs = {
         'build_id': build_id_filter,
+        'submission_id': submission_id_filter,
         'submission_email': submission_email_filter,
         'platform': platform_filter,
         'type': type_filter,
@@ -1420,6 +1424,7 @@ def dataset_manager():
         active_page='dataset_manager',
         filters={
             'build_id': build_id_filter,
+            'submission_id': submission_id_filter,
             'submission_email': submission_email_filter,
             'platform': platform_filter,
             'type': type_filter,

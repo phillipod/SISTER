@@ -26,6 +26,13 @@
                             </div>
                         </th>
                         <th class="filterable">
+                            Submission ID <i class="fas fa-filter filter-icon {% if filters.submission_id %}active-filter{% endif %}"></i>
+                            <div class="filter-popup">
+                                <label for="submission_id">Filter by Submission ID</label>
+                                <input type="text" name="submission_id" id="submission_id" value="{{ filters.submission_id }}" class="form-control">
+                            </div>
+                        </th>
+                        <th class="filterable">
                             Submission Email <i class="fas fa-filter filter-icon {% if filters.submission_email %}active-filter{% endif %}"></i>
                             <div class="filter-popup">
                                 <label for="submission_email">Filter by Submission Email</label>
@@ -78,6 +85,7 @@
                             <a href="{{ url_for('browse_screenshots', build_id=build.id) }}">{{ build.id[:8] }}...</a>
                             <i class="fas fa-history audit-log-icon" data-build-id="{{ build.id }}" title="View Audit Log"></i>
                         </td>
+                        <td>{{ build.submission.id[:8] }}...</td>
                         <td>{{ build.submission.email }}</td>
                         <td>
                             <select class="form-control build-detail-select" data-build-id="{{ build.id }}" data-field="platform">
@@ -105,7 +113,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" style="text-align: center;">No accepted builds found.</td>
+                        <td colspan="7" style="text-align: center;">No accepted builds found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
