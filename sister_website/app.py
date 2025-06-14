@@ -1561,17 +1561,17 @@ def get_build_audit_log(build_id):
 # Add common security headers to all responses
 @app.after_request
 def set_security_headers(resp):
-    # Set X-Frame-Options based on the requested host
-    if request.host == 'logviewer.sto-tools.org':
-        # Allow the log viewer to be framed by its own origin (which is the main site in this context)
-        resp.headers['X-Frame-Options'] = 'SAMEORIGIN'
-    else:
-        # Deny framing for all other parts of the site
-        resp.headers['X-Frame-Options'] = 'DENY'
+    # If the request is for the logviewer, its route handles its own headers.
+    # We do nothing here to avoid overwriting them.
+    if 'logviewer' in request.host:
+        return resp
+
+    # For the main site (sister.sto-tools.org)
+    resp.headers.setdefault('X-Frame-Options', 'DENY')
 
     csp = {
         'default-src': "'self'",
-        'style-src': "'self' https://cdnjs.cloudflare.com 'unsafe-inline'",
+        'style-src': "'self' https://cdnjs.cloudflare.com", # Reverted to secure default
         'font-src': "'self' https://cdnjs.cloudflare.com",
         'frame-src': "blob: https://logviewer.sto-tools.org",
         'child-src': "blob: https://logviewer.sto-tools.org",
@@ -1783,8 +1783,10 @@ def public_email_log_view(log_id):
 
     from flask import make_response
     resp = make_response(body_html)
-    # The X-Frame-Options header is now handled by the global after_request hook.
-    # The CSP for this specific response still needs to be set to allow inline styles.
-    resp.headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'"
+    
+    # This response sets its own specific headers and is ignored by the global hook.
+    # This CSP allows inline styles AND specifies that only the main site can frame it.
+    resp.headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors https://sister.sto-tools.org;"
+    # We do NOT set X-Frame-Options, allowing the CSP to be the source of truth for framing.
     return resp
 
