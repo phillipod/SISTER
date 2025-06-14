@@ -119,6 +119,38 @@ def send_reply_confirmation_email(original_sender_email, submission_id, decision
         return False
 
 
+def send_verification_email(user_email, token):
+    try:
+        client = ForwardEmailClient(api_key=os.getenv('FORWARD_EMAIL_API_KEY'))
+
+        verification_url = url_for('verify_email', token=token, _external=True)
+
+        from_email = EmailAddress(
+            email=f"noreply@{os.getenv('FORWARD_EMAIL_DOMAIN', 'adhd.geek.nz')}",
+            name="SISTER Team"
+        )
+
+        html_content = render_template(
+            'email/verification_email.html',
+            verification_url=verification_url,
+            timestamp=datetime.utcnow()
+        )
+
+        message = EmailMessage(
+            from_email=from_email,
+            to=[user_email],
+            subject="SISTER - Verify your email address",
+            html=html_content
+        )
+
+        client.send_email(message)
+        logger.info(f"Sent verification email to: {user_email}")
+        return True
+    except Exception as e:
+        logger.error(f"Email sending error for verification to {user_email}: {e}", exc_info=True)
+        return False
+
+
 def verify_webhook_signature(request_data, signature_header, secret_key):
     if not all([request_data, signature_header, secret_key]):
         return False

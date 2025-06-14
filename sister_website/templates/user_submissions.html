@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}My Submissions{% endblock %}
+
+{% block content %}
+<div class="container user-submissions-page">
+    <h1>My Submissions</h1>
+    <hr>
+    {% if submissions %}
+        {% for submission in submissions %}
+        <div class="submission-card">
+            <div class="submission-header">
+                <h3>Submission from {{ submission.created_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</h3>
+                <span class="status-badge status-{{ submission.acceptance_state.value }}">
+                    {{ submission.acceptance_state.value | capitalize }}
+                </span>
+            </div>
+            <div class="submission-body">
+                <p><strong>Submission ID:</strong> {{ submission.id }}</p>
+                <p><strong>Email:</strong> {{ submission.email }}</p>
+                
+                {% if submission.builds %}
+                    <h4>Builds:</h4>
+                    <ul class="build-list">
+                        {% for build in submission.builds %}
+                            <li>{{ build.platform }} - {{ build.type }} ({{ build.screenshots|length }} screenshots)</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No builds associated with this submission.</p>
+                {% endif %}
+
+                <div class="submission-actions">
+                    {% if submission.acceptance_state.value == 'pending' %}
+                        <a href="{{ url_for('accept_license', token=submission.acceptance_token) }}" class="btn btn-success">Accept License</a>
+                        <a href="{{ url_for('decline_license', token=submission.acceptance_token) }}" class="btn btn-warning">Decline License</a>
+                    {% elif submission.acceptance_state.value == 'accepted' and not submission.is_withdrawn %}
+                        <a href="{{ url_for('withdraw_submission', token=submission.acceptance_token) }}" class="btn btn-danger">Withdraw Submission</a>
+                    {% endif %}
+                </div>
+                
+                <div class="submission-logs">
+                    <button class="btn btn-secondary log-toggle-btn" data-target="logs-{{ submission.id }}">
+                        Toggle Logs
+                    </button>
+                    <div id="logs-{{ submission.id }}" class="log-details" style="display: none;">
+                        <h4>Email Logs</h4>
+                        {% if submission.email_logs %}
+                        <ul class="log-list">
+                            {% for log in submission.email_logs %}
+                            <li>{{ log.received_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC - Subject: {{ log.subject }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p>No email logs.</p>
+                        {% endif %}
+                        <hr>
+                        <h4>Link Click Logs</h4>
+                         {% if submission.link_logs %}
+                        <ul class="log-list">
+                            {% for log in submission.link_logs %}
+                            <li>{{ log.clicked_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC - IP: {{ log.ip_address }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p>No link logs.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p>You have not made any submissions yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleButtons = document.querySelectorAll('.log-toggle-btn');
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const targetElement = document.getElementById(targetId);
+            if (targetElement) {
+                if (targetElement.style.display === 'none') {
+                    targetElement.style.display = 'block';
+                    this.textContent = 'Hide Logs';
+                } else {
+                    targetElement.style.display = 'none';
+                    this.textContent = 'Toggle Logs';
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

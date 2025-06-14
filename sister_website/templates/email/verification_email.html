@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SISTER - Email Verification</title>
+</head>
+<body>
+    <p>Hello,</p>
+    <p>Thank you for registering with SISTER. Please click the link below to verify your email address and activate your account:</p>
+    <p><a href="{{ verification_url }}">Verify Your Email</a></p>
+    <p>If you did not register for an account, please ignore this email.</p>
+    <p>Thanks,<br>The SISTER Team</p>
+    <p><small>This email was sent at {{ timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC.</small></p>
+</body>
+</html> 

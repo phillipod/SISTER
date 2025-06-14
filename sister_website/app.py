@@ -29,6 +29,7 @@ from io import BytesIO
 import requests
 from sqlalchemy import or_
 from sqlalchemy import case, func, and_
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 
 from .models import (
     db,
@@ -40,13 +41,15 @@ from .models import (
     AdminUser,
     AcceptanceState,
     DatasetLabel,
-    BuildAuditLog
+    BuildAuditLog,
+    User
 )
-from .forms import UploadForm, LoginForm, AdminUserForm, ChangePasswordForm, DatasetLabelForm
+from .forms import UploadForm, AdminLoginForm, AdminUserForm, ChangePasswordForm, DatasetLabelForm, RegistrationForm, UserLoginForm
 from .email_utils import (
     send_consent_email,
     send_reply_confirmation_email,
     verify_webhook_signature,
+    send_verification_email
 )
 # import magic # Removed, will use the one below with other Flask imports
 
@@ -758,7 +761,7 @@ def acceptance_thank_you():
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
-    form = LoginForm()
+    form = AdminLoginForm()
     if form.validate_on_submit():
         user = AdminUser.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data) and not user.is_locked:
@@ -1574,4 +1577,73 @@ def verify_admin_session():
             flash('Please log in again.', 'warning')
             if request.path.startswith('/admin'):
                 return redirect(url_for('admin_login', next=request.path))
+
+# After app initialization
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(user_id)
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(email=form.email.data)
+        user.set_password(form.password.data)
+        token = user.generate_verification_token()
+        db.session.add(user)
+        db.session.commit()
+        send_verification_email(user.email, token)
+        flash('A verification email has been sent to your email address.', 'info')
+        return redirect(url_for('login'))
+    return render_template('register.html', form=form, active_page='register')
+
+@app.route('/verify_email/<token>')
+def verify_email(token):
+    user = User.query.filter_by(email_verification_token=token).first()
+    if user:
+        user.email_verified = True
+        user.email_verification_token = None # Token should be single-use
+        db.session.commit()
+        flash('Your email has been verified! You can now log in.', 'success')
+        return redirect(url_for('login'))
+    else:
+        flash('The verification link is invalid or has expired.', 'danger')
+        return redirect(url_for('home'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    form = UserLoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and user.check_password(form.password.data):
+            if user.email_verified:
+                login_user(user)
+                next_page = request.args.get('next')
+                return redirect(next_page or url_for('home'))
+            else:
+                flash('Please verify your email address first.', 'warning')
+        else:
+            flash('Login Unsuccessful. Please check email and password', 'danger')
+    return render_template('login.html', form=form, active_page='login')
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('home'))
+
+@app.route('/me/submissions')
+@login_required
+def user_submissions():
+    # The submissions property on the User model already fetches submissions
+    # ordered by creation date, so we can use it directly.
+    submissions = current_user.submissions
+    return render_template('user_submissions.html', submissions=submissions, active_page='user_submissions')
 

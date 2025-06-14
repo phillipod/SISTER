@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.mysql import LONGBLOB
 from werkzeug.security import generate_password_hash, check_password_hash
 import enum
+import secrets
 
 # SQLAlchemy database instance
 # This is imported by the application and initialized there
@@ -92,6 +93,31 @@ class LinkLog(db.Model):
     def __repr__(self):
         return f'<LinkLog {self.id} for Submission {self.submission_id} from {self.ip_address}>'
 
+
+class User(db.Model):
+    __tablename__ = 'user'
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(256), nullable=False)
+    email_verified = db.Column(db.Boolean, default=False, nullable=False)
+    email_verification_token = db.Column(db.String(64), unique=True, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def generate_verification_token(self):
+        token = secrets.token_urlsafe(32)
+        self.email_verification_token = token
+        return token
+
+    @property
+    def submissions(self):
+        return Submission.query.filter_by(email=self.email).order_by(Submission.created_at.desc()).all()
 
 class AdminUser(db.Model):
     __tablename__ = 'admin_user'

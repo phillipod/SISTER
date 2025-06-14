@@ -28,11 +28,21 @@
                     <li><a href="{{ url_for('training_data') }}" {% if active_page == 'training_data' %}class="active"{% endif %}>Training Data</a></li>
                     <li><a href="{{ url_for('training_data_stats') }}" {% if active_page == 'training_data_stats' %}class="active"{% endif %}>Stats</a></li>
                     <li><a href="{{ url_for('contact') }}" {% if active_page == 'contact' %}class="active"{% endif %}>Contact</a></li>
-                    {% if session.admin_user_id %}
-                        <li class="nav-item-right"><a href="{{ url_for('admin_dashboard') }}" class="{% if active_page.startswith('admin') %}active"{% endif %}">Admin</a></li>
-                        <li><a href="{{ url_for('admin_logout') }}">Logout</a></li>
+                </ul>
+                <ul class="main-nav-right">
+                    {% if current_user.is_authenticated %}
+                        <li><a href="{{ url_for('user_submissions') }}" class="{% if active_page == 'user_submissions' %}active{% endif %}">My Submissions</a></li>
+                        <li><a href="{{ url_for('logout') }}">Logout</a></li>
                     {% else %}
-                        <li class="nav-item-right"><a href="{{ url_for('admin_login') }}" class="{% if active_page == 'admin_login' %}class="active"{% endif %}">Login</a></li>
+                        <li><a href="{{ url_for('login') }}" class="{% if active_page == 'login' %}active{% endif %}">Login</a></li>
+                        <li><a href="{{ url_for('register') }}" class="{% if active_page == 'register' %}active{% endif %}">Register</a></li>
+                    {% endif %}
+                    
+                    {% if session.admin_user_id %}
+                        <li><a href="{{ url_for('admin_dashboard') }}" class="{% if active_page.startswith('admin') %}active"{% endif %}">Admin</a></li>
+                        <li><a href="{{ url_for('admin_logout') }}">Logout</a></li>
+                    {% elif not current_user.is_authenticated %}
+                        <li><a href="{{ url_for('admin_login') }}" class="{% if active_page == 'admin_login' %}active{% endif %}">Admin Login</a></li>
                     {% endif %}
                 </ul>
             </nav>
@@ -61,5 +71,22 @@
         </main>
     </div>
     {% block scripts %}{% endblock %}
+    <style>
+    .main-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .main-nav ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        align-items: center;
+    }
+    .main-nav-right li {
+        margin-left: 15px;
+    }
+    </style>
 </body>
 </html>
