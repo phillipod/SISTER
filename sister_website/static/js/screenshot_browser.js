@@ -8,6 +8,14 @@ class ScreenshotBrowser {
         // This is the specific element where previews (grid or single) will be rendered.
         this.previewContent = document.getElementById(config.previewContentId);
 
+        // API endpoints can now be configured
+        this.api = {
+            logAccessToken: config.logAccessTokenUrl, // e.g., '/api/log-access-token/{log_id}'
+            emailLog: config.emailLogUrl,             // e.g., '/admin/api/email_log/{log_id}'
+            linkLog: config.linkLogUrl,               // e.g., '/admin/api/link_log/{log_id}'
+            screenshotImage: config.screenshotImageUrl  // e.g., '/admin/screenshot/{sc_id}'
+        };
+
         if (!this.treePane || !this.previewPane || !this.submissionInfoPane || !this.previewContent) {
             console.error("ScreenshotBrowser: One or more essential container elements are missing.");
             return;
@@ -115,8 +123,9 @@ class ScreenshotBrowser {
     }
 
     renderSinglePreview(screenshotId) {
+        const imageUrl = this.api.screenshotImage.replace('{sc_id}', screenshotId);
         this.previewContent.innerHTML = `
-            <img id="preview-image" alt="Screenshot Preview" src="/admin/screenshot/${screenshotId}?t=${Date.now()}" />
+            <img id="preview-image" alt="Screenshot Preview" src="${imageUrl}?t=${Date.now()}" />
         `;
     }
 
@@ -139,10 +148,11 @@ class ScreenshotBrowser {
                 }
             });
 
+            const imageUrl = this.api.screenshotImage.replace('{sc_id}', id);
             if (isProgrammatic) {
-                img.src = `/admin/screenshot/${id}?t=${Date.now()}`;
+                img.src = `${imageUrl}?t=${Date.now()}`;
             } else {
-                img.dataset.src = `/admin/screenshot/${id}?t=${Date.now()}`;
+                img.dataset.src = `${imageUrl}?t=${Date.now()}`;
                 img.loading = 'lazy';
             }
             grid.appendChild(img);
@@ -246,10 +256,13 @@ class ScreenshotBrowser {
         
         try {
             if (logType === 'email') {
+                const tokenUrl = this.api.logAccessToken.replace('{log_id}', logId);
+                const logUrl = this.api.emailLog.replace('{log_id}', logId);
+
                 // Fetch the access token and log metadata in parallel for efficiency
                 const [tokenRes, logRes] = await Promise.all([
-                    fetch(`/api/log-access-token/${logId}`),
-                    fetch(`/admin/api/email_log/${logId}`)
+                    fetch(tokenUrl),
+                    fetch(logUrl)
                 ]);
 
                 if (!tokenRes.ok) throw new Error('Could not get access token.');
@@ -268,7 +281,8 @@ class ScreenshotBrowser {
                 this.showModal('Email Details', content);
 
             } else { // Handle link log (which doesn't need a token)
-                const response = await fetch(`/admin/api/link_log/${logId}`);
+                const logUrl = this.api.linkLog.replace('{log_id}', logId);
+                const response = await fetch(logUrl);
                 if (!response.ok) throw new Error(`Failed to fetch ${logType} log.`);
                 const log = await response.json();
                 

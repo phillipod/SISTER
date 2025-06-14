@@ -111,7 +111,12 @@ document.addEventListener('DOMContentLoaded', function() {
         previewContentId: 'preview-content',
         dataUrl: '/admin/api/screenshots',
         mapBuilder: mapBuilder,
-        treeRenderer: (data, treePane) => adminTreeRenderer(data, treePane)
+        treeRenderer: (data, treePane) => adminTreeRenderer(data, treePane),
+        // API Endpoints
+        logAccessTokenUrl: '/api/log-access-token/{log_id}',
+        emailLogUrl: '/admin/api/email_log/{log_id}',
+        linkLogUrl: '/admin/api/link_log/{log_id}',
+        screenshotImageUrl: '/admin/screenshot/{sc_id}'
     };
 
     const browser = new ScreenshotBrowser(config);

@@ -118,7 +118,12 @@ document.addEventListener('DOMContentLoaded', () => {
         previewContentId: 'preview-content',
         dataUrl: '/api/me/submissions_data',
         mapBuilder: userMapBuilder,
-        treeRenderer: userTreeRenderer
+        treeRenderer: userTreeRenderer,
+        // API Endpoints (Note: screenshot image URL is the same for both)
+        logAccessTokenUrl: '/api/log-access-token/{log_id}',
+        emailLogUrl: '/api/me/email_log/{log_id}',
+        linkLogUrl: '/api/me/link_log/{log_id}',
+        screenshotImageUrl: '/admin/screenshot/{sc_id}' // This endpoint is admin-protected but fine for users who own the screenshot
     };
     
     const browser = new ScreenshotBrowser(config);

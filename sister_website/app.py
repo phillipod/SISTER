@@ -1771,6 +1771,35 @@ def user_submissions_data():
         
     return jsonify(data_structured)
 
+@app.route('/api/me/email_log/<log_id>')
+@login_required
+def user_email_log(log_id):
+    log = EmailLog.query.get_or_404(log_id)
+    if log.submission.email != current_user.email:
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    return jsonify({
+         "from": log.from_address,
+         "to": log.to_address,
+         "subject": log.subject,
+         "body_html": log.body_html,
+         "body_text": log.body_text,
+         "received_at": log.received_at.isoformat()
+    })
+
+@app.route('/api/me/link_log/<log_id>')
+@login_required
+def user_link_log(log_id):
+    log = LinkLog.query.get_or_404(log_id)
+    if log.submission.email != current_user.email:
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    return jsonify({
+        "ip_address": log.ip_address,
+        "user_agent": log.user_agent,
+        "clicked_at": log.clicked_at.isoformat()
+    })
+
 # --------------------- DIAGNOSTIC ROUTES ---------------------
 @app.route('/test-flash')
 def test_flash():
