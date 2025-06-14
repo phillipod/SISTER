@@ -41,7 +41,11 @@
             <h3>Contact Information</h3>
             <div class="form-group">
                 {{ form.email.label }}
-                <div class="input-help">Your email is required for consent confirmation and will not be shared publicly.</div>
+                <div class="input-help">Your email is required for consent confirmation and will not be shared publicly.
+                    {% if current_user.is_authenticated %}
+                        <br><span style="color: #28a745; font-size: 0.9em;"><i class="fas fa-check-circle"></i> Auto-filled from your account</span>
+                    {% endif %}
+                </div>
                 {{ form.email(class="form-control", placeholder="your.email@example.com") }}
                 {% if form.email.errors %}
                     <div class="errors">

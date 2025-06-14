@@ -326,6 +326,9 @@ def training_redirect():
 @app.route('/training-data')
 def training_data():
     form = UploadForm()
+    # Pre-fill email field if user is logged in
+    if current_user.is_authenticated:
+        form.email.data = current_user.email
     return render_template('pages/training_data.html', form=form, active_page='training_data')
 
 @app.route('/training-data/submit', methods=['GET', 'POST'])
