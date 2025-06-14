@@ -166,6 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const firstSc = subScreenshots[0];
                         const subLabel = `Submission ${firstSc.submission_id.substring(0, 8)}`;
                         const subDetailsResult = createDetails(subLabel, parentElement, subScreenshots, depth + 1, parentPath);
+                        subDetailsResult.element.dataset.buildId = firstSc.build_id;
                         
                         const scUl = document.createElement('ul');
                         scUl.classList.add(`tree-depth-${depth + 2}`);
