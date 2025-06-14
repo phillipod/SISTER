@@ -843,6 +843,7 @@ def browse_screenshots():
         return redirect(url_for('admin_login', next=request.path))
     
     build_id = request.args.get('build_id')
+    current_app.logger.info(f'[Debug] browse_screenshots: Received request for build_id: {build_id}')
     
     return render_template('admin_screenshots.html', active_page='admin_screenshots', build_id=build_id)
 

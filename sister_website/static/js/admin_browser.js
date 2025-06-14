@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const scriptTag = document.getElementById('admin-browser-script');
     let initialBuildId = scriptTag ? scriptTag.dataset.buildId : null;
+    console.log('[Debug] Admin Browser Script Loaded. Initial Build ID:', initialBuildId);
 
     const filters = {
         platform: document.getElementById('platform-filter'),
@@ -79,6 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // After rendering, check if we need to scroll to a specific build
         if (initialBuildId) {
+            console.log('[Debug] buildAndRenderTree: Attempting to scroll to Build ID:', initialBuildId);
             scrollToBuild(initialBuildId);
             // Clear the ID after the first use to prevent re-scrolling on filter change
             initialBuildId = null; 
@@ -152,9 +154,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function scrollToBuild(buildId) {
+        console.log('[Debug] scrollToBuild: Function called for Build ID:', buildId);
         // Find the element for the build. We added a 'data-build-id' attribute for this.
         const buildElement = treePane.querySelector(`details[data-build-id="${buildId}"]`);
+        
         if (buildElement) {
+            console.log('[Debug] scrollToBuild: Found build element:', buildElement);
             // Scroll the element into view
             buildElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -165,13 +170,18 @@ document.addEventListener('DOMContentLoaded', function() {
             // Trigger a click on the summary to show the screenshot previews
             const summary = buildElement.querySelector('summary');
             if (summary) {
+                console.log('[Debug] scrollToBuild: Found summary element. Clicking to show screenshots.');
                 summary.click();
+            } else {
+                console.log('[Debug] scrollToBuild: Could not find summary element to click.');
             }
 
             // Remove the highlight after a few seconds
             setTimeout(() => {
                 buildElement.classList.remove('highlight');
             }, 3000);
+        } else {
+            console.log('[Debug] scrollToBuild: Did not find element for Build ID:', buildId);
         }
     }
 
