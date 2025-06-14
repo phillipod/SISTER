@@ -87,7 +87,7 @@ def create_app():
     app.config['SECRET_KEY'] = secret_key
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_HTTPONLY'] = True
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     # Short lifetime for admin sessions (default 30 minutes, configurable via env)
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(
         minutes=int(os.getenv('SESSION_LIFETIME_MINUTES', '30'))
@@ -1615,7 +1615,7 @@ def verify_email(token):
         user.email_verification_token = None # Token should be single-use
         db.session.commit()
         flash('Your email has been verified! You can now log in.', 'success')
-        return redirect(url_for('test_flash_target'))
+        return redirect(url_for('login'))
     else:
         flash('The verification link is invalid or has expired.', 'danger')
         return redirect(url_for('home'))
@@ -1650,19 +1650,4 @@ def user_submissions():
     # ordered by creation date, so we can use it directly.
     submissions = current_user.submissions
     return render_template('user_submissions.html', submissions=submissions, active_page='user_submissions')
-
-# --------------------- DIAGNOSTIC ROUTES ---------------------
-@app.route('/test-flash')
-def test_flash():
-    """Diagnostic route to test the flash messaging system."""
-    flash('This is a test flash message.', 'info')
-    current_app.logger.info("Flashed a test message to the session.")
-    return redirect(url_for('test_flash_target'))
-
-@app.route('/test-flash-target')
-def test_flash_target():
-    """Target page for the flash message test."""
-    current_app.logger.info("Landed on flash test target page.")
-    return render_template('pages/test_flash_target.html')
-# -----------------------------------------------------------
 
