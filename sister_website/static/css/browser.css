@@ -59,12 +59,16 @@
     font-weight: bold;
     padding: 0.25rem;
     border-radius: 4px;
+    display: flex;
+    align-items: center;
 }
 
 .tree-container summary > span {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
+    margin-left: 0.5rem;
 }
 
 .tree-container summary:hover {
