@@ -7,15 +7,17 @@
     <h1>{{ title }}</h1>
 
     <form method="get" action="{{ url_for('dataset_manager') }}" class="filter-form">
+        
+        <div class="table-toolbar">
+            <a href="{{ url_for('dataset_manager') }}" title="Clear All Filters" class="clear-filters-btn">
+                <i class="fas fa-eraser"></i>
+            </a>
+        </div>
+
         <div class="admin-users-list">
             <table class="user-table">
                 <thead>
                     <tr>
-                        <th class="clear-filter-cell">
-                            <a href="{{ url_for('dataset_manager') }}" title="Clear All Filters">
-                                <i class="fas fa-eraser"></i>
-                            </a>
-                        </th>
                         <th class="filterable">
                             Build ID <i class="fas fa-filter filter-icon {% if filters.build_id %}active-filter{% endif %}"></i>
                             <div class="filter-popup">
@@ -72,7 +74,6 @@
                 <tbody>
                     {% for build in builds %}
                     <tr data-build-id="{{ build.id }}">
-                        <td></td>
                         <td><a href="{{ url_for('browse_screenshots', build_id=build.id) }}">{{ build.id[:8] }}...</a></td>
                         <td>{{ build.submission.email }}</td>
                         <td>{{ build.platform }}</td>
@@ -91,7 +92,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" style="text-align: center;">No accepted builds found.</td>
+                        <td colspan="6" style="text-align: center;">No accepted builds found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

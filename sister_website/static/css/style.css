@@ -2003,18 +2003,21 @@ footer {
     margin-left: 5px;
 }
 
-.clear-filter-cell {
-    width: 40px;
-    text-align: center;
-    vertical-align: middle;
+.table-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.5rem;
 }
 
-.clear-filter-cell a {
+.clear-filters-btn {
     color: #6c757d;
     font-size: 1.2em;
+    padding: 5px;
+    display: inline-block;
+    line-height: 1;
 }
 
-.clear-filter-cell a:hover {
+.clear-filters-btn:hover {
     color: #dc3545;
 }
 
