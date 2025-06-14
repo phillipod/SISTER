@@ -437,4 +437,28 @@
 .preview-grid-img:hover {
     transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Styles for SortableJS drag-and-drop */
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: #c8ebfb;
+}
+
+.draggable-label {
+    cursor: move;
+    cursor: -webkit-grab;
+    cursor: grab;
+    padding: 5px;
+    border: 1px dashed transparent;
+    border-radius: 4px;
+}
+
+.draggable-label:active {
+    cursor: -webkit-grabbing;
+    cursor: grabbing;
+}
+
+.draggable-label:hover {
+    border-color: #ddd;
 } 
