@@ -1560,8 +1560,8 @@ footer {
 }
 
 .admin-tool-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
 }
 
 .admin-tool-card .card-body {
@@ -1574,6 +1574,14 @@ footer {
     font-weight: 600;
     margin-bottom: 10px;
     color: var(--text-color);
+    display: flex;
+    align-items: center;
+}
+
+.card-icon {
+    margin-right: 12px;
+    font-size: 1.2em;
+    color: var(--accent-color);
 }
 
 .admin-tool-card .card-text {
