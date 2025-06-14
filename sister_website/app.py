@@ -1561,10 +1561,17 @@ def get_build_audit_log(build_id):
 # Add common security headers to all responses
 @app.after_request
 def set_security_headers(resp):
-    resp.headers.setdefault('X-Frame-Options', 'DENY')
+    # Set X-Frame-Options based on the requested host
+    if request.host == 'logviewer.sto-tools.org':
+        # Allow the log viewer to be framed by its own origin (which is the main site in this context)
+        resp.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    else:
+        # Deny framing for all other parts of the site
+        resp.headers['X-Frame-Options'] = 'DENY'
+
     csp = {
         'default-src': "'self'",
-        'style-src': "'self' https://cdnjs.cloudflare.com",
+        'style-src': "'self' https://cdnjs.cloudflare.com 'unsafe-inline'",
         'font-src': "'self' https://cdnjs.cloudflare.com",
         'frame-src': "blob: https://logviewer.sto-tools.org",
         'child-src': "blob: https://logviewer.sto-tools.org",
@@ -1776,9 +1783,8 @@ def public_email_log_view(log_id):
 
     from flask import make_response
     resp = make_response(body_html)
-    # Relaxed CSP: allow inline styles but nothing else (no scripts, no external fetches)
+    # The X-Frame-Options header is now handled by the global after_request hook.
+    # The CSP for this specific response still needs to be set to allow inline styles.
     resp.headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'"
-    # Permit framing (needed because X-Frame-Options DENY is global)
-    resp.headers['X-Frame-Options'] = 'SAMEORIGIN'
     return resp
 
