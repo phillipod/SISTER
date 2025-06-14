@@ -466,25 +466,21 @@ def contact():
 
 @app.route('/api/accept-license/<token>', methods=['GET', 'POST'])
 def accept_license(token):
-    """Handle license acceptance via email link for a Submission."""
-    submission = None
-    if request.method == 'POST':
-        # This part might be less relevant now if direct link click is the primary method
-        data = request.get_json()
-        token_from_post = data.get('token')
-        if token_from_post:
-             token = token_from_post # Allow token override from POST body
-
-    # Find the submission by acceptance token
+    """Handle license acceptance via email link (GET) or dashboard button (POST)."""
     submission = Submission.query.filter_by(acceptance_token=token).first()
 
     if not submission:
         message = "Invalid or expired acceptance link."
         if request.method == 'GET':
             flash(message, 'danger')
-            return redirect(url_for('home')) # Or a more specific error page
-        else: # For POST requests or other API uses
+            return redirect(url_for('home'))
+        else:
             return jsonify({"status": "error", "message": message}), 400
+
+    # For dashboard actions, ensure the logged-in user is the owner
+    if request.method == 'POST' and current_user.is_authenticated:
+        if submission.email != current_user.email:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
     if submission.is_accepted:
         message = "This submission has already been accepted."
@@ -566,18 +562,22 @@ def accept_license(token):
         else:
             return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
 
-@app.route('/api/decline-license/<token>', methods=['GET'])
+@app.route('/api/decline-license/<token>', methods=['GET', 'POST'])
 def decline_license(token):
-    """Handle license declining via email link for a Submission."""
+    """Handle license declining via email link (GET) or dashboard button (POST)."""
     submission = Submission.query.filter_by(acceptance_token=token).first_or_404()
 
+    # For dashboard actions, ensure the logged-in user is the owner
+    if request.method == 'POST' and current_user.is_authenticated:
+        if submission.email != current_user.email:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
     if submission.acceptance_state != AcceptanceState.PENDING:
-        if submission.acceptance_state == AcceptanceState.DECLINED:
-            return render_template('decline_confirmation.html', message="This submission has already been declined.")
-        elif submission.acceptance_state == AcceptanceState.ACCEPTED:
-            return render_template('acceptance_thank_you.html', message="This submission has already been accepted and cannot be declined. You may withdraw it if needed.")
-        # Fallback redirect for any other state, though unlikely.
-        return redirect(url_for('home'))
+        message = "This submission has already been processed and cannot be changed."
+        if request.method == 'GET':
+            return render_template('decline_confirmation.html', message=message)
+        else:
+            return jsonify({"status": "error", "message": message}), 409
 
     submission.acceptance_state = AcceptanceState.DECLINED
     submission.accepted_at = datetime.utcnow() # Using accepted_at to mark when the decision was made
@@ -588,18 +588,33 @@ def decline_license(token):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error declining license for submission {submission.id}: {e}", exc_info=True)
-        flash("An error occurred while processing your request. Please contact support.", 'danger')
-        return redirect(url_for('home'))
+        if request.method == 'GET':
+            flash("An error occurred while processing your request. Please contact support.", 'danger')
+            return redirect(url_for('home'))
+        else:
+            return jsonify({"status": "error", "message": "Database error"}), 500
 
-    return render_template('decline_confirmation.html')
+    if request.method == 'GET':
+        return render_template('decline_confirmation.html')
+    else:
+        return jsonify({"status": "success", "message": "Submission declined."})
 
-@app.route('/api/withdraw-submission/<token>', methods=['GET'])
+@app.route('/api/withdraw-submission/<token>', methods=['GET', 'POST'])
 def withdraw_submission(token):
-    """Handle submission withdrawal via email link."""
+    """Handle submission withdrawal via email link (GET) or dashboard button (POST)."""
     submission = Submission.query.filter_by(acceptance_token=token).first_or_404()
 
+    # For dashboard actions, ensure the logged-in user is the owner
+    if request.method == 'POST' and current_user.is_authenticated:
+        if submission.email != current_user.email:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
     if submission.is_withdrawn:
-        return render_template('withdrawal_confirmation.html', message="This submission has already been withdrawn.")
+        message = "This submission has already been withdrawn."
+        if request.method == 'GET':
+            return render_template('withdrawal_confirmation.html', message=message)
+        else:
+            return jsonify({"status": "info", "message": message}), 200
 
     submission.is_withdrawn = True
     submission.withdrawn_at = datetime.utcnow()
@@ -609,10 +624,16 @@ def withdraw_submission(token):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error withdrawing submission {submission.id}: {e}", exc_info=True)
-        flash("An error occurred while processing your request. Please contact support.", 'danger')
-        return redirect(url_for('home'))
+        if request.method == 'GET':
+            flash("An error occurred while processing your request. Please contact support.", 'danger')
+            return redirect(url_for('home'))
+        else:
+            return jsonify({"status": "error", "message": "Database error"}), 500
         
-    return render_template('withdrawal_confirmation.html')
+    if request.method == 'GET':
+        return render_template('withdrawal_confirmation.html')
+    else:
+        return jsonify({"status": "success", "message": "Submission withdrawn."})
 
 def extract_reply_text(email_body_text):
     """Attempts to extract the new reply text from an email, stripping quoted original messages."""

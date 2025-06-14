@@ -119,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dataUrl: '/api/me/submissions_data',
         mapBuilder: userMapBuilder,
         treeRenderer: userTreeRenderer,
+        userCanManage: true,
         // API Endpoints
         logAccessTokenUrl: '/api/log-access-token/{log_id}',
         emailLogUrl: '/api/me/email_log/{log_id}',

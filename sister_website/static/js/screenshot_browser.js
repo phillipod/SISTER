@@ -180,8 +180,25 @@ class ScreenshotBrowser {
             statusHtml += ` <span class="status-badge status-withdrawn">Withdrawn</span>`;
         }
         
+        // Add action buttons based on the submission state
+        let actionButtonsHtml = '';
+        if (this.config.userCanManage) { // A new config flag to enable this feature
+            if (state === 'pending') {
+                actionButtonsHtml = `
+                    <div class="submission-actions">
+                        <button class="btn btn-success btn-sm action-btn" data-action="accept" data-token="${info.acceptance_token}">Accept License</button>
+                        <button class="btn btn-warning btn-sm action-btn" data-action="decline" data-token="${info.acceptance_token}">Decline License</button>
+                    </div>`;
+            } else if (state === 'accepted') {
+                actionButtonsHtml = `
+                    <div class="submission-actions">
+                        <button class="btn btn-danger btn-sm action-btn" data-action="withdraw" data-token="${info.acceptance_token}">Withdraw Submission</button>
+                    </div>`;
+            }
+        }
+        
         let resendButtonHtml = '';
-        if (info.acceptance_state === 'pending' && !info.is_withdrawn) {
+        if (this.config.userCanManage && info.acceptance_state === 'pending' && !info.is_withdrawn) {
             resendButtonHtml = `
                 <div class="resend-section">
                     <button class="btn btn-secondary btn-sm resend-btn" data-submission-id="${info.id}">Resend Consent</button>
@@ -204,6 +221,7 @@ class ScreenshotBrowser {
             <div class="info-card">
                 <p><strong>License Status:</strong> ${statusHtml}</p>
                 <p><strong>Email:</strong> ${info.email}</p>
+                ${actionButtonsHtml}
                 ${resendButtonHtml}
                 <h4>Timeline</h4>
                 <ul class="timeline">${timelineHtml}</ul>
@@ -218,6 +236,9 @@ class ScreenshotBrowser {
         });
         this.submissionInfoPane.querySelectorAll('.view-log').forEach(link => {
             link.addEventListener('click', this.handleViewLog.bind(this));
+        });
+        this.submissionInfoPane.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', this.handleLicenseAction.bind(this));
         });
     }
     
@@ -365,6 +386,52 @@ class ScreenshotBrowser {
         if (element) {
              const parent = element.closest('details, li');
              if(parent) parent.classList.add('active-node');
+        }
+    }
+
+    forceRerender() {
+        // This function will re-fetch data and completely re-render the component
+        this.previewContent.innerHTML = '';
+        this.submissionInfoPane.innerHTML = '';
+        this.initialize();
+    }
+
+    async handleLicenseAction(e) {
+        const button = e.target;
+        const action = button.dataset.action;
+        const token = button.dataset.token;
+        const urlMap = {
+            accept: `/api/accept-license/${token}`,
+            decline: `/api/decline-license/${token}`,
+            withdraw: `/api/withdraw-submission/${token}`
+        };
+
+        if (!urlMap[action] || !confirm(`Are you sure you want to ${action} this submission's license?`)) {
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = 'Processing...';
+
+        try {
+            const response = await fetch(urlMap[action], {
+                method: 'POST', // Use POST to align with API expectations for actions
+                headers: { 'X-CSRF-Token': this.csrfToken, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source: 'dashboard' })
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || `Failed to ${action}.`);
+            }
+            
+            // Re-render the entire component to reflect the new state
+            this.forceRerender();
+
+        } catch (error) {
+            alert(`An error occurred: ${error.message}`);
+            button.disabled = false;
+            button.textContent = action.charAt(0).toUpperCase() + action.slice(1);
         }
     }
 } 
