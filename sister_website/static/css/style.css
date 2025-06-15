@@ -17,55 +17,10 @@
     display: block; /* revert from grid */
 }
 
-.dev-overlay::before {
-    content: attr(data-env-text);
-    position: absolute;
-    top: -80%;
-    left: 25%;
-    width: 300%;
-    height: 300%;
-    font-size: 6rem;
-    font-weight: bold;
-    color: #ff6b6b;
-    line-height: 8rem;
-    letter-spacing: 2rem;
-    transform: rotate(-45deg);
-    transform-origin: center;
-    white-space: nowrap;
-    display: block;
-    animation: devScroll 20s linear infinite;
-    opacity: 0.1;
-    z-index: 1;
-}
-
+/* -- hide legacy pseudo watermark layers -- */
+.dev-overlay::before,
 .dev-overlay::after {
-    content: attr(data-env-text);
-    position: absolute;
-    top: -65%;
-    left: 45%;
-    width: 300%;
-    height: 300%;
-    font-size: 6rem;
-    font-weight: bold;
-    color: #ff6b6b;
-    line-height: 8rem;
-    letter-spacing: 2rem;
-    transform: rotate(-45deg);
-    transform-origin: center;
-    white-space: nowrap;
-    display: block;
-    animation: devScroll 25s linear infinite reverse;
-    opacity: 0.1;
-    z-index: 2;
-}
-
-@keyframes devScroll {
-    0% {
-        transform: rotate(-45deg) translateX(-100%);
-    }
-    100% {
-        transform: rotate(-45deg) translateX(100%);
-    }
+    content: none !important;
 }
 
 /* Additional dev layers */
