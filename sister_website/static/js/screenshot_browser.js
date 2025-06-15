@@ -24,6 +24,79 @@ class ScreenshotBrowser {
         this.data = null; // To store the raw data from the API
         this.screenshotDataMap = {}; // For quick lookup of screenshot details
         this.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        // Set up common UI elements if enabled
+        if (config.setupUI !== false) {
+            this.setupCommonUI();
+        }
+    }
+
+    setupCommonUI() {
+        // Set up filters, popup, and drag-and-drop
+        this.filters = {
+            platform: document.getElementById('platform-filter'),
+            type: document.getElementById('type-filter'),
+            accepted: document.getElementById('accepted-filter')
+        };
+
+        this.popup = document.getElementById('tree-options-popup');
+        this.openPopupBtn = document.getElementById('tree-options-btn');
+        this.toggleFiltersBtn = document.getElementById('toggle-filters-btn');
+        this.filtersContainer = document.querySelector('.screenshot-filters');
+        this.groupByFieldset = document.getElementById('group-by-fieldset');
+
+        // Set up event listeners
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        // Filter change listeners
+        if (this.filters) {
+            Object.values(this.filters).forEach(filter => {
+                if (filter) {
+                    filter.addEventListener('change', () => this.renderTree());
+                }
+            });
+        }
+
+        // Toggle filters button
+        if (this.toggleFiltersBtn && this.filtersContainer) {
+            this.toggleFiltersBtn.addEventListener('click', () => {
+                this.filtersContainer.classList.toggle('hidden');
+            });
+        }
+
+        // Popup handling
+        if (this.openPopupBtn && this.popup) {
+            this.openPopupBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                this.popup.classList.toggle('active');
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!this.popup.contains(event.target) && !this.openPopupBtn.contains(event.target)) {
+                    this.popup.classList.remove('active');
+                }
+            });
+
+            this.popup.addEventListener('click', (event) => {
+                event.stopPropagation();
+            });
+        }
+
+        // Set up drag-and-drop for grouping if SortableJS is available
+        if (typeof Sortable !== 'undefined' && this.groupByFieldset) {
+            new Sortable(this.groupByFieldset, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: () => this.renderTree()
+            });
+
+            // Add listeners to checkboxes to re-render on check/uncheck
+            this.groupByFieldset.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', () => this.renderTree());
+            });
+        }
     }
 
     async initialize(initialId = null) {
@@ -52,23 +125,188 @@ class ScreenshotBrowser {
         }
     }
 
-    // Default map builder, suitable for the user submissions API structure
+    // Default map builder, suitable for flat screenshot data structure
     buildScreenshotMap(data) {
-        data.forEach(sub => {
-            sub.builds.forEach(build => {
-                build.screenshots.forEach(sc => {
-                    this.screenshotDataMap[sc.id] = sc;
-                });
-            });
-        });
+        if (this.config.mapBuilder) {
+            this.screenshotDataMap = this.config.mapBuilder(data);
+        } else {
+            const map = {};
+            if (Array.isArray(data) && data.length > 0) {
+                // Check if this is flat data (screenshots) or nested data (submissions)
+                if (data[0].builds) {
+                    // Nested structure (legacy support)
+                    data.forEach(sub => {
+                        sub.builds.forEach(build => {
+                            build.screenshots.forEach(sc => {
+                                map[sc.id] = sc;
+                            });
+                        });
+                    });
+                } else {
+                    // Flat structure (current)
+                    data.forEach(sc => {
+                        map[sc.id] = sc;
+                    });
+                }
+            }
+            this.screenshotDataMap = map;
+        }
     }
 
     renderTree() {
-        if (!this.config.treeRenderer) {
-            console.error("ScreenshotBrowser: No treeRenderer function provided in config.");
+        const renderer = this.config.treeRenderer || this.defaultTreeRenderer.bind(this);
+        renderer(this.data, this.treePane);
+    }
+
+    defaultTreeRenderer(data, treePane) {
+        if (!this.filters) {
+            console.error("ScreenshotBrowser: Cannot use default tree renderer without filters setup.");
             return;
         }
-        this.config.treeRenderer(this.data, this.treePane);
+
+        const platformFilter = this.filters.platform.value;
+        const typeFilter = this.filters.type.value;
+        const acceptedFilter = this.filters.accepted.value;
+
+        // Capture current open/closed state before clearing
+        const openStates = {};
+        const captureOpenStates = (element, path = []) => {
+            const details = element.querySelectorAll('details');
+            details.forEach(detail => {
+                const summary = detail.querySelector('summary > span');
+                if (summary) {
+                    const text = summary.textContent.trim();
+                    const currentPath = [...path, text];
+                    const pathKey = currentPath.join('|');
+                    openStates[pathKey] = detail.open;
+                    captureOpenStates(detail, currentPath);
+                }
+            });
+        };
+        captureOpenStates(treePane);
+
+        treePane.innerHTML = '';
+        
+        const filteredData = data.filter(sc => {
+            const platformMatch = platformFilter === 'all' || sc.platform === platformFilter;
+            const typeMatch = typeFilter === 'all' || sc.type === typeFilter;
+            const acceptedMatch = acceptedFilter === 'all' || sc.acceptance_state === acceptedFilter;
+            return platformMatch && typeMatch && acceptedMatch;
+        });
+
+        if (filteredData.length === 0) {
+            const noResultsMessage = this.config.noResultsMessage || 'No screenshots match the current filters.';
+            treePane.innerHTML = `<p>${noResultsMessage}</p>`;
+            return;
+        }
+
+        const groupOrder = [];
+        if (this.groupByFieldset) {
+            const groupByCheckboxes = this.groupByFieldset.querySelectorAll('input[type="checkbox"]');
+            groupByCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    groupOrder.push(checkbox.dataset.groupKey);
+                }
+            });
+        }
+        groupOrder.push('date');
+
+        const hierarchicalData = {};
+        filteredData.forEach(sc => {
+            let currentLevel = hierarchicalData;
+            groupOrder.forEach(key => {
+                const value = sc[key] || 'Unknown';
+                if (!currentLevel[value]) {
+                    currentLevel[value] = {};
+                }
+                currentLevel = currentLevel[value];
+            });
+            
+            if (!currentLevel[sc.submission_id]) {
+                currentLevel[sc.submission_id] = [];
+            }
+            currentLevel[sc.submission_id].push(sc);
+        });
+
+        const createDetails = (summaryText, parentElement, allScreenshots, depth = 0, parentPath = []) => {
+            const details = document.createElement('details');
+            const currentPath = [...parentPath, summaryText];
+            const pathKey = currentPath.join('|');
+            
+            // Restore previous open state if available, otherwise default based on depth
+            if (pathKey in openStates) {
+                details.open = openStates[pathKey];
+            } else {
+                details.open = depth < 3; // Default: open for shallow levels, closed for deep ones
+            }
+            
+            details.classList.add(`tree-depth-${depth}`);
+            const summary = document.createElement('summary');
+            const summarySpan = document.createElement('span');
+            summarySpan.textContent = summaryText;
+
+            if (allScreenshots && allScreenshots.length > 0) {
+                summarySpan.dataset.groupScreenshots = allScreenshots.map(sc => sc.id).join(',');
+            }
+
+            summary.appendChild(summarySpan);
+            details.appendChild(summary);
+            parentElement.appendChild(details);
+            return { element: details, path: currentPath };
+        };
+
+        const renderNode = (node, parentElement, depth = 0, parentPath = []) => {
+            for (const key in node) {
+                const childNode = node[key];
+                
+                const isSubmissionContainer = Object.values(childNode).every(val => Array.isArray(val));
+
+                if (isSubmissionContainer) {
+                    const dateDetailsResult = createDetails(key, parentElement, this.getAllScreenshots(childNode), depth, parentPath);
+                     for (const subId in childNode) {
+                        const subScreenshots = childNode[subId];
+                        if (subScreenshots.length > 0) {
+                            const firstSc = subScreenshots[0];
+                            const subLabel = `Submission ${firstSc.submission_id.substring(0, 8)}`;
+                            const subDetailsResult = createDetails(subLabel, dateDetailsResult.element, subScreenshots, depth + 1, dateDetailsResult.path);
+                            subDetailsResult.element.dataset.buildId = firstSc.build_id;
+
+                            const scUl = document.createElement('ul');
+                            scUl.classList.add(`tree-depth-${depth + 2}`);
+                            subScreenshots.forEach(sc => {
+                                const scLi = document.createElement('li');
+                                const link = document.createElement('a');
+                                link.href = '#';
+                                link.className = 'screenshot-link';
+                                link.textContent = sc.filename;
+                                link.dataset.screenshotId = sc.id;
+                                scLi.appendChild(link);
+                                scUl.appendChild(scLi);
+                            });
+                            subDetailsResult.element.appendChild(scUl);
+                        }
+                    }
+                } else {
+                    const detailsResult = createDetails(key, parentElement, this.getAllScreenshots(childNode), depth, parentPath);
+                    renderNode(childNode, detailsResult.element, depth + 1, detailsResult.path);
+                }
+            }
+        };
+
+        renderNode(hierarchicalData, treePane);
+    }
+    
+    getAllScreenshots(node) {
+        let screenshots = [];
+        for (const key in node) {
+            const child = node[key];
+            if (Array.isArray(child)) {
+                screenshots = screenshots.concat(child);
+            } else {
+                screenshots = screenshots.concat(this.getAllScreenshots(child));
+            }
+        }
+        return screenshots;
     }
     
     handleTreeClick(event) {
