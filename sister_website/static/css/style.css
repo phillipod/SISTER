@@ -72,6 +72,75 @@
     }
 }
 
+/* Additional dev layers */
+.dev-layer {
+    position: absolute;
+    width: 300%;
+    height: 300%;
+    font-size: 6rem;
+    font-weight: bold;
+    color: #ff6b6b;
+    line-height: 8rem;
+    letter-spacing: 2rem;
+    transform: rotate(-45deg);
+    transform-origin: center;
+    white-space: nowrap;
+    display: block;
+    pointer-events: none;
+}
+
+.dev-layer-1 {
+    top: -60%;
+    left: -50%;
+    animation: devScroll 15s linear infinite;
+    opacity: 0.08;
+}
+
+.dev-layer-1::before {
+    content: 'DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT';
+}
+
+.dev-layer-2 {
+    top: -40%;
+    left: -60%;
+    animation: devScroll 18s linear infinite reverse;
+    opacity: 0.06;
+    font-size: 5rem;
+    line-height: 7rem;
+}
+
+.dev-layer-2::before {
+    content: 'DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE';
+}
+
+.dev-layer-3 {
+    top: -20%;
+    left: -40%;
+    animation: devScroll 22s linear infinite;
+    opacity: 0.05;
+    font-size: 4rem;
+    line-height: 6rem;
+    transform: rotate(-45deg) rotateY(15deg);
+}
+
+.dev-layer-3::before {
+    content: 'NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION';
+}
+
+.dev-layer-4 {
+    top: -70%;
+    left: -30%;
+    animation: devScroll 28s linear infinite reverse;
+    opacity: 0.04;
+    font-size: 7rem;
+    line-height: 9rem;
+    letter-spacing: 3rem;
+}
+
+.dev-layer-4::before {
+    content: 'TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST';
+}
+
 /* Development banner at the top */
 .dev-banner {
     position: fixed;
