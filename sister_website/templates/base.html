@@ -11,7 +11,13 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     {% block additional_styles %}{% endblock %}
 </head>
-<body>
+<body{% if is_development %} class="dev-environment"{% endif %}>
+    {% if is_development %}
+    <div class="dev-banner">
+        🚧 Development Environment - This is not the production site 🚧
+    </div>
+    <div class="dev-overlay"></div>
+    {% endif %}
     <div class="container">
         <header>
             <div class="admin-actions">

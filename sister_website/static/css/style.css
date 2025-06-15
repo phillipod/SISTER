@@ -12,6 +12,84 @@
     --nav-active: #f90;
 }
 
+/* Development environment overlay */
+.dev-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+    overflow: hidden;
+    opacity: 0.05;
+}
+
+.dev-overlay::before {
+    content: 'DEV';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200%;
+    height: 200%;
+    font-size: 8rem;
+    font-weight: bold;
+    color: #ff6b6b;
+    line-height: 10rem;
+    transform: rotate(-45deg);
+    transform-origin: center;
+    background-image: repeating-linear-gradient(
+        -45deg,
+        transparent 0,
+        transparent 5rem,
+        rgba(255, 107, 107, 0.1) 5rem,
+        rgba(255, 107, 107, 0.1) 10rem
+    );
+    background-repeat: repeat;
+    white-space: pre;
+    word-spacing: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: devScroll 30s linear infinite;
+}
+
+@keyframes devScroll {
+    0% {
+        transform: rotate(-45deg) translateX(-100px) translateY(-100px);
+    }
+    100% {
+        transform: rotate(-45deg) translateX(100px) translateY(100px);
+    }
+}
+
+/* Development banner at the top */
+.dev-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+    color: white;
+    text-align: center;
+    padding: 0.5rem;
+    font-weight: bold;
+    font-size: 0.9rem;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* Adjust body padding when dev banner is present */
+body.dev-environment {
+    padding-top: 3rem;
+}
+
+.dev-environment .container {
+    margin-top: -1rem;
+}
+
 * {
     margin: 0;
     padding: 0;

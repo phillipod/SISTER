@@ -69,6 +69,9 @@ def create_app():
 
     # Initialize Flask app
     app = Flask(__name__, instance_relative_config=True)
+    
+    # Check if this is a development environment
+    is_development = os.getenv('FLASK_ENV', '').lower() == 'development' or os.getenv('ENV', '').lower() != 'production'
 
     # Configure logging
     log_level = os.getenv('FLASK_LOG_LEVEL', 'INFO').upper()
@@ -140,6 +143,11 @@ def create_app():
 
     # Database creation/migration is now handled by Flask-Migrate
     # The db.create_all() call has been removed.
+    
+    # Add context processor to make development flag available to all templates
+    @app.context_processor
+    def inject_environment():
+        return {'is_development': is_development}
 
     return app
 
