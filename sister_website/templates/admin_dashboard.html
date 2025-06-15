@@ -7,13 +7,13 @@
     <h1>Admin Dashboard</h1>
     <p>Welcome to the admin area. From here you can manage submissions and users.</p>
     <div class="admin-tools-grid">
-        <a href="{{ url_for('browse_screenshots') }}" class="admin-tool-card">
+        <a href="{{ url_for('browse_submissions') }}" class="admin-tool-card">
             <div class="card-body">
                 <h5 class="card-title">
                     <i class="fa-solid fa-images card-icon"></i>
-                    Screenshot Browser
+                    Submission Browser
                 </h5>
-                <p class="card-text">Browse, review, and manage individual screenshots.</p>
+                <p class="card-text">Browse, review, and manage submissions and their screenshots.</p>
             </div>
         </a>
         <a href="{{ url_for('admin_dataset_labels') }}" class="admin-tool-card">

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Screenshot Browser{% endblock %}
+{% block title %}Submission Browser{% endblock %}
 
 {% block additional_styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/browser.css') }}">
@@ -8,7 +8,7 @@
 
 {% block content %}
 <div class="admin-container">
-    <h1>Screenshot Browser</h1>
+    <h1>Submission Browser</h1>
 
     <div class="table-toolbar">
         <div class="toolbar-group">
@@ -63,7 +63,7 @@
     <div class="screenshot-browser-wrapper">
         <div class="screenshot-browser-content">
             <div id="tree-pane" class="tree-container">
-                <p>Loading screenshots...</p>
+                <p>Loading submissions...</p>
             </div>
             <div class="screenshot-preview" id="preview-pane">
                 <div id="preview-content">
@@ -86,8 +86,8 @@
 {{ super() }}
 <script src="{{ url_for('static', filename='js/screenshot_browser.js') }}" defer></script>
 <script id="admin-browser-script" 
-        src="{{ url_for('static', filename='js/admin_browser.js') }}"
+        src="{{ url_for('static', filename='js/admin_submissions_browser.js') }}"
         data-build-id="{{ build_id or '' }}"
         defer>
 </script>
-{% endblock %}
+{% endblock %} 

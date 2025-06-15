@@ -82,7 +82,7 @@
                     {% for build in builds %}
                     <tr data-build-id="{{ build.id }}">
                         <td>
-                            <a href="{{ url_for('browse_screenshots', build_id=build.id) }}">{{ build.id[:8] }}...</a>
+                            <a href="{{ url_for('browse_submissions', build_id=build.id) }}">{{ build.id[:8] }}...</a>
                             <i class="fas fa-history audit-log-icon" data-build-id="{{ build.id }}" title="View Audit Log"></i>
                         </td>
                         <td>{{ build.submission.id[:8] }}...</td>

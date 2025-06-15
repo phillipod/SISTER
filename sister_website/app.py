@@ -893,7 +893,7 @@ def admin_login():
             flash('Logged in as admin.', 'success')
             next_page = request.args.get('next')
             if not next_page or not is_safe_url(next_page):
-                next_page = url_for('browse_screenshots')
+                next_page = url_for('browse_submissions')
             return redirect(next_page)
         flash('Invalid credentials', 'danger')
     return render_template('admin_login.html', form=form, active_page='admin_login')
@@ -989,18 +989,18 @@ def delete_admin_user(user_id):
     return redirect(url_for('admin_users'))
 
 
-@app.route('/admin/screenshots')
-def browse_screenshots():
+@app.route('/admin/submissions')
+def browse_submissions():
     if not is_admin():
         return redirect(url_for('admin_login', next=request.path))
     
     build_id = request.args.get('build_id')
     
-    return render_template('admin_screenshots.html', active_page='admin_screenshots', build_id=build_id)
+    return render_template('admin_submissions.html', active_page='admin_submissions', build_id=build_id)
 
 
-@app.route('/admin/api/screenshots')
-def admin_screenshots_data():
+@app.route('/admin/api/submissions')
+def admin_submissions_data():
     if not is_admin():
         return jsonify({"error": "Unauthorized"}), 403
 
