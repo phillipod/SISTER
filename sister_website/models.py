@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import uuid
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.dialects.mysql import LONGBLOB
+from sqlalchemy import LargeBinary
 from werkzeug.security import generate_password_hash, check_password_hash
 import enum
 import secrets
@@ -63,8 +63,8 @@ class Screenshot(db.Model):
     build_id = db.Column(db.String(36), db.ForeignKey('build.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     md5sum = db.Column(db.String(32), nullable=False, index=True)
-    data = db.Column(LONGBLOB, nullable=True)
-    thumbnail_data = db.Column(LONGBLOB, nullable=True)
+    data = db.Column(LargeBinary, nullable=True)
+    thumbnail_data = db.Column(LargeBinary, nullable=True)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class EmailLog(db.Model):
