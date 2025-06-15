@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 import uuid
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import LargeBinary
+from sqlalchemy import LargeBinary, TypeDecorator
+from sqlalchemy.dialects import mysql, sqlite
 from werkzeug.security import generate_password_hash, check_password_hash
 import enum
 import secrets
@@ -11,6 +12,24 @@ from flask_login import UserMixin
 # This is imported by the application and initialized there
 # when create_app() is called.
 db = SQLAlchemy()
+
+
+class LongBinary(TypeDecorator):
+    """Cross-platform LONGBLOB/BLOB type that works with both MySQL and SQLite.
+    
+    In MySQL: Uses LONGBLOB (4GB limit)
+    In SQLite: Uses BLOB (unlimited)
+    """
+    impl = LargeBinary
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'mysql':
+            return dialect.type_descriptor(mysql.LONGBLOB())
+        elif dialect.name == 'sqlite':
+            return dialect.type_descriptor(sqlite.BLOB())
+        else:
+            return dialect.type_descriptor(LargeBinary())
 
 class AcceptanceState(enum.Enum):
     PENDING = "pending"
@@ -63,8 +82,8 @@ class Screenshot(db.Model):
     build_id = db.Column(db.String(36), db.ForeignKey('build.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     md5sum = db.Column(db.String(32), nullable=False, index=True)
-    data = db.Column(LargeBinary, nullable=True)
-    thumbnail_data = db.Column(LargeBinary, nullable=True)
+    data = db.Column(LongBinary, nullable=True)
+    thumbnail_data = db.Column(LongBinary, nullable=True)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class EmailLog(db.Model):
