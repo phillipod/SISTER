@@ -36,6 +36,7 @@
     white-space: nowrap;
     pointer-events: none;
     animation: devScrollSlide 40s linear infinite;
+    z-index: 9999;
 }
 
 /* -- hide middle watermarks to avoid overlap -- */
