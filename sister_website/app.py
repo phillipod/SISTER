@@ -70,8 +70,9 @@ def create_app():
     # Initialize Flask app
     app = Flask(__name__, instance_relative_config=True)
     
-    # Check if this is a development environment
-    is_development = os.getenv('FLASK_ENV', '').lower() == 'development' or os.getenv('ENV', '').lower() != 'production'
+    # Determine environment and whether to show development indicators
+    env_value = os.getenv('FLASK_ENV', os.getenv('ENV', 'production')).lower()
+    is_development = env_value != 'production'
 
     # Configure logging
     log_level = os.getenv('FLASK_LOG_LEVEL', 'INFO').upper()
@@ -147,7 +148,7 @@ def create_app():
     # Add context processor to make development flag available to all templates
     @app.context_processor
     def inject_environment():
-        flask_env = os.getenv('FLASK_ENV', 'development').upper()
+        flask_env = env_value.upper()
         return {
             'is_development': is_development,
             'flask_env': flask_env
