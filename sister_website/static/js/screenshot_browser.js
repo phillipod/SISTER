@@ -460,11 +460,17 @@ class ScreenshotBrowser {
             });
 
             // Add mouseover popup for submission info
-            img.addEventListener('mouseenter', (e) => {
-                this.showSubmissionPopup(e, id);
+            let popupTimeout;
+            
+            img.addEventListener('mouseover', (e) => {
+                clearTimeout(popupTimeout);
+                popupTimeout = setTimeout(() => {
+                    this.showSubmissionPopup(e, id);
+                }, 500); // Longer delay to let CSS hover animation show first
             });
 
-            img.addEventListener('mouseleave', () => {
+            img.addEventListener('mouseout', () => {
+                clearTimeout(popupTimeout);
                 this.hideSubmissionPopup();
             });
 
@@ -801,7 +807,7 @@ class ScreenshotBrowser {
             <div class="popup-content">
                 <p><strong>Email:</strong> ${info.email}</p>
                 <p><strong>Status:</strong> ${statusHtml}</p>
-                <p><strong>Submission:</strong> ${info.id ? info.id.substring(0, 8) : 'N/A'}...</p>
+                <p><strong>Submission:</strong> ${info.id ? String(info.id).substring(0, 8) : 'N/A'}...</p>
                 <p><strong>Screenshot:</strong> ${screenshotInfo.filename}</p>
             </div>
         `;
@@ -813,16 +819,18 @@ class ScreenshotBrowser {
         const rect = e.target.getBoundingClientRect();
         const popupRect = popup.getBoundingClientRect();
         
-        let left = rect.left + rect.width / 2 - popupRect.width / 2;
-        let top = rect.top - popupRect.height - 10;
+        let left = rect.right + 10; // Position to the right of the image
+        let top = rect.top + rect.height / 2 - popupRect.height / 2; // Center vertically
 
         // Adjust position if popup would go off screen
-        if (left < 10) left = 10;
         if (left + popupRect.width > window.innerWidth - 10) {
-            left = window.innerWidth - popupRect.width - 10;
+            left = rect.left - popupRect.width - 10; // Position to the left instead
         }
         if (top < 10) {
-            top = rect.bottom + 10;
+            top = 10;
+        }
+        if (top + popupRect.height > window.innerHeight - 10) {
+            top = window.innerHeight - popupRect.height - 10;
         }
 
         popup.style.left = `${left}px`;
