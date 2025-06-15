@@ -4,55 +4,50 @@
 
 {% block content %}
 <section class="training-section">
-    <h2>Contribute Build Screenshots for Training</h2>
-    <p class="lead">Help us build SISTER's first neural network by contributing your Star Trek Online build screenshots. Your contributions will train a CNN for label detection, enabling SISTER to run as a fast web API without GPU requirements.</p>
+    <h2>Contribute Build Screenshots</h2>
+    <p class="lead">Help us build SISTER's first neural network. Your STO build screenshots will train a CNN for label detection, enabling SISTER to run as a fast web API without GPU requirements.</p>
 
     <div class="github-info">
-        <p>SISTER is an open-source project. Visit our <a href="https://github.com/phillipod/SISTER" target="_blank" rel="noopener noreferrer">GitHub repository</a> to learn more about the project, download the latest release, or contribute.</p>
-        <p>Current release: <a href="https://github.com/phillipod/SISTER/releases/tag/v2025.05.31-release" target="_blank" rel="noopener noreferrer">v2025.05.31</a> | 
-        <a href="{{ url_for('training_data_stats') }}" class="stats-link">View Submission Statistics</a></p>
+        <p>SISTER is an open-source project. <a href="https://github.com/phillipod/SISTER" target="_blank" rel="noopener noreferrer">View on GitHub</a> | 
+        <a href="https://github.com/phillipod/SISTER/releases/tag/v2025.05.31-release" target="_blank" rel="noopener noreferrer">Current release: v2025.05.31</a> | 
+        <a href="{{ url_for('training_data_stats') }}" class="stats-link">Submission Statistics</a></p>
     </div>
 
-    <h3>Why We Need Your Screenshots</h3>
-    <p>SISTER currently uses EasyOCR for text detection, which requires GPU acceleration to run fast enough for web applications. We're building a custom CNN to replace this dependency. Your screenshots help us train this network to:</p>
-    <ul>
-        <li>Detect labels and text in STO screenshots without requiring EasyOCR</li>
-        <li>Enable SISTER to run as a fast web API without GPU acceleration</li>
-        <li>Work reliably across different UI scales and visual conditions</li>
-        <li>Handle both PC and Console platform variations</li>
-        <li>Support future web applications that use SISTER's computer vision pipeline</li>
-    </ul>
+    <div class="training-overview">
+        <div class="training-goal">
+            <h3>The Goal</h3>
+            <p>We're building a custom CNN to replace EasyOCR, enabling SISTER to run as a web API without GPU acceleration. Your screenshots provide the training data we need.</p>
+        </div>
+        
+        <div class="account-options">
+            <h3>Submit With or Without an Account</h3>
+            <p><strong>No account:</strong> Just use your email - you'll get confirmations via email.</p>
+            <p><strong>With account:</strong> Track submissions, auto-filled forms, manage your contribution history.</p>
+        </div>
+    </div>
 
-    <h3>Account Benefits</h3>
-    <p><strong>Submit without an account:</strong> Use just your email address. You'll receive confirmations via email.</p>
-    <p><strong>Create an account for:</strong></p>
-    <ul>
-        <li>Track all your submissions and their processing status</li>
-        <li>Auto-filled forms for faster submission</li>
-        <li>Easy management of your contribution history</li>
-        <li>Direct access to modify or withdraw submissions</li>
-    </ul>
+    <div class="screenshot-requirements">
+        <h3>Screenshot Requirements</h3>
+        <p>For the best training data, please ensure your screenshots are:</p>
+        <ul>
+            <li>Full resolution, unmodified originals</li>
+            <li>Clear UI elements without overlapping windows or tooltips</li>
+            <li>Complete build information for space and/or ground</li>
+        </ul>
+    </div>
 
-    <h3>How It Works</h3>
-    <ol>
-        <li>Upload screenshots for your builds (space and/or ground)</li>
-        <li>Provide your email address</li>
-        <li>Review and agree to the CC BY-NC-SA 4.0 license terms for your submission</li>
-        <li>Receive a detailed consent form via email</li>
-        <li>Reply to confirm your consent</li>
-    </ol>
+    <div class="process-flow">
+        <h3>How It Works</h3>
+        <ol>
+            <li>Upload your build screenshots</li>
+            <li>Agree to the CC BY-NC-SA 4.0 license terms</li>
+            <li>Receive email confirmation</li>
+            <li>Reply to confirm participation</li>
+        </ol>
+    </div>
 
     <div class="screenshot-guide">
-        <h3>Screenshot Guidelines</h3>
-        <p><strong>For the best training data, please ensure your screenshots:</strong></p>
-        <ul>
-            <li>Are taken at full resolution (avoid downscaling or compression)</li>
-            <li>Show all UI elements clearly without any overlapping windows</li>
-            <li>Avoid tooltips or pop-up windows covering important information</li>
-            <li>Include complete build information for both space and ground when possible</li>
-            <li>Are unmodified originals (no editing, cropping, or filters)</li>
-        </ul>
-        <div class="tip">💡 Tip: You can submit multiple builds at once using the "Add Another Build" button below.</div>
+        <div class="tip">💡 You can submit multiple builds at once using the "Add Another Build" button below.</div>
     </div>
 
     <form action="{{ url_for('training_data_submit') }}" method="post" enctype="multipart/form-data" class="upload-form" id="uploadForm">
@@ -156,18 +151,23 @@
     </form>
 
     <div class="privacy-section">
-        <h3>License, Privacy &amp; Data Usage</h3>
-        <p>Your contributions are valuable to improving SISTER for the entire STO community. Here's how we handle your data and licensing:</p>
-        <ul>
-            <li><strong>Licensing:</strong> By submitting screenshots, you agree to license them under the <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license</a>. This allows the SISTER project and others to use, share, and build upon your contributions while requiring attribution, non-commercial use, and sharing under the same terms.</li>
-            <li><strong>Permitted Uses:</strong> Your screenshots will be used exclusively for training the label detection CNN, future computer vision research related to STO build analysis, and inclusion in our test suite for quality assurance.</li>
-            <li><strong>Public Availability:</strong> Screenshots and derived datasets are stored in public GitHub repositories as part of our open data commitment, always under the CC BY-NC-SA 4.0 license.</li>
-            <li><strong>License Permanence:</strong> The CC BY-NC-SA 4.0 license is irrevocable once data is distributed. This ensures stability for researchers and developers who rely on the dataset. However, you can request that we stop using your screenshots in future releases.</li>
-            <li><strong>Future Withdrawal:</strong> You may request that we exclude your screenshots from future datasets or training runs. Previously published copies will remain available under the existing license terms.</li>
-            <li><strong>Email Privacy:</strong> Your email address is used only for consent confirmation and communication about your submission. It will never be published, shared, or used for any other purpose.</li>
-            <li><strong>Focused Usage:</strong> All data usage is strictly limited to improving Star Trek Online build analysis tools and related computer vision research within the SISTER project scope.</li>
-        </ul>
-        <p>After submitting your screenshots and agreeing to the license, you'll receive an email to verify your submission. Your data will be processed according to these terms only after you confirm your consent.</p>
+        <h3>Privacy &amp; Licensing</h3>
+        <div class="privacy-summary">
+            <p>By submitting screenshots, you license them under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a> for training our label detection CNN and related research.</p>
+        </div>
+        
+        <details class="privacy-details">
+            <summary>Full Privacy &amp; Licensing Details</summary>
+            <ul>
+                <li><strong>Storage:</strong> Screenshots are stored in public GitHub repositories under the CC BY-NC-SA 4.0 license.</li>
+                <li><strong>Uses:</strong> Training the label detection CNN, computer vision research, and test suite quality assurance.</li>
+                <li><strong>Email:</strong> Used only for consent confirmation, never published or shared.</li>
+                <li><strong>Withdrawal:</strong> You can request exclusion from future datasets. Previously published copies remain under the existing license.</li>
+                <li><strong>Permanence:</strong> The CC BY-NC-SA 4.0 license is irrevocable once distributed, ensuring dataset stability.</li>
+                <li><strong>Scope:</strong> Usage strictly limited to improving STO build analysis tools and related computer vision research.</li>
+            </ul>
+            <p>After submission, you'll receive an email to verify your consent before any data processing begins.</p>
+        </details>
     </div>
 </section>
 
