@@ -5,171 +5,349 @@
 {% block content %}
 <section class="training-section">
     <h2>Contribute Build Screenshots</h2>
-    <p class="lead">Help us build SISTER's first neural network. Your STO build screenshots will train a CNN for label detection, enabling SISTER to run as a fast web API without GPU requirements.</p>
+    <p class="lead">Help us build SISTER's first neural network for label detection.</p>
+
+    <div class="tab-container">
+        <div class="tab-nav">
+            <button class="tab-button active" data-tab="submit">Submit</button>
+            <button class="tab-button" data-tab="about">About</button>
+            <button class="tab-button" data-tab="license">License</button>
+            <button class="tab-button" data-tab="stats">Stats</button>
+        </div>
+
+        <div class="tab-content">
+            <!-- Submit Tab -->
+            <div id="submit-tab" class="tab-pane active">
+                <div class="submit-intro">
+                    <p>Upload your STO build screenshots to help train our CNN for label detection.</p>
+                    <div class="tip">💡 You can submit multiple builds at once using the "Add Another Build" button.</div>
+                </div>
+
+                <div class="screenshot-requirements">
+                    <h3>Screenshot Requirements</h3>
+                    <ul>
+                        <li>Full resolution, unmodified originals</li>
+                        <li>Clear UI elements without overlapping windows or tooltips</li>
+                        <li>Complete build information for space and/or ground</li>
+                    </ul>
+                </div>
+
+                <form action="{{ url_for('training_data_submit') }}" method="post" enctype="multipart/form-data" class="upload-form" id="uploadForm">
+                    {{ form.csrf_token }}
+                    
+                    <div class="form-section">
+                        <h3>Contact Information</h3>
+                        <div class="form-group">
+                            {{ form.email.label }}
+                            <div class="input-help">Your email is required for consent confirmation and will not be shared publicly.
+                                {% if current_user.is_authenticated %}
+                                    <br><span style="color: #28a745; font-size: 0.9em;"><i class="fas fa-check-circle"></i> Auto-filled from your account</span>
+                                {% endif %}
+                            </div>
+                            {{ form.email(class="form-control", placeholder="your.email@example.com") }}
+                            {% if form.email.errors %}
+                                <div class="errors">
+                                    {% for error in form.email.errors %}
+                                        <span class="error">{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>License Agreement</h3>
+                        <p class="consent-intro">By submitting screenshots, you agree to license them under the <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a> license for training our label detection CNN.</p>
+                        <div class="consent-group">
+                            <div class="consent-option">
+                                {{ form.agree_to_license(class="consent-checkbox") }}
+                                <label class="consent-label" for="agree_to_license">{{ form.agree_to_license.label.text }}</label>
+                                {% if form.agree_to_license.errors %}
+                                    <div class="errors">
+                                        {% for error in form.agree_to_license.errors %}
+                                            <span class="error">{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="buildsContainer">
+                        <div class="build-section" data-build-index="0">
+                            <div class="build-header">
+                                <h3>Build Screenshots</h3>
+                            </div>
+                            <div class="screenshots-section">
+                                <div class="build-platform-selection">
+                                    <h4>Build Platform</h4>
+                                    <div class="radio-group">
+                                        <label class="radio-option">
+                                            <input type="radio" name="build_platform_0" value="PC" checked>
+                                            PC
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="build_platform_0" value="Console">
+                                            Console
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="build-type-selection">
+                                    <h4>Build Type</h4>
+                                    <div class="radio-group">
+                                        <label class="radio-option">
+                                            <input type="radio" name="build_type_0" value="space" checked>
+                                            Space Build
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="build_type_0" value="ground">
+                                            Ground Build
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="file-upload-section">
+                                    <h4>Screenshots</h4>
+                                    <input type="file" name="screenshots_0" multiple class="file-input">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" id="addBuildBtn" class="add-build-btn">
+                        Add Another Build
+                    </button>
+
+                    <div class="form-actions">
+                        <button type="submit" id="submitBtn" class="submit-btn" style="min-width: 180px; display: inline-flex; align-items: center; justify-content: center;">
+                            <span class="spinner"></span>
+                            <span class="button-text">Submit Screenshots</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- About Tab -->
+            <div id="about-tab" class="tab-pane">
+                <div class="about-content">
+                    <h3>Why We Need Your Screenshots</h3>
+                    <p>SISTER currently uses EasyOCR for text detection, which requires GPU acceleration to run fast enough for web applications. We're building a custom CNN to replace this dependency.</p>
+                    
+                    <div class="goal-benefits">
+                        <h4>What Your Screenshots Enable</h4>
+                        <ul>
+                            <li>Fast label detection without EasyOCR dependency</li>
+                            <li>SISTER running as a web API without GPU requirements</li>
+                            <li>Support for future web applications using SISTER's pipeline</li>
+                            <li>Reliable performance across different UI scales and platforms</li>
+                        </ul>
+                    </div>
+
+                    <h3>Account Options</h3>
+                    <div class="account-comparison">
+                        <div class="no-account">
+                            <h4>Submit Without Account</h4>
+                            <ul>
+                                <li>Just use your email address</li>
+                                <li>Receive confirmations via email</li>
+                                <li>Contact us through GitHub for changes</li>
+                            </ul>
+                        </div>
+                        <div class="with-account">
+                            <h4>Submit With Account</h4>
+                            <ul>
+                                <li>Track all your submissions</li>
+                                <li>See processing status</li>
+                                <li>Auto-filled forms</li>
+                                <li>Manage contribution history</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="process-overview">
+                        <h3>How It Works</h3>
+                        <ol>
+                            <li>Upload your build screenshots</li>
+                            <li>Agree to the CC BY-NC-SA 4.0 license terms</li>
+                            <li>Receive email confirmation</li>
+                            <li>Reply to confirm participation</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- License Tab -->
+            <div id="license-tab" class="tab-pane">
+                <div class="license-content">
+                    <h3>Creative Commons License</h3>
+                    <p>By submitting screenshots, you agree to license them under the <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)</a> license.</p>
+
+                    <div class="license-details">
+                        <h4>What This Means</h4>
+                        <ul>
+                            <li><strong>Attribution:</strong> Your contribution will be credited</li>
+                            <li><strong>NonCommercial:</strong> Used only for non-commercial purposes</li>
+                            <li><strong>ShareAlike:</strong> Derivatives shared under same license</li>
+                        </ul>
+
+                        <h4>How We Use Your Data</h4>
+                        <ul>
+                            <li><strong>Primary Use:</strong> Training the label detection CNN</li>
+                            <li><strong>Research:</strong> Computer vision research related to STO build analysis</li>
+                            <li><strong>Quality Assurance:</strong> Inclusion in our test suite</li>
+                        </ul>
+
+                        <h4>Data Storage & Privacy</h4>
+                        <ul>
+                            <li><strong>Storage:</strong> Screenshots stored in public GitHub repositories</li>
+                            <li><strong>Email Privacy:</strong> Used only for consent confirmation, never published</li>
+                            <li><strong>Scope:</strong> Usage limited to STO build analysis tools and related research</li>
+                        </ul>
+
+                        <h4>Your Rights</h4>
+                        <ul>
+                            <li><strong>Withdrawal:</strong> Request exclusion from future datasets</li>
+                            <li><strong>Permanence:</strong> Previously distributed copies remain under existing license</li>
+                            <li><strong>Irrevocability:</strong> License ensures dataset stability for researchers</li>
+                        </ul>
+                    </div>
+
+                    <div class="consent-process">
+                        <h3>Consent Process</h3>
+                        <p>After submitting your screenshots and agreeing to the license, you'll receive an email to verify your submission. Your data will be processed only after you confirm your consent via email reply.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Tab -->
+            <div id="stats-tab" class="tab-pane">
+                <div class="stats-content">
+                    <h3>Submission Statistics</h3>
+                    <p>View detailed statistics about community contributions.</p>
+                    <p><a href="{{ url_for('training_data_stats') }}" class="stats-link">View Full Statistics Page</a></p>
+                    
+                    <div class="quick-stats">
+                        <p><em>Quick stats will be loaded here or you can visit the full statistics page above.</em></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="github-info">
         <p>SISTER is an open-source project. <a href="https://github.com/phillipod/SISTER" target="_blank" rel="noopener noreferrer">View on GitHub</a> | 
-        <a href="https://github.com/phillipod/SISTER/releases/tag/v2025.05.31-release" target="_blank" rel="noopener noreferrer">Current release: v2025.05.31</a> | 
-        <a href="{{ url_for('training_data_stats') }}" class="stats-link">Submission Statistics</a></p>
-    </div>
-
-    <div class="training-overview">
-        <div class="training-goal">
-            <h3>The Goal</h3>
-            <p>We're building a custom CNN to replace EasyOCR, enabling SISTER to run as a web API without GPU acceleration. Your screenshots provide the training data we need.</p>
-        </div>
-        
-        <div class="account-options">
-            <h3>Submit With or Without an Account</h3>
-            <p><strong>No account:</strong> Just use your email - you'll get confirmations via email.</p>
-            <p><strong>With account:</strong> Track submissions, auto-filled forms, manage your contribution history.</p>
-        </div>
-    </div>
-
-    <div class="screenshot-requirements">
-        <h3>Screenshot Requirements</h3>
-        <p>For the best training data, please ensure your screenshots are:</p>
-        <ul>
-            <li>Full resolution, unmodified originals</li>
-            <li>Clear UI elements without overlapping windows or tooltips</li>
-            <li>Complete build information for space and/or ground</li>
-        </ul>
-    </div>
-
-    <div class="process-flow">
-        <h3>How It Works</h3>
-        <ol>
-            <li>Upload your build screenshots</li>
-            <li>Agree to the CC BY-NC-SA 4.0 license terms</li>
-            <li>Receive email confirmation</li>
-            <li>Reply to confirm participation</li>
-        </ol>
-    </div>
-
-    <div class="screenshot-guide">
-        <div class="tip">💡 You can submit multiple builds at once using the "Add Another Build" button below.</div>
-    </div>
-
-    <form action="{{ url_for('training_data_submit') }}" method="post" enctype="multipart/form-data" class="upload-form" id="uploadForm">
-        {{ form.csrf_token }}
-        
-        <div class="form-section">
-            <h3>Contact Information</h3>
-            <div class="form-group">
-                {{ form.email.label }}
-                <div class="input-help">Your email is required for consent confirmation and will not be shared publicly.
-                    {% if current_user.is_authenticated %}
-                        <br><span style="color: #28a745; font-size: 0.9em;"><i class="fas fa-check-circle"></i> Auto-filled from your account</span>
-                    {% endif %}
-                </div>
-                {{ form.email(class="form-control", placeholder="your.email@example.com") }}
-                {% if form.email.errors %}
-                    <div class="errors">
-                        {% for error in form.email.errors %}
-                            <span class="error">{{ error }}</span>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="form-section">
-            <h3>License Agreement</h3>
-            <p class="consent-intro">To contribute your screenshots, you must agree to license them under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license. This license allows the SISTER project to use your contributions for specific purposes while ensuring they remain freely available under similar terms.</p>
-            <div class="consent-group">
-                <div class="consent-option">
-                    {{ form.agree_to_license(class="consent-checkbox") }}
-                    <label class="consent-label" for="agree_to_license">{{ form.agree_to_license.label.text }} <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">(Learn more about CC BY-NC-SA 4.0)</a></label>
-                    {% if form.agree_to_license.errors %}
-                        <div class="errors">
-                            {% for error in form.agree_to_license.errors %}
-                                <span class="error">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-                <p class="consent-details">Specifically, your agreement allows us to use your screenshots for:</p>
-                <ul>
-                    <li>Training machine learning models for recognizing elements in Star Trek Online screenshots.</li>
-                    <li>Future machine learning research and development related to STO build analysis.</li>
-                    <li>Inclusion in the SISTER project's test suite to ensure software quality.</li>
-                </ul>
-                <p>The CC BY-NC-SA 4.0 license is irrevocable for data that has been shared or distributed. This means that once your data is part of a dataset released under this license, the license terms for that data cannot be revoked.</p>
-            </div>
-        </div>
-
-        <div id="buildsContainer">
-            <div class="build-section" data-build-index="0">
-                <div class="build-header">
-                    <h3>Build Screenshots</h3>
-                </div>
-                <div class="screenshots-section">
-                    <div class="build-platform-selection">
-                        <h4>Build Platform</h4>
-                        <div class="radio-group">
-                            <label class="radio-option">
-                                <input type="radio" name="build_platform_0" value="PC" checked>
-                                PC
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="build_platform_0" value="Console">
-                                Console
-                            </label>
-                        </div>
-                    </div>
-                    <div class="build-type-selection">
-                        <h4>Build Type</h4>
-                        <div class="radio-group">
-                            <label class="radio-option">
-                                <input type="radio" name="build_type_0" value="space" checked>
-                                Space Build
-                            </label>
-                            <label class="radio-option">
-                                <input type="radio" name="build_type_0" value="ground">
-                                Ground Build
-                            </label>
-                        </div>
-                    </div>
-                    <div class="file-upload-section">
-                        <h4>Screenshots</h4>
-                        <input type="file" name="screenshots_0" multiple class="file-input">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <button type="button" id="addBuildBtn" class="add-build-btn">
-            Add Another Build
-        </button>
-
-        <div class="form-actions">
-            <button type="submit" id="submitBtn" class="submit-btn" style="min-width: 180px; display: inline-flex; align-items: center; justify-content: center;">
-                <span class="spinner"></span>
-                <span class="button-text">Submit Screenshots</span>
-            </button>
-        </div>
-    </form>
-
-    <div class="privacy-section">
-        <h3>Privacy &amp; Licensing</h3>
-        <div class="privacy-summary">
-            <p>By submitting screenshots, you license them under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a> for training our label detection CNN and related research.</p>
-        </div>
-        
-        <details class="privacy-details">
-            <summary>Full Privacy &amp; Licensing Details</summary>
-            <ul>
-                <li><strong>Storage:</strong> Screenshots are stored in public GitHub repositories under the CC BY-NC-SA 4.0 license.</li>
-                <li><strong>Uses:</strong> Training the label detection CNN, computer vision research, and test suite quality assurance.</li>
-                <li><strong>Email:</strong> Used only for consent confirmation, never published or shared.</li>
-                <li><strong>Withdrawal:</strong> You can request exclusion from future datasets. Previously published copies remain under the existing license.</li>
-                <li><strong>Permanence:</strong> The CC BY-NC-SA 4.0 license is irrevocable once distributed, ensuring dataset stability.</li>
-                <li><strong>Scope:</strong> Usage strictly limited to improving STO build analysis tools and related computer vision research.</li>
-            </ul>
-            <p>After submission, you'll receive an email to verify your consent before any data processing begins.</p>
-        </details>
+        <a href="https://github.com/phillipod/SISTER/releases/tag/v2025.05.31-release" target="_blank" rel="noopener noreferrer">Current release: v2025.05.31</a></p>
     </div>
 </section>
+
+<style>
+.tab-container {
+    margin: 2rem 0;
+}
+
+.tab-nav {
+    display: flex;
+    border-bottom: 2px solid #e0e0e0;
+    margin-bottom: 2rem;
+}
+
+.tab-button {
+    background: none;
+    border: none;
+    padding: 1rem 2rem;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #666;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-button:hover {
+    color: #333;
+    background-color: #f5f5f5;
+}
+
+.tab-button.active {
+    color: #2c5aa0;
+    border-bottom-color: #2c5aa0;
+    background-color: #f8f9fa;
+}
+
+.tab-content {
+    position: relative;
+}
+
+.tab-pane {
+    display: none;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+.account-comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin: 1.5rem 0;
+}
+
+.account-comparison > div {
+    padding: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+.license-details h4 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #2c5aa0;
+}
+
+.submit-intro {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .tab-nav {
+        flex-wrap: wrap;
+    }
+    
+    .tab-button {
+        flex: 1;
+        min-width: 120px;
+        padding: 0.75rem 1rem;
+    }
+    
+    .account-comparison {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tab switching functionality
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+            
+            // Remove active class from all buttons and panes
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabPanes.forEach(pane => pane.classList.remove('active'));
+            
+            // Add active class to clicked button and corresponding pane
+            this.classList.add('active');
+            document.getElementById(targetTab + '-tab').classList.add('active');
+        });
+    });
+});
+</script>
 
 <script src="{{ url_for('static', filename='js/training_data.js') }}"></script>
 {% endblock %} 
