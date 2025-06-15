@@ -352,15 +352,35 @@ class ScreenshotBrowser {
         const ids = idsCsv.split(',');
         this.renderGridPreview(ids, isProgrammatic);
 
+        // Only show submission info if all screenshots belong to the same submission
         if (ids.length > 0) {
-            const firstScreenshot = this.screenshotDataMap[ids[0]];
-            if (firstScreenshot) {
-                 this.renderSubmissionInfo(firstScreenshot.submission_details || firstScreenshot);
+            const uniqueSubmissions = new Set();
+            ids.forEach(id => {
+                const screenshot = this.screenshotDataMap[id];
+                if (screenshot) {
+                    const submissionId = screenshot.submission_id || 
+                                       (screenshot.submission_details && screenshot.submission_details.id);
+                    if (submissionId) {
+                        uniqueSubmissions.add(submissionId);
+                    }
+                }
+            });
+
+            // Only show submission info if there's exactly one unique submission
+            if (uniqueSubmissions.size === 1) {
+                const firstScreenshot = this.screenshotDataMap[ids[0]];
+                if (firstScreenshot) {
+                    this.renderSubmissionInfo(firstScreenshot.submission_details || firstScreenshot);
+                }
+            } else {
+                // Clear submission info for multi-submission groups
+                this.submissionInfoPane.innerHTML = '';
             }
         }
     }
 
     renderSinglePreview(screenshotId) {
+        this.hideSubmissionPopup(); // Clear any existing popup
         this.previewContent.classList.remove('has-grid');
         const imageUrl = this.api.screenshotImage.replace('{sc_id}', screenshotId);
         this.previewContent.innerHTML = `
@@ -369,6 +389,7 @@ class ScreenshotBrowser {
     }
 
     renderGridPreview(ids, isProgrammatic) {
+        this.hideSubmissionPopup(); // Clear any existing popup
         this.previewContent.classList.add('has-grid');
         const grid = document.createElement('div');
         grid.id = 'preview-grid';
@@ -436,6 +457,15 @@ class ScreenshotBrowser {
                 } else {
                     console.log('No screenshot info found for ID:', id);
                 }
+            });
+
+            // Add mouseover popup for submission info
+            img.addEventListener('mouseenter', (e) => {
+                this.showSubmissionPopup(e, id);
+            });
+
+            img.addEventListener('mouseleave', () => {
+                this.hideSubmissionPopup();
             });
 
             const imageUrl = this.api.screenshotImage.replace('{sc_id}', id);
@@ -740,6 +770,65 @@ class ScreenshotBrowser {
             alert(`An error occurred: ${error.message}`);
             button.disabled = false;
             button.textContent = action.charAt(0).toUpperCase() + action.slice(1);
+        }
+    }
+
+    showSubmissionPopup(e, screenshotId) {
+        const screenshotInfo = this.screenshotDataMap[screenshotId];
+        if (!screenshotInfo) return;
+
+        // Remove any existing popup
+        this.hideSubmissionPopup();
+
+        const popup = document.createElement('div');
+        popup.id = 'submission-popup';
+        popup.className = 'submission-popup';
+        
+        const info = screenshotInfo.submission_details || screenshotInfo;
+        const state = info.is_withdrawn ? 'withdrawn' : info.acceptance_state;
+        const stateText = state.charAt(0).toUpperCase() + state.slice(1);
+        
+        let statusHtml = `<span class="status-badge status-${state}">${stateText}</span>`;
+        if (info.is_withdrawn && state !== 'withdrawn') {
+            statusHtml += ` <span class="status-badge status-withdrawn">Withdrawn</span>`;
+        }
+
+        popup.innerHTML = `
+            <div class="popup-content">
+                <p><strong>Email:</strong> ${info.email}</p>
+                <p><strong>Status:</strong> ${statusHtml}</p>
+                <p><strong>Submission:</strong> ${info.id ? info.id.substring(0, 8) : 'N/A'}...</p>
+                <p><strong>Screenshot:</strong> ${screenshotInfo.filename}</p>
+            </div>
+        `;
+
+        document.body.appendChild(popup);
+
+        // Position the popup near the mouse cursor
+        const rect = e.target.getBoundingClientRect();
+        const popupRect = popup.getBoundingClientRect();
+        
+        let left = rect.left + rect.width / 2 - popupRect.width / 2;
+        let top = rect.top - popupRect.height - 10;
+
+        // Adjust position if popup would go off screen
+        if (left < 10) left = 10;
+        if (left + popupRect.width > window.innerWidth - 10) {
+            left = window.innerWidth - popupRect.width - 10;
+        }
+        if (top < 10) {
+            top = rect.bottom + 10;
+        }
+
+        popup.style.left = `${left}px`;
+        popup.style.top = `${top}px`;
+        popup.style.display = 'block';
+    }
+
+    hideSubmissionPopup() {
+        const existingPopup = document.getElementById('submission-popup');
+        if (existingPopup) {
+            existingPopup.remove();
         }
     }
 } 

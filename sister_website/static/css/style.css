@@ -2220,3 +2220,9 @@ footer {
     margin-top: 1.5rem;
 }
 
+.modal-body hr {
+    border: none;
+    border-top: 1px solid #dee2e6;
+    margin: 15px 0;
+}
+
