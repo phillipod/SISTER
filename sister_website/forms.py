@@ -111,3 +111,50 @@ class UserSettingsForm(FlaskForm):
             raise ValidationError('Please confirm your new password.')
         if not new_password.data and self.confirm_password.data:
             raise ValidationError('Please enter a new password.')
+
+
+class NormalUserForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[
+        DataRequired(),
+        EqualTo('confirm_password', message='Passwords must match.')
+    ])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired()])
+    email_verified = BooleanField('Email Verified')
+    contributor_recognition_enabled = BooleanField('Contributor Recognition Enabled')
+    contributor_recognition_text = TextAreaField('Contributor Recognition Text')
+    contributor_recognition_verified = BooleanField('Contributor Recognition Verified')
+    submit = SubmitField('Create User')
+
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user:
+            raise ValidationError('That email is already taken. Please choose a different one.')
+
+
+class EditNormalUserForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    email_verified = BooleanField('Email Verified')
+    contributor_recognition_enabled = BooleanField('Contributor Recognition Enabled')
+    contributor_recognition_text = TextAreaField('Contributor Recognition Text')
+    contributor_recognition_verified = BooleanField('Contributor Recognition Verified')
+    submit = SubmitField('Update User')
+
+    def __init__(self, original_email=None, *args, **kwargs):
+        super(EditNormalUserForm, self).__init__(*args, **kwargs)
+        self.original_email = original_email
+
+    def validate_email(self, email):
+        if email.data != self.original_email:
+            user = User.query.filter_by(email=email.data).first()
+            if user:
+                raise ValidationError('That email is already taken. Please choose a different one.')
+
+
+class UserPasswordForm(FlaskForm):
+    password = PasswordField('New Password', validators=[
+        DataRequired(),
+        EqualTo('confirm_password', message='Passwords must match.')
+    ])
+    confirm_password = PasswordField('Confirm New Password', validators=[DataRequired()])
+    submit = SubmitField('Change Password')

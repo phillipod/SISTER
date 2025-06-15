@@ -38,9 +38,18 @@
             <div class="card-body">
                 <h5 class="card-title">
                     <i class="fa-solid fa-users-cog card-icon"></i>
-                    User Management
+                    Admin User Management
                 </h5>
                 <p class="card-text">Manage administrator accounts.</p>
+            </div>
+        </a>
+        <a href="{{ url_for('admin_normal_users') }}" class="admin-tool-card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fa-solid fa-users card-icon"></i>
+                    Normal User Management
+                </h5>
+                <p class="card-text">Manage normal user accounts, settings, and permissions.</p>
             </div>
         </a>
     </div>

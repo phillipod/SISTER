@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Normal User Management{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h1>Normal User Management</h1>
+    
+    <!-- Search Form -->
+    <div class="admin-users-form" style="margin-bottom: 2rem;">
+        <form method="GET" action="{{ url_for('admin_normal_users') }}" class="search-form" style="display: flex; gap: 1rem; align-items: end;">
+            <div class="form-group" style="flex: 1;">
+                <label for="search">Search Users</label>
+                <input type="text" id="search" name="search" value="{{ search }}" class="form-input" placeholder="Search by email...">
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-secondary">Search</button>
+                {% if search %}
+                    <a href="{{ url_for('admin_normal_users') }}" class="btn btn-outline">Clear</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+    
+    <div class="admin-users-layout">
+        <div class="admin-users-list">
+            <h2>Existing Users ({{ users.total }} total)</h2>
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th class="status-column">Email Status</th>
+                        <th class="status-column">Account Status</th>
+                        <th class="status-column">Contributor</th>
+                        <th>Created</th>
+                        <th class="actions-column">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users.items %}
+                    <tr>
+                        <td>{{ user.email }}</td>
+                        <td class="status-column">
+                            {% if user.email_verified %}
+                                <span class="status-badge status-accepted">Verified</span>
+                            {% else %}
+                                <span class="status-badge status-declined">Not Verified</span>
+                            {% endif %}
+                        </td>
+                        <td class="status-column">
+                            {% if user.is_locked %}
+                                <span class="status-badge status-declined">Locked</span>
+                            {% else %}
+                                <span class="status-badge status-accepted">Active</span>
+                            {% endif %}
+                        </td>
+                        <td class="status-column">
+                            {% if user.contributor_recognition_enabled %}
+                                {% if user.contributor_recognition_verified %}
+                                    <span class="status-badge status-accepted">Verified</span>
+                                {% else %}
+                                    <span class="status-badge status-pending">Pending</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="status-badge status-declined">Disabled</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td class="actions-cell">
+                            <a href="{{ url_for('edit_normal_user', user_id=user.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+                            <a href="{{ url_for('change_normal_user_password', user_id=user.id) }}" class="btn btn-sm btn-secondary">Change Password</a>
+                            
+                            <!-- Email Verification Actions -->
+                            {% if user.email_verified %}
+                                <form method="POST" action="{{ url_for('unverify_normal_user_email', user_id=user.id) }}" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-warning">Unverify Email</button>
+                                </form>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('verify_normal_user_email', user_id=user.id) }}" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-success">Verify Email</button>
+                                </form>
+                            {% endif %}
+                            
+                            <!-- Lock/Unlock Actions -->
+                            {% if user.is_locked %}
+                                <form method="POST" action="{{ url_for('unlock_normal_user', user_id=user.id) }}" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-success">Unlock</button>
+                                </form>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('lock_normal_user', user_id=user.id) }}" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-warning">Lock</button>
+                                </form>
+                            {% endif %}
+                            
+                            <!-- Delete Action -->
+                            <form method="POST" action="{{ url_for('delete_normal_user', user_id=user.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this user and all their submissions? This action cannot be undone.');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6">No users found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <!-- Pagination -->
+            {% if users.pages > 1 %}
+            <div class="pagination">
+                {% if users.has_prev %}
+                    <a href="{{ url_for('admin_normal_users', page=users.prev_num, search=search) }}" class="btn btn-sm btn-secondary">Previous</a>
+                {% endif %}
+                
+                <span>Page {{ users.page }} of {{ users.pages }}</span>
+                
+                {% if users.has_next %}
+                    <a href="{{ url_for('admin_normal_users', page=users.next_num, search=search) }}" class="btn btn-sm btn-secondary">Next</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="admin-users-form">
+            <h2>Create New User</h2>
+            <form method="POST" action="{{ url_for('admin_normal_users') }}">
+                {{ form.csrf_token }}
+                <div class="form-group">
+                    {{ form.email.label }}
+                    {{ form.email(class="form-input" + (" input-error" if form.email.errors else "")) }}
+                    {% if form.email.errors %}
+                        <div class="form-error">
+                            {% for error in form.email.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.password.label }}
+                    {{ form.password(class="form-input" + (" input-error" if form.password.errors else "")) }}
+                    {% if form.password.errors %}
+                        <div class="form-error">
+                            {% for error in form.password.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.confirm_password.label }}
+                    {{ form.confirm_password(class="form-input" + (" input-error" if form.confirm_password.errors else "")) }}
+                    {% if form.confirm_password.errors %}
+                        <div class="form-error">
+                            {% for error in form.confirm_password.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.email_verified() }}
+                    {{ form.email_verified.label }}
+                </div>
+                <div class="form-group">
+                    {{ form.contributor_recognition_enabled() }}
+                    {{ form.contributor_recognition_enabled.label }}
+                </div>
+                <div class="form-group">
+                    {{ form.contributor_recognition_text.label }}
+                    {{ form.contributor_recognition_text(class="form-input") }}
+                </div>
+                <div class="form-group">
+                    {{ form.contributor_recognition_verified() }}
+                    {{ form.contributor_recognition_verified.label }}
+                </div>
+                <div class="form-group">
+                    {{ form.submit(class="btn") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 1rem;
+}
+
+.search-form {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    border-radius: 0.25rem;
+    text-transform: uppercase;
+}
+
+.status-accepted {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-declined {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.status-pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+</style>
+{% endblock %} 

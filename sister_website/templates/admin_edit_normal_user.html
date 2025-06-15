@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Edit User - {{ user.email }}{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <h1>Edit User: <em>{{ user.email }}</em></h1>
+
+    <div class="admin-users-form" style="max-width: 600px;">
+        <form method="POST" action="{{ url_for('edit_normal_user', user_id=user.id) }}">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                {{ form.email.label }}
+                {{ form.email(class="form-input" + (" input-error" if form.email.errors else "")) }}
+                {% if form.email.errors %}
+                    <div class="form-error">
+                        {% for error in form.email.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                {{ form.email_verified() }}
+                {{ form.email_verified.label }}
+            </div>
+            <div class="form-group">
+                {{ form.contributor_recognition_enabled() }}
+                {{ form.contributor_recognition_enabled.label }}
+            </div>
+            <div class="form-group">
+                {{ form.contributor_recognition_text.label }}
+                {{ form.contributor_recognition_text(class="form-input", rows="3") }}
+                <small class="form-text">How the user wants to be acknowledged in contributor recognition.</small>
+            </div>
+            <div class="form-group">
+                {{ form.contributor_recognition_verified() }}
+                {{ form.contributor_recognition_verified.label }}
+            </div>
+            <div class="form-group-actions">
+                {{ form.submit(class="btn") }}
+                <a href="{{ url_for('admin_normal_users') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+        
+        <!-- User Info Section -->
+        <div class="user-info-section" style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #dee2e6;">
+            <h3>User Information</h3>
+            <table class="user-info-table">
+                <tr>
+                    <td><strong>User ID:</strong></td>
+                    <td>{{ user.id }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Created:</strong></td>
+                    <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Last Updated:</strong></td>
+                    <td>{{ user.updated_at.strftime('%Y-%m-%d %H:%M:%S UTC') }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Account Status:</strong></td>
+                    <td>
+                        {% if user.is_locked %}
+                            <span class="status-badge status-declined">Locked</span>
+                        {% else %}
+                            <span class="status-badge status-accepted">Active</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Total Submissions:</strong></td>
+                    <td>{{ user.submissions|length }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+.user-info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.user-info-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.user-info-table td:first-child {
+    width: 150px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    border-radius: 0.25rem;
+    text-transform: uppercase;
+}
+
+.status-accepted {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-declined {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.form-text {
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

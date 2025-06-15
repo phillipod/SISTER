@@ -977,3 +977,244 @@ def test_admin_api_routes_require_admin_auth(client, app):
     for route in api_routes:
         response = client.get(route)
         assert response.status_code == 403, f"API route {route} should return 403 Forbidden"
+
+
+# ===== NORMAL USER MANAGEMENT TESTS =====
+
+def create_normal_user(app, email="test@example.com", password="password", **kwargs):
+    """Helper to create a normal user for testing."""
+    with app.app_context():
+        user = User(email=email)
+        user.set_password(password)
+        
+        # Set optional attributes
+        for key, value in kwargs.items():
+            setattr(user, key, value)
+        
+        db.session.add(user)
+        db.session.commit()
+        return user.id, user.email
+
+
+def test_admin_normal_users_page_requires_login(client, app):
+    """Test normal users page requires authentication."""
+    response = client.get('/admin/normal-users')
+    assert response.status_code == 302  # Redirect to login
+
+
+def test_admin_normal_users_page_authenticated(client, app, admin_user):
+    """Test normal users page with authentication."""
+    with app.app_context():
+        admin = AdminUser.query.filter_by(username='admin').first()
+        admin_username = admin.username
+    
+    login_admin(client, admin_username, 'password')
+    
+    response = client.get('/admin/normal-users')
+    assert response.status_code == 200
+    assert b'Normal User Management' in response.data
+
+
+def test_create_normal_user_success(client, app, admin_user):
+    """Test creating a new normal user."""
+    with app.app_context():
+        admin = AdminUser.query.filter_by(username='admin').first()
+        admin_username = admin.username
+    
+    login_admin(client, admin_username, 'password')
+    
+    response = client.post('/admin/normal-users', data={
+        'email': 'newuser@test.com',
+        'password': 'newpassword123',
+        'confirm_password': 'newpassword123',
+        'email_verified': True,
+        'contributor_recognition_enabled': True,
+        'contributor_recognition_text': 'Test User',
+        'contributor_recognition_verified': True,
+        'csrf_token': 'test'
+    })
+    assert response.status_code == 302  # Redirect after creation
+    
+    # Verify user was created
+    with app.app_context():
+        new_user = User.query.filter_by(email='newuser@test.com').first()
+        assert new_user is not None
+        assert new_user.check_password('newpassword123')
+        assert new_user.email_verified is True
+        assert new_user.contributor_recognition_enabled is True
+        assert new_user.contributor_recognition_text == 'Test User'
+        assert new_user.contributor_recognition_verified is True
+
+
+def test_edit_normal_user_success(client, app, admin_user):
+    """Test editing a normal user."""
+    user_id, user_email = create_normal_user(app, "edit@test.com", "password")
+    
+    with app.app_context():
+        admin = AdminUser.query.filter_by(username='admin').first()
+        admin_username = admin.username
+    
+    login_admin(client, admin_username, 'password')
+    
+    response = client.post(f'/admin/normal-user/{user_id}/edit', data={
+        'email': 'edited@test.com',
+        'email_verified': True,
+        'contributor_recognition_enabled': True,
+        'contributor_recognition_text': 'Edited User',
+        'contributor_recognition_verified': True,
+        'csrf_token': 'test'
+    })
+    assert response.status_code == 302  # Redirect after success
+    
+    # Verify user was updated
+    with app.app_context():
+        user = User.query.get(user_id)
+        assert user.email == 'edited@test.com'
+        assert user.email_verified is True
+        assert user.contributor_recognition_enabled is True
+        assert user.contributor_recognition_text == 'Edited User'
+        assert user.contributor_recognition_verified is True
+
+
+def test_change_normal_user_password_success(client, app, admin_user):
+    """Test changing a normal user's password."""
+    user_id, user_email = create_normal_user(app, "password@test.com", "oldpassword")
+    
+    with app.app_context():
+        admin = AdminUser.query.filter_by(username='admin').first()
+        admin_username = admin.username
+    
+    login_admin(client, admin_username, 'password')
+    
+    response = client.post(f'/admin/normal-user/{user_id}/change-password', data={
+        'password': 'newpassword123',
+        'confirm_password': 'newpassword123',
+        'csrf_token': 'test'
+    })
+    assert response.status_code == 302  # Redirect after success
+    
+    # Verify password was changed
+    with app.app_context():
+        user = User.query.get(user_id)
+        assert user.check_password('newpassword123')
+        assert not user.check_password('oldpassword')
+
+
+def test_lock_normal_user_success(client, app, admin_user):
+    """Test locking a normal user."""
+    user_id, user_email = create_normal_user(app, "lock@test.com", "password")
+    
+    with app.app_context():
+        admin = AdminUser.query.filter_by(username='admin').first()
+        admin_username = admin.username
+    
+    login_admin(client, admin_username, 'password')
+    
+    response = client.post(f'/admin/normal-user/{user_id}/lock')
+    assert response.status_code == 302  # Redirect after success
+    
+    # Verify user was locked
+    with app.app_context():
+        user = User.query.get(user_id)
+        assert user.is_locked is True
+
+
+def test_unlock_normal_user_success(client, app, admin_user):
+    """Test unlocking a normal user."""
+    user_id, user_email = create_normal_user(app, "unlock@test.com", "password", is_locked=True)
+    
+    with app.app_context():
+        admin = AdminUser.query.filter_by(username='admin').first()
+        admin_username = admin.username
+    
+    login_admin(client, admin_username, 'password')
+    
+    response = client.post(f'/admin/normal-user/{user_id}/unlock')
+    assert response.status_code == 302  # Redirect after success
+    
+    # Verify user was unlocked
+    with app.app_context():
+        user = User.query.get(user_id)
+        assert user.is_locked is False
+
+
+def test_verify_normal_user_email_success(client, app, admin_user):
+    """Test verifying a normal user's email."""
+    user_id, user_email = create_normal_user(app, "verify@test.com", "password", email_verified=False)
+    
+    with app.app_context():
+        admin = AdminUser.query.filter_by(username='admin').first()
+        admin_username = admin.username
+    
+    login_admin(client, admin_username, 'password')
+    
+    response = client.post(f'/admin/normal-user/{user_id}/verify-email')
+    assert response.status_code == 302  # Redirect after success
+    
+    # Verify email was verified
+    with app.app_context():
+        user = User.query.get(user_id)
+        assert user.email_verified is True
+
+
+def test_delete_normal_user_success(client, app, admin_user):
+    """Test deleting a normal user."""
+    user_id, user_email = create_normal_user(app, "delete@test.com", "password")
+    
+    with app.app_context():
+        admin = AdminUser.query.filter_by(username='admin').first()
+        admin_username = admin.username
+    
+    login_admin(client, admin_username, 'password')
+    
+    response = client.post(f'/admin/normal-user/{user_id}/delete')
+    assert response.status_code == 302  # Redirect after success
+    
+    # Verify user was deleted
+    with app.app_context():
+        user = User.query.get(user_id)
+        assert user is None
+
+
+def test_search_normal_users(client, app, admin_user):
+    """Test searching normal users."""
+    create_normal_user(app, "searchme@test.com", "password")
+    create_normal_user(app, "other@test.com", "password")
+    
+    with app.app_context():
+        admin = AdminUser.query.filter_by(username='admin').first()
+        admin_username = admin.username
+    
+    login_admin(client, admin_username, 'password')
+    
+    response = client.get('/admin/normal-users?search=searchme')
+    assert response.status_code == 200
+    assert b'searchme@test.com' in response.data
+    assert b'other@test.com' not in response.data
+
+
+def test_admin_normal_user_routes_require_admin_auth(client, app):
+    """Test that all normal user management routes require admin authentication."""
+    user_id, _ = create_normal_user(app, "test@test.com", "password")
+    
+    routes_to_test = [
+        ('/admin/normal-users', 'GET'),
+        ('/admin/normal-users', 'POST'),
+        (f'/admin/normal-user/{user_id}/edit', 'GET'),
+        (f'/admin/normal-user/{user_id}/edit', 'POST'),
+        (f'/admin/normal-user/{user_id}/change-password', 'GET'),
+        (f'/admin/normal-user/{user_id}/change-password', 'POST'),
+        (f'/admin/normal-user/{user_id}/lock', 'POST'),
+        (f'/admin/normal-user/{user_id}/unlock', 'POST'),
+        (f'/admin/normal-user/{user_id}/delete', 'POST'),
+        (f'/admin/normal-user/{user_id}/verify-email', 'POST'),
+        (f'/admin/normal-user/{user_id}/unverify-email', 'POST'),
+    ]
+    
+    for route, method in routes_to_test:
+        if method == 'GET':
+            response = client.get(route)
+        else:
+            response = client.post(route)
+        
+        assert response.status_code == 302  # Should redirect to admin login

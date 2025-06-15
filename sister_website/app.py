@@ -48,7 +48,7 @@ from .models import (
     BuildAuditLog,
     User
 )
-from .forms import UploadForm, AdminLoginForm, AdminUserForm, ChangePasswordForm, DatasetLabelForm, RegistrationForm, UserLoginForm, ForgotPasswordForm, ResetPasswordForm, UserSettingsForm
+from .forms import UploadForm, AdminLoginForm, AdminUserForm, ChangePasswordForm, DatasetLabelForm, RegistrationForm, UserLoginForm, ForgotPasswordForm, ResetPasswordForm, UserSettingsForm, NormalUserForm, EditNormalUserForm, UserPasswordForm
 from .email_utils import (
     send_consent_email,
     send_reply_confirmation_email,
@@ -1000,6 +1000,173 @@ def delete_admin_user(user_id):
     db.session.commit()
     flash(f"User '{user_to_delete.username}' has been deleted.", "success")
     return redirect(url_for('admin_users'))
+
+
+# ===== NORMAL USER MANAGEMENT ROUTES =====
+
+@app.route('/admin/normal-users', methods=['GET', 'POST'])
+def admin_normal_users():
+    if not is_admin():
+        return redirect(url_for('admin_login', next=request.path))
+    
+    form = NormalUserForm()
+    if form.validate_on_submit():
+        new_user = User(email=form.email.data)
+        new_user.set_password(form.password.data)
+        new_user.email_verified = form.email_verified.data
+        new_user.contributor_recognition_enabled = form.contributor_recognition_enabled.data
+        new_user.contributor_recognition_text = form.contributor_recognition_text.data
+        new_user.contributor_recognition_verified = form.contributor_recognition_verified.data
+        db.session.add(new_user)
+        db.session.commit()
+        flash(f'User {new_user.email} created successfully.', 'success')
+        return redirect(url_for('admin_normal_users'))
+
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = 25
+    
+    # Search functionality
+    search = request.args.get('search', '')
+    query = User.query
+    if search:
+        query = query.filter(User.email.contains(search))
+    
+    users = query.order_by(User.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    return render_template('admin_normal_users.html', users=users, form=form, 
+                         search=search, active_page='admin_normal_users')
+
+
+@app.route('/admin/normal-user/<user_id>/edit', methods=['GET', 'POST'])
+def edit_normal_user(user_id):
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    
+    user = User.query.get_or_404(user_id)
+    form = EditNormalUserForm(original_email=user.email)
+    
+    if form.validate_on_submit():
+        user.email = form.email.data
+        user.email_verified = form.email_verified.data
+        user.contributor_recognition_enabled = form.contributor_recognition_enabled.data
+        user.contributor_recognition_text = form.contributor_recognition_text.data
+        user.contributor_recognition_verified = form.contributor_recognition_verified.data
+        user.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash(f"User {user.email} has been updated.", 'success')
+        return redirect(url_for('admin_normal_users'))
+    
+    # Pre-populate form with current values
+    form.email.data = user.email
+    form.email_verified.data = user.email_verified
+    form.contributor_recognition_enabled.data = user.contributor_recognition_enabled
+    form.contributor_recognition_text.data = user.contributor_recognition_text
+    form.contributor_recognition_verified.data = user.contributor_recognition_verified
+        
+    return render_template('admin_edit_normal_user.html', user=user, form=form, active_page='admin_normal_users')
+
+
+@app.route('/admin/normal-user/<user_id>/change-password', methods=['GET', 'POST'])
+def change_normal_user_password(user_id):
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    
+    user = User.query.get_or_404(user_id)
+    form = UserPasswordForm()
+    
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        user.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash(f"Password for user {user.email} has been updated.", 'success')
+        return redirect(url_for('admin_normal_users'))
+        
+    return render_template('admin_change_normal_user_password.html', user=user, form=form, active_page='admin_normal_users')
+
+
+@app.route('/admin/normal-user/<user_id>/lock', methods=['POST'])
+def lock_normal_user(user_id):
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    
+    user = User.query.get_or_404(user_id)
+    user.is_locked = True
+    user.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash(f"User {user.email} has been locked.", 'success')
+    return redirect(url_for('admin_normal_users'))
+
+
+@app.route('/admin/normal-user/<user_id>/unlock', methods=['POST'])
+def unlock_normal_user(user_id):
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    
+    user = User.query.get_or_404(user_id)
+    user.is_locked = False
+    user.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash(f"User {user.email} has been unlocked.", 'success')
+    return redirect(url_for('admin_normal_users'))
+
+
+@app.route('/admin/normal-user/<user_id>/delete', methods=['POST'])
+def delete_normal_user(user_id):
+    if not is_admin():
+        flash("You do not have permission to perform this action.", "danger")
+        return redirect(url_for('admin_login'))
+
+    user_to_delete = User.query.get_or_404(user_id)
+    
+    # Delete associated submissions first
+    submissions = Submission.query.filter_by(email=user_to_delete.email).all()
+    for submission in submissions:
+        # Delete associated builds and screenshots
+        builds = Build.query.filter_by(submission_id=submission.id).all()
+        for build in builds:
+            Screenshot.query.filter_by(build_id=build.id).delete()
+            db.session.delete(build)
+        
+        # Delete associated logs
+        EmailLog.query.filter_by(submission_id=submission.id).delete()
+        LinkLog.query.filter_by(submission_id=submission.id).delete()
+        
+        db.session.delete(submission)
+    
+    db.session.delete(user_to_delete)
+    db.session.commit()
+    flash(f"User '{user_to_delete.email}' and all associated data have been deleted.", "success")
+    return redirect(url_for('admin_normal_users'))
+
+
+@app.route('/admin/normal-user/<user_id>/verify-email', methods=['POST'])
+def verify_normal_user_email(user_id):
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    
+    user = User.query.get_or_404(user_id)
+    user.email_verified = True
+    user.email_verification_token = None
+    user.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash(f"Email for user {user.email} has been verified.", 'success')
+    return redirect(url_for('admin_normal_users'))
+
+
+@app.route('/admin/normal-user/<user_id>/unverify-email', methods=['POST'])
+def unverify_normal_user_email(user_id):
+    if not is_admin():
+        return redirect(url_for('admin_login'))
+    
+    user = User.query.get_or_404(user_id)
+    user.email_verified = False
+    user.updated_at = datetime.utcnow()
+    db.session.commit()
+    flash(f"Email verification for user {user.email} has been removed.", 'success')
+    return redirect(url_for('admin_normal_users'))
 
 
 @app.route('/admin/submissions')

@@ -108,6 +108,7 @@ class User(db.Model, UserMixin):
     contributor_recognition_enabled = db.Column(db.Boolean, default=False, nullable=False)
     contributor_recognition_text = db.Column(db.Text, nullable=True)
     contributor_recognition_verified = db.Column(db.Boolean, default=False, nullable=False)
+    is_locked = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
