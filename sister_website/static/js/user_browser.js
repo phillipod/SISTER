@@ -12,22 +12,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtersContainer = document.querySelector('.screenshot-filters');
     const groupByFieldset = document.getElementById('group-by-fieldset');
 
-    // This map builder is for the user data structure, which is a flat list of submissions.
+    // Now using the same flat structure as admin browser
     const userMapBuilder = (data) => {
         const map = {};
         if (!data) return map;
-        data.forEach(sub => {
-            sub.builds.forEach(build => {
-                build.screenshots.forEach(sc => {
-                    // The user API already provides submission_details nested correctly.
-                    map[sc.id] = sc;
-                });
-            });
+        data.forEach(sc => {
+            map[sc.id] = sc;
         });
         return map;
     };
 
     const userTreeRenderer = (data, treePane) => {
+        const platformFilter = filters.platform.value;
+        const typeFilter = filters.type.value;
+        const acceptedFilter = filters.accepted.value;
+
         // Capture current open/closed state before clearing
         const openStates = {};
         const captureOpenStates = (element, path = []) => {
@@ -46,29 +45,15 @@ document.addEventListener('DOMContentLoaded', () => {
         captureOpenStates(treePane);
 
         treePane.innerHTML = '';
+        
+        const filteredData = data.filter(sc => {
+            const platformMatch = platformFilter === 'all' || sc.platform === platformFilter;
+            const typeMatch = typeFilter === 'all' || sc.type === typeFilter;
+            const acceptedMatch = acceptedFilter === 'all' || sc.acceptance_state === acceptedFilter;
+            return platformMatch && typeMatch && acceptedMatch;
+        });
 
-        // 1. Filter data based on dropdowns
-        const platformFilter = filters.platform.value;
-        const typeFilter = filters.type.value;
-        const acceptedFilter = filters.accepted.value;
-
-        const filteredData = data.filter(sub => {
-            // Filter by license status first
-            return acceptedFilter === 'all' || sub.acceptance_state === acceptedFilter;
-        }).map(sub => {
-            // Then filter the builds within the matching submissions
-            const newSub = {...sub, builds: []};
-            sub.builds.forEach(build => {
-                const platformMatch = platformFilter === 'all' || build.platform === platformFilter;
-                const typeMatch = typeFilter === 'all' || build.type === typeFilter;
-                if (platformMatch && typeMatch) {
-                    newSub.builds.push(build);
-                }
-            });
-            return newSub;
-        }).filter(sub => sub.builds.length > 0); // Remove submissions with no matching builds
-
-        if (!filteredData || filteredData.length === 0) {
+        if (filteredData.length === 0) {
             treePane.innerHTML = '<p>You have no submissions matching the current options.</p>';
             return;
         }
@@ -80,49 +65,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 groupOrder.push(checkbox.dataset.groupKey);
             }
         });
-        groupOrder.push('date'); // Date is always a grouping level.
+        groupOrder.push('date');
 
-        // 2. Transform the flat submission list into a dynamic hierarchical structure.
         const hierarchicalData = {};
-        filteredData.forEach(sub => {
-            const dateStr = new Date(sub.created_at).toISOString().split('T')[0];
-            sub.builds.forEach(build => {
-                build.screenshots.forEach(sc => {
-                    const scData = {
-                        platform: build.platform || "Unknown",
-                        type: build.type || "Unknown",
-                        date: dateStr,
-                        screenshot: { // Keep original screenshot data separate
-                            ...sc,
-                            build_id: build.id,
-                            submission_id: sub.id,
-                            email: sub.email,
-                            acceptance_state: sub.acceptance_state,
-                            is_withdrawn: sub.is_withdrawn,
-                            events: sub.events,
-                            platform: build.platform || "Unknown",
-                            type: build.type || "Unknown"
-                        }
-                    };
-
-                    let currentLevel = hierarchicalData;
-                    groupOrder.forEach(key => {
-                        const value = scData[key];
-                        if (!currentLevel[value]) {
-                            if (key === 'date') {
-                                currentLevel[value] = [];
-                            } else {
-                                currentLevel[value] = {};
-                            }
-                        }
-                        currentLevel = currentLevel[value];
-                    });
-                    currentLevel.push(scData.screenshot);
-                });
+        filteredData.forEach(sc => {
+            let currentLevel = hierarchicalData;
+            groupOrder.forEach(key => {
+                const value = sc[key] || 'Unknown';
+                if (!currentLevel[value]) {
+                    currentLevel[value] = {};
+                }
+                currentLevel = currentLevel[value];
             });
+            
+            if (!currentLevel[sc.submission_id]) {
+                currentLevel[sc.submission_id] = [];
+            }
+            currentLevel[sc.submission_id].push(sc);
         });
-        
-        // 3. Render the tree from the hierarchical data.
+
         const createDetails = (summaryText, parentElement, allScreenshots, depth = 0, parentPath = []) => {
             const details = document.createElement('details');
             const currentPath = [...parentPath, summaryText];
@@ -139,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const summary = document.createElement('summary');
             const summarySpan = document.createElement('span');
             summarySpan.textContent = summaryText;
-            
+
             if (allScreenshots && allScreenshots.length > 0) {
                 summarySpan.dataset.groupScreenshots = allScreenshots.map(sc => sc.id).join(',');
             }
@@ -153,38 +114,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const renderNode = (node, parentElement, depth = 0, parentPath = []) => {
             for (const key in node) {
                 const childNode = node[key];
-                if (Array.isArray(childNode)) { // Leaf nodes (screenshot arrays)
-                    // Group screenshots by submission
-                    const submissions = childNode.reduce((acc, sc) => {
-                        acc[sc.submission_id] = acc[sc.submission_id] || [];
-                        acc[sc.submission_id].push(sc);
-                        return acc;
-                    }, {});
+                
+                const isSubmissionContainer = Object.values(childNode).every(val => Array.isArray(val));
 
-                    for (const subId in submissions) {
-                        const subScreenshots = submissions[subId];
-                        const firstSc = subScreenshots[0];
-                        const subLabel = `Submission ${firstSc.submission_id.substring(0, 8)}`;
-                        const subDetailsResult = createDetails(subLabel, parentElement, subScreenshots, depth + 1, parentPath);
-                        subDetailsResult.element.dataset.buildId = firstSc.build_id;
-                        
-                        const scUl = document.createElement('ul');
-                        scUl.classList.add(`tree-depth-${depth + 2}`);
-                        subScreenshots.forEach(sc => {
-                            const scLi = document.createElement('li');
-                            const link = document.createElement('a');
-                            link.href = '#';
-                            link.className = 'screenshot-link';
-                            link.textContent = sc.filename;
-                            link.dataset.screenshotId = sc.id;
-                            scLi.appendChild(link);
-                            scUl.appendChild(scLi);
-                        });
-                        subDetailsResult.element.appendChild(scUl);
+                if (isSubmissionContainer) {
+                    const dateDetailsResult = createDetails(key, parentElement, getAllScreenshots(childNode), depth, parentPath);
+                     for (const subId in childNode) {
+                        const subScreenshots = childNode[subId];
+                        if (subScreenshots.length > 0) {
+                            const firstSc = subScreenshots[0];
+                            const subLabel = `Submission ${firstSc.submission_id.substring(0, 8)}`;
+                            const subDetailsResult = createDetails(subLabel, dateDetailsResult.element, subScreenshots, depth + 1, dateDetailsResult.path);
+                            subDetailsResult.element.dataset.buildId = firstSc.build_id;
+
+                            const scUl = document.createElement('ul');
+                            scUl.classList.add(`tree-depth-${depth + 2}`);
+                            subScreenshots.forEach(sc => {
+                                const scLi = document.createElement('li');
+                                const link = document.createElement('a');
+                                link.href = '#';
+                                link.className = 'screenshot-link';
+                                link.textContent = sc.filename;
+                                link.dataset.screenshotId = sc.id;
+                                scLi.appendChild(link);
+                                scUl.appendChild(scLi);
+                            });
+                            subDetailsResult.element.appendChild(scUl);
+                        }
                     }
-                } else { // It's a grouping node
-                    const allScreenshotsInGroup = getAllScreenshots(childNode);
-                    const detailsResult = createDetails(key, parentElement, allScreenshotsInGroup, depth, parentPath);
+                } else {
+                    const detailsResult = createDetails(key, parentElement, getAllScreenshots(childNode), depth, parentPath);
                     renderNode(childNode, detailsResult.element, depth + 1, detailsResult.path);
                 }
             }

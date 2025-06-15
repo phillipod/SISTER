@@ -1781,8 +1781,8 @@ def user_submissions():
 @login_required
 def user_submissions_data():
     """
-    Provides submission data for the logged-in user in a format
-    suitable for the user-facing screenshot browser.
+    Provides submission data for the logged-in user in a flat format
+    matching the admin browser structure.
     """
     submissions = Submission.query.options(
         db.joinedload(Submission.builds).joinedload(Build.screenshots),
@@ -1790,9 +1790,12 @@ def user_submissions_data():
         db.joinedload(Submission.link_logs)
     ).filter_by(email=current_user.email).order_by(Submission.created_at.desc()).all()
 
-    data_structured = []
+    data_flat = []
 
     for sub in submissions:
+        if not sub.builds:
+            continue
+        
         # Build the same 'events' structure as the admin browser
         events = []
         events.append({"type": "Submitted", "timestamp": sub.created_at.isoformat(), "method": "Web Form"})
@@ -1838,39 +1841,31 @@ def user_submissions_data():
 
         events.sort(key=lambda x: datetime.fromisoformat(x['timestamp'].replace('Z', '+00:00')))
 
-        # This dictionary is safe to embed inside screenshots to avoid circular references.
-        submission_details_for_embedding = {
-            'id': sub.id,
-            'created_at': sub.created_at.isoformat(),
-            'acceptance_state': sub.acceptance_state.value,
-            'is_withdrawn': sub.is_withdrawn,
-            'acceptance_token': sub.acceptance_token,
-            'email': sub.email,
-            'events': events,
-        }
+        # Now, iterate over all builds within the submission and create flat screenshot data
+        for build in sub.builds:
+            platform = build.platform or "Unknown"
+            sc_type = build.type or "Unknown"
 
-        # This is the full object for the top-level response.
-        submission_info = {
-            **submission_details_for_embedding,
-            'builds': [
-                {
-                    'id': build.id,
-                    'platform': build.platform,
-                    'type': build.type,
-                    'screenshots': [
-                        {
-                            'id': sc.id,
-                            'filename': sc.filename,
-                            'submission_details': submission_details_for_embedding
-                        } for sc in build.screenshots
-                    ]
-                } for build in sub.builds
-            ]
-        }
+            for sc in build.screenshots:
+                screenshot_info = {
+                    'id': sc.id,
+                    'filename': sc.filename,
+                    'build_id': str(build.id),
+                    'submission_id': str(sub.id),
+                    'submission_created': sub.created_at.isoformat(),
+                    'is_accepted': sub.is_accepted,
+                    'acceptance_state': sub.acceptance_state.value,
+                    'is_withdrawn': sub.is_withdrawn,
+                    'acceptance_token': sub.acceptance_token,
+                    'email': sub.email,
+                    'events': events,
+                    'platform': platform,
+                    'type': sc_type,
+                    'date': sub.created_at.strftime('%Y-%m-%d')
+                }
+                data_flat.append(screenshot_info)
         
-        data_structured.append(submission_info)
-        
-    return jsonify(data_structured)
+    return jsonify(data_flat)
 
 @app.route('/api/me/email_log/<log_id>')
 @login_required
