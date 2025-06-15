@@ -774,8 +774,12 @@ class ScreenshotBrowser {
     }
 
     showSubmissionPopup(e, screenshotId) {
+        console.log('showSubmissionPopup called with ID:', screenshotId);
         const screenshotInfo = this.screenshotDataMap[screenshotId];
-        if (!screenshotInfo) return;
+        if (!screenshotInfo) {
+            console.log('No screenshot info found for ID:', screenshotId);
+            return;
+        }
 
         // Remove any existing popup
         this.hideSubmissionPopup();
@@ -803,6 +807,7 @@ class ScreenshotBrowser {
         `;
 
         document.body.appendChild(popup);
+        console.log('Popup added to DOM:', popup);
 
         // Position the popup near the mouse cursor
         const rect = e.target.getBoundingClientRect();
@@ -823,12 +828,23 @@ class ScreenshotBrowser {
         popup.style.left = `${left}px`;
         popup.style.top = `${top}px`;
         popup.style.display = 'block';
+        
+        console.log('Popup positioned at:', left, top, 'with display:', popup.style.display);
+        console.log('Popup computed styles:', window.getComputedStyle(popup));
+        
+        // Force visibility
+        popup.style.visibility = 'visible';
+        popup.style.opacity = '1';
     }
 
     hideSubmissionPopup() {
+        console.log('hideSubmissionPopup called');
         const existingPopup = document.getElementById('submission-popup');
         if (existingPopup) {
+            console.log('Removing existing popup:', existingPopup);
             existingPopup.remove();
+        } else {
+            console.log('No existing popup found to remove');
         }
     }
 } 
