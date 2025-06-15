@@ -45,9 +45,8 @@ def test_webhook_signature_validation_valid():
     secret = "test_secret_key"
     signature = create_webhook_signature(payload_str, secret)
     
-    with patch('os.getenv', return_value=secret):
-        result = verify_webhook_signature(payload_str, signature)
-        assert result is True
+    result = verify_webhook_signature(payload_str, signature, secret)
+    assert result is True
 
 
 def test_webhook_signature_validation_invalid():
@@ -57,9 +56,8 @@ def test_webhook_signature_validation_invalid():
     secret = "test_secret_key"
     wrong_signature = "invalid_signature"
     
-    with patch('os.getenv', return_value=secret):
-        result = verify_webhook_signature(payload_str, wrong_signature)
-        assert result is False
+    result = verify_webhook_signature(payload_str, wrong_signature, secret)
+    assert result is False
 
 
 def test_webhook_signature_validation_missing_secret():
@@ -67,9 +65,8 @@ def test_webhook_signature_validation_missing_secret():
     payload_str = '{"test": "data"}'
     signature = "some_signature"
     
-    with patch('os.getenv', return_value=None):
-        result = verify_webhook_signature(payload_str, signature)
-        assert result is False
+    result = verify_webhook_signature(payload_str, signature, None)
+    assert result is False
 
 
 def test_webhook_email_route_success(client, app):
@@ -84,19 +81,20 @@ def test_webhook_email_route_success(client, app):
         db.session.add(submission)
         db.session.commit()
         submission_id = submission.id
+        acceptance_token = submission.acceptance_token
     
     # Create webhook payload
     payload = create_test_webhook_payload()
-    payload['text'] = f"ACCEPT {submission.acceptance_token}\n\nI agree to the terms."
+    payload['text'] = f"ACCEPT {acceptance_token}\n\nI agree to the terms."
     payload_str = json.dumps(payload, separators=(',', ':'))
     
     secret = "test_webhook_secret"
     signature = create_webhook_signature(payload_str, secret)
     
     with patch('os.getenv', return_value=secret):
-        with patch('sister_website.app.get_forwardemail_ips_cached', return_value=['127.0.0.1']):
+        with patch('sister_website.app.get_forwardemail_ips', return_value=['127.0.0.1']):
             response = client.post(
-                '/webhook/email',
+                f'/api/email-webhook?username=training-data-submission-{submission_id}',
                 data=payload_str,
                 content_type='application/json',
                 headers={'X-Webhook-Signature': signature},
@@ -130,19 +128,20 @@ def test_webhook_email_route_decline(client, app):
         db.session.add(submission)
         db.session.commit()
         submission_id = submission.id
+        acceptance_token = submission.acceptance_token
     
     # Create webhook payload with decline
     payload = create_test_webhook_payload()
-    payload['text'] = f"DECLINE {submission.acceptance_token}\n\nI do not agree."
+    payload['text'] = f"DECLINE {acceptance_token}\n\nI do not agree."
     payload_str = json.dumps(payload, separators=(',', ':'))
     
     secret = "test_webhook_secret"
     signature = create_webhook_signature(payload_str, secret)
     
     with patch('os.getenv', return_value=secret):
-        with patch('sister_website.app.get_forwardemail_ips_cached', return_value=['127.0.0.1']):
+        with patch('sister_website.app.get_forwardemail_ips', return_value=['127.0.0.1']):
             response = client.post(
-                '/webhook/email',
+                f'/api/email-webhook?username=training-data-submission-{submission_id}',
                 data=payload_str,
                 content_type='application/json',
                 headers={'X-Webhook-Signature': signature},
@@ -167,16 +166,16 @@ def test_webhook_email_route_invalid_signature(client, app):
     secret = "test_webhook_secret"
     
     with patch('os.getenv', return_value=secret):
-        with patch('sister_website.app.get_forwardemail_ips_cached', return_value=['127.0.0.1']):
+        with patch('sister_website.app.get_forwardemail_ips', return_value=['127.0.0.1']):
             response = client.post(
-                '/webhook/email',
+                '/api/email-webhook?username=training-data-submission-test-id',
                 data=payload_str,
                 content_type='application/json',
                 headers={'X-Webhook-Signature': invalid_signature},
                 environ_base={'REMOTE_ADDR': '127.0.0.1'}
             )
     
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_webhook_email_route_unauthorized_ip(client, app):
@@ -188,9 +187,9 @@ def test_webhook_email_route_unauthorized_ip(client, app):
     signature = create_webhook_signature(payload_str, secret)
     
     with patch('os.getenv', return_value=secret):
-        with patch('sister_website.app.get_forwardemail_ips_cached', return_value=['1.2.3.4']):  # Different IP
+        with patch('sister_website.app.get_forwardemail_ips', return_value=['1.2.3.4']):  # Different IP
             response = client.post(
-                '/webhook/email',
+                '/api/email-webhook?username=training-data-submission-test-id',
                 data=payload_str,
                 content_type='application/json',
                 headers={'X-Webhook-Signature': signature},
@@ -202,6 +201,17 @@ def test_webhook_email_route_unauthorized_ip(client, app):
 
 def test_webhook_email_route_no_token_found(client, app):
     """Test webhook email processing when no valid token is found."""
+    # Create a test submission first
+    with app.app_context():
+        submission = Submission(
+            email='user@example.com',
+            acceptance_token='different_token',
+            acceptance_state=AcceptanceState.PENDING
+        )
+        db.session.add(submission)
+        db.session.commit()
+        submission_id = submission.id
+    
     payload = create_test_webhook_payload()
     payload['text'] = "ACCEPT invalid_token_123\n\nI agree to the terms."
     payload_str = json.dumps(payload, separators=(',', ':'))
@@ -210,9 +220,9 @@ def test_webhook_email_route_no_token_found(client, app):
     signature = create_webhook_signature(payload_str, secret)
     
     with patch('os.getenv', return_value=secret):
-        with patch('sister_website.app.get_forwardemail_ips_cached', return_value=['127.0.0.1']):
+        with patch('sister_website.app.get_forwardemail_ips', return_value=['127.0.0.1']):
             response = client.post(
-                '/webhook/email',
+                f'/api/email-webhook?username=training-data-submission-{submission_id}',
                 data=payload_str,
                 content_type='application/json',
                 headers={'X-Webhook-Signature': signature},
@@ -236,19 +246,21 @@ def test_webhook_email_route_already_processed(client, app):
         )
         db.session.add(submission)
         db.session.commit()
+        submission_id = submission.id
+        acceptance_token = submission.acceptance_token
     
     # Try to accept again via email
     payload = create_test_webhook_payload()
-    payload['text'] = f"ACCEPT {submission.acceptance_token}\n\nI agree to the terms."
+    payload['text'] = f"ACCEPT {acceptance_token}\n\nI agree to the terms."
     payload_str = json.dumps(payload, separators=(',', ':'))
     
     secret = "test_webhook_secret"
     signature = create_webhook_signature(payload_str, secret)
     
     with patch('os.getenv', return_value=secret):
-        with patch('sister_website.app.get_forwardemail_ips_cached', return_value=['127.0.0.1']):
+        with patch('sister_website.app.get_forwardemail_ips', return_value=['127.0.0.1']):
             response = client.post(
-                '/webhook/email',
+                f'/api/email-webhook?username=training-data-submission-{submission_id}',
                 data=payload_str,
                 content_type='application/json',
                 headers={'X-Webhook-Signature': signature},
@@ -270,16 +282,16 @@ def test_webhook_email_route_malformed_json(client, app):
     signature = "some_signature"
     
     with patch('os.getenv', return_value="secret"):
-        with patch('sister_website.app.get_forwardemail_ips_cached', return_value=['127.0.0.1']):
+        with patch('sister_website.app.get_forwardemail_ips', return_value=['127.0.0.1']):
             response = client.post(
-                '/webhook/email',
+                '/api/email-webhook?username=training-data-submission-test-id',
                 data=malformed_payload,
                 content_type='application/json',
                 headers={'X-Webhook-Signature': signature},
                 environ_base={'REMOTE_ADDR': '127.0.0.1'}
             )
     
-    assert response.status_code == 400
+    assert response.status_code == 401
 
 
 def test_webhook_email_route_missing_signature_header(client, app):
@@ -287,16 +299,17 @@ def test_webhook_email_route_missing_signature_header(client, app):
     payload = create_test_webhook_payload()
     payload_str = json.dumps(payload, separators=(',', ':'))
     
-    with patch('sister_website.app.get_forwardemail_ips_cached', return_value=['127.0.0.1']):
-        response = client.post(
-            '/webhook/email',
-            data=payload_str,
-            content_type='application/json',
-            # No signature header
-            environ_base={'REMOTE_ADDR': '127.0.0.1'}
-        )
+    with patch('os.getenv', return_value="secret"):
+        with patch('sister_website.app.get_forwardemail_ips', return_value=['127.0.0.1']):
+            response = client.post(
+                '/api/email-webhook?username=training-data-submission-test-id',
+                data=payload_str,
+                content_type='application/json',
+                # No signature header
+                environ_base={'REMOTE_ADDR': '127.0.0.1'}
+            )
     
-    assert response.status_code == 403
+    assert response.status_code == 400
 
 
 @patch('sister_website.app.send_reply_confirmation_email')
@@ -313,19 +326,21 @@ def test_webhook_email_route_sends_confirmation(mock_send_email, client, app):
         )
         db.session.add(submission)
         db.session.commit()
+        submission_id = submission.id
+        acceptance_token = submission.acceptance_token
     
     # Create webhook payload
     payload = create_test_webhook_payload()
-    payload['text'] = f"ACCEPT {submission.acceptance_token}\n\nI agree."
+    payload['text'] = f"ACCEPT {acceptance_token}\n\nI agree."
     payload_str = json.dumps(payload, separators=(',', ':'))
     
     secret = "test_webhook_secret"
     signature = create_webhook_signature(payload_str, secret)
     
     with patch('os.getenv', return_value=secret):
-        with patch('sister_website.app.get_forwardemail_ips_cached', return_value=['127.0.0.1']):
+        with patch('sister_website.app.get_forwardemail_ips', return_value=['127.0.0.1']):
             response = client.post(
-                '/webhook/email',
+                f'/api/email-webhook?username=training-data-submission-{submission_id}',
                 data=payload_str,
                 content_type='application/json',
                 headers={'X-Webhook-Signature': signature},
@@ -338,4 +353,4 @@ def test_webhook_email_route_sends_confirmation(mock_send_email, client, app):
     mock_send_email.assert_called_once()
     call_args = mock_send_email.call_args[0]
     assert call_args[0] == 'user@example.com'  # recipient email
-    assert call_args[2] == AcceptanceState.ACCEPTED  # acceptance state 
+    assert call_args[2] == 'License Agreement Accepted'  # decision message 
