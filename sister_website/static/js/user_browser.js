@@ -7,7 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
         previewContentId: 'preview-content',
         dataUrl: '/api/me/submissions_data',
         noResultsMessage: 'You have no submissions matching the current options.',
-        userCanManage: true,
+        userCanManage: true, // Allow user to manage their own submissions
+        isAdminView: false, // This is not an admin view
+        canResendConsent: false, // Users cannot resend consent emails
+        showSubmissionEmail: false, // Users don't need to see their own email
         // API Endpoints
         logAccessTokenUrl: '/api/log-access-token/{log_id}',
         emailLogUrl: '/api/me/email_log/{log_id}',

@@ -501,7 +501,7 @@ class ScreenshotBrowser {
         
         // Add action buttons based on the submission state
         let actionButtonsHtml = '';
-        if (this.config.userCanManage) { // A new config flag to enable this feature
+        if (this.config.userCanManage) { // Users can manage their own submissions
             if (state === 'pending') {
                 actionButtonsHtml = `
                     <div class="submission-actions">
@@ -517,7 +517,7 @@ class ScreenshotBrowser {
         }
         
         let resendButtonHtml = '';
-        if (this.config.userCanManage && info.acceptance_state === 'pending' && !info.is_withdrawn) {
+        if (this.config.canResendConsent && info.acceptance_state === 'pending' && !info.is_withdrawn) {
             resendButtonHtml = `
                 <div class="resend-section">
                     <button class="btn btn-secondary btn-sm resend-btn" data-submission-id="${info.id}">Resend Consent</button>
@@ -536,11 +536,17 @@ class ScreenshotBrowser {
             return `<li><strong>${event.type}</strong> - ${timestamp} via ${event.method || 'N/A'} ${detailsHtml}</li>`;
         }).join('');
 
+        // Build email display based on configuration
+        let emailHtml = '';
+        if (this.config.showSubmissionEmail !== false) { // Default to true if not specified
+            emailHtml = `<p><strong>Email:</strong> ${info.email}</p>`;
+        }
+
         const container = document.createElement('div');
         container.className = 'info-card';
         container.innerHTML = `
             <p><strong>License Status:</strong> ${statusHtml}</p>
-            <p><strong>Email:</strong> ${info.email}</p>
+            ${emailHtml}
             ${actionButtonsHtml}
             ${resendButtonHtml}
             <h4>Timeline</h4>
@@ -796,9 +802,15 @@ class ScreenshotBrowser {
             statusHtml += ` <span class="status-badge status-withdrawn">Withdrawn</span>`;
         }
 
+        // Build email display for popup based on configuration
+        let popupEmailHtml = '';
+        if (this.config.showSubmissionEmail !== false) { // Default to true if not specified
+            popupEmailHtml = `<p><strong>Email:</strong> ${info.email}</p>`;
+        }
+
         popup.innerHTML = `
             <div class="popup-content">
-                <p><strong>Email:</strong> ${info.email}</p>
+                ${popupEmailHtml}
                 <p><strong>Status:</strong> ${statusHtml}</p>
                 <p><strong>Submission:</strong> ${screenshotInfo.submission_id ? String(screenshotInfo.submission_id).substring(0, 8) : 'N/A'}...</p>
                 <p><strong>Screenshot:</strong> ${screenshotInfo.filename}</p>

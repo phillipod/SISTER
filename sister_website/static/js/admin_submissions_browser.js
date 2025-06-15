@@ -16,7 +16,10 @@ document.addEventListener('DOMContentLoaded', function() {
         emailLogUrl: '/admin/api/email_log/{log_id}',
         linkLogUrl: '/admin/api/link_log/{log_id}',
         screenshotImageUrl: '/admin/screenshot/{sc_id}',
-        userCanManage: true // Enable admin actions in submission info
+        userCanManage: false, // Admins should not be able to accept/decline licenses
+        isAdminView: true, // This is an admin view
+        canResendConsent: true, // Admins can resend consent emails
+        showSubmissionEmail: true // Admins need to see submission email addresses
     };
 
     // Initialize the browser with common UI setup
