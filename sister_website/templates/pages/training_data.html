@@ -4,14 +4,34 @@
 
 {% block content %}
 <section class="training-section">
-    <h2>Build Screenshot Collection</h2>
-    <p class="lead">Help improve SISTER by contributing your Star Trek Online build screenshots for training.</p>
+    <h2>Contribute Build Screenshots for Training</h2>
+    <p class="lead">Help us build SISTER's first neural network by contributing your Star Trek Online build screenshots. Your contributions will train a CNN for label detection, enabling SISTER to run as a fast web API without GPU requirements.</p>
 
     <div class="github-info">
         <p>SISTER is an open-source project. Visit our <a href="https://github.com/phillipod/SISTER" target="_blank" rel="noopener noreferrer">GitHub repository</a> to learn more about the project, download the latest release, or contribute.</p>
         <p>Current release: <a href="https://github.com/phillipod/SISTER/releases/tag/v2025.05.31-release" target="_blank" rel="noopener noreferrer">v2025.05.31</a> | 
         <a href="{{ url_for('training_data_stats') }}" class="stats-link">View Submission Statistics</a></p>
     </div>
+
+    <h3>Why We Need Your Screenshots</h3>
+    <p>SISTER currently uses EasyOCR for text detection, which requires GPU acceleration to run fast enough for web applications. We're building a custom CNN to replace this dependency. Your screenshots help us train this network to:</p>
+    <ul>
+        <li>Detect labels and text in STO screenshots without requiring EasyOCR</li>
+        <li>Enable SISTER to run as a fast web API without GPU acceleration</li>
+        <li>Work reliably across different UI scales and visual conditions</li>
+        <li>Handle both PC and Console platform variations</li>
+        <li>Support future web applications that use SISTER's computer vision pipeline</li>
+    </ul>
+
+    <h3>Account Benefits</h3>
+    <p><strong>Submit without an account:</strong> Use just your email address. You'll receive confirmations via email.</p>
+    <p><strong>Create an account for:</strong></p>
+    <ul>
+        <li>Track all your submissions and their processing status</li>
+        <li>Auto-filled forms for faster submission</li>
+        <li>Easy management of your contribution history</li>
+        <li>Direct access to modify or withdraw submissions</li>
+    </ul>
 
     <h3>How It Works</h3>
     <ol>
@@ -24,14 +44,15 @@
 
     <div class="screenshot-guide">
         <h3>Screenshot Guidelines</h3>
+        <p><strong>For the best training data, please ensure your screenshots:</strong></p>
         <ul>
-            <li>Take screenshots at full resolution (no downscaling)</li>
-            <li>Ensure all UI elements are clearly visible</li>
-            <li>Avoid overlapping windows or tooltips</li>
-            <li>Include both space and ground builds if possible</li>
-            <li>Multiple screenshots per build are allowed</li>
+            <li>Are taken at full resolution (avoid downscaling or compression)</li>
+            <li>Show all UI elements clearly without any overlapping windows</li>
+            <li>Avoid tooltips or pop-up windows covering important information</li>
+            <li>Include complete build information for both space and ground when possible</li>
+            <li>Are unmodified originals (no editing, cropping, or filters)</li>
         </ul>
-        <div class="tip">💡 Tip: You can add multiple builds using the "Add Another Build" button below.</div>
+        <div class="tip">💡 Tip: You can submit multiple builds at once using the "Add Another Build" button below.</div>
     </div>
 
     <form action="{{ url_for('training_data_submit') }}" method="post" enctype="multipart/form-data" class="upload-form" id="uploadForm">
@@ -136,17 +157,17 @@
 
     <div class="privacy-section">
         <h3>License, Privacy &amp; Data Usage</h3>
-        <p>Your contributions are valuable to the SISTER project. Here's how we handle your data and licensing:</p>
+        <p>Your contributions are valuable to improving SISTER for the entire STO community. Here's how we handle your data and licensing:</p>
         <ul>
-            <li><strong>Licensing:</strong> By submitting screenshots, you agree to license them under the <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license</a>. This means your contributions can be used, shared, and adapted by the SISTER project and others, provided they adhere to the terms of this license (attribution, non-commercial use, and share-alike).</li>
-            <li><strong>Permitted Uses:</strong> As per the license agreement, your screenshots will be used for training machine learning models, future machine learning research, and inclusion in our test suite.</li>
-            <li><strong>Public Availability:</strong> Screenshots and derived data may be published in public GitHub repositories or other accessible forms as part of open research and open data efforts, consistent with the CC BY-NC-SA 4.0 license.</li>
-            <li><strong>Irrevocability:</strong> The CC BY-NC-SA 4.0 license is irrevocable. This means that once your data is distributed under this license, the permissions you've granted cannot be withdrawn for those copies. This is standard for Creative Commons licenses to ensure stability for downstream users.</li>
-            <li><strong>Withdrawal:</strong> You may request that we stop using your screenshots in future datasets or training runs. Copies that have already been published will remain available under the CC BY-NC-SA 4.0 license.</li>
-            <li><strong>Email Usage:</strong> Your email address is collected solely for the purpose of sending you a confirmation and consent verification for your submission. It will not be published or shared with third parties.</li>
-            <li><strong>Data Usage Scope:</strong> All data usage is strictly limited to activities that improve Star Trek Online build analysis tools and related research within the SISTER project.</li>
+            <li><strong>Licensing:</strong> By submitting screenshots, you agree to license them under the <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noopener noreferrer">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) license</a>. This allows the SISTER project and others to use, share, and build upon your contributions while requiring attribution, non-commercial use, and sharing under the same terms.</li>
+            <li><strong>Permitted Uses:</strong> Your screenshots will be used exclusively for training the label detection CNN, future computer vision research related to STO build analysis, and inclusion in our test suite for quality assurance.</li>
+            <li><strong>Public Availability:</strong> Screenshots and derived datasets are stored in public GitHub repositories as part of our open data commitment, always under the CC BY-NC-SA 4.0 license.</li>
+            <li><strong>License Permanence:</strong> The CC BY-NC-SA 4.0 license is irrevocable once data is distributed. This ensures stability for researchers and developers who rely on the dataset. However, you can request that we stop using your screenshots in future releases.</li>
+            <li><strong>Future Withdrawal:</strong> You may request that we exclude your screenshots from future datasets or training runs. Previously published copies will remain available under the existing license terms.</li>
+            <li><strong>Email Privacy:</strong> Your email address is used only for consent confirmation and communication about your submission. It will never be published, shared, or used for any other purpose.</li>
+            <li><strong>Focused Usage:</strong> All data usage is strictly limited to improving Star Trek Online build analysis tools and related computer vision research within the SISTER project scope.</li>
         </ul>
-        <p>After submitting your screenshots and agreeing to the license, you'll receive an email to confirm your submission. Your data will be processed according to these terms upon your confirmation.</p>
+        <p>After submitting your screenshots and agreeing to the license, you'll receive an email to verify your submission. Your data will be processed according to these terms only after you confirm your consent.</p>
     </div>
 </section>
 

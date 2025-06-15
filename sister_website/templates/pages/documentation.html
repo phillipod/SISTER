@@ -5,7 +5,7 @@
 {% block content %}
 <section class="docs-section">
     <h2>Documentation</h2>
-    <p class="lead">Learn how to use SISTER effectively with our comprehensive documentation.</p>
+    <p class="lead">Learn how to use SISTER effectively with our comprehensive documentation and guides.</p>
 
     <div class="docs-nav">
         <ul>
@@ -19,11 +19,11 @@
 
     <section id="getting-started" class="docs-content">
         <h3>Getting Started</h3>
-        <p>After installing SISTER, you can start using it immediately. Icons are downloaded automatically as needed.</p>
+        <p>After installing SISTER, you can start using it immediately. Required icons are downloaded automatically as needed.</p>
 
         <div class="info-box">
             <h4>Optional Setup</h4>
-            <p>If you want to pre-download all icons:</p>
+            <p>To pre-download all icons for offline use:</p>
             <div class="code-block">
                 <code>sister-cli --download</code>
             </div>
@@ -31,13 +31,13 @@
             <div class="code-block">
                 <code>sister-cli --build-hash-cache</code>
             </div>
-            <p>Note: The --download command must be run before --build-hash-cache</p>
+            <p><strong>Important:</strong> The --download command must be run before --build-hash-cache</p>
         </div>
     </section>
 
     <section id="usage" class="docs-content">
         <h3>Usage</h3>
-        <p>SISTER can be used both as a command-line tool and as a Python library.</p>
+        <p>SISTER can be used both as a command-line tool and as a Python library for integration into your own projects.</p>
 
         <h4>Command Line Usage</h4>
         <div class="code-block">
@@ -47,13 +47,13 @@
             <code># Process multiple screenshots</code>
             <code>sister-cli -s screenshot1.jpg screenshot2.jpg</code>
             <code></code>
-            <code># Specify output prefix</code>
+            <code># Specify custom output prefix</code>
             <code>sister-cli -s screenshot.jpg -o results</code>
             <code></code>
-            <code># Enable GPU acceleration for OCR</code>
+            <code># Enable GPU acceleration for OCR (if supported)</code>
             <code>sister-cli -s screenshot.jpg --gpu</code>
             <code></code>
-            <code># Disable image downscaling</code>
+            <code># Disable automatic image resizing</code>
             <code>sister-cli -s screenshot.jpg --no-resize</code>
         </div>
 
@@ -100,27 +100,30 @@
             <div class="trouble-card">
                 <h4>Poor Recognition Results</h4>
                 <ul>
-                    <li>Ensure screenshots are high quality and not compressed</li>
-                    <li>Check that the UI scale in STO matches the expected size</li>
-                    <li>Verify that no UI elements are overlapping</li>
+                    <li>Ensure screenshots are high quality and not heavily compressed</li>
+                    <li>Verify that the UI scale in STO matches expected sizes</li>
+                    <li>Check that no UI elements are overlapping important information</li>
+                    <li>Make sure tooltips or pop-ups aren't covering critical areas</li>
                 </ul>
             </div>
 
             <div class="trouble-card">
                 <h4>Performance Issues</h4>
                 <ul>
-                    <li>Enable GPU acceleration with --gpu if available</li>
-                    <li>Reduce logging level if not debugging</li>
-                    <li>Consider pre-downloading icons if processing many screenshots</li>
+                    <li>Enable GPU acceleration with --gpu if you have compatible hardware</li>
+                    <li>Reduce logging verbosity if not debugging</li>
+                    <li>Consider pre-downloading icons when processing many screenshots</li>
+                    <li>Ensure you have sufficient RAM (8GB minimum recommended)</li>
                 </ul>
             </div>
 
             <div class="trouble-card">
                 <h4>Installation Problems</h4>
                 <ul>
-                    <li>Verify Python 3.11+ is installed</li>
+                    <li>Verify Python 3.11 or higher is installed</li>
                     <li>Check system requirements (8GB RAM minimum)</li>
-                    <li>Install required system libraries</li>
+                    <li>Install required system libraries for your platform</li>
+                    <li>Ensure pip is up to date before installation</li>
                 </ul>
             </div>
         </div>

@@ -6,7 +6,8 @@
 {% block content %}
 <div class="auth-container">
     <div class="auth-form-wrapper">
-        <h2>Login</h2>
+        <h2>Login to Your Account</h2>
+        <p class="auth-intro">Access your submission history, track screenshot processing status, and manage your contributions.</p>
         <form method="POST" action="{{ url_for('login') }}" class="auth-form">
             {{ form.hidden_tag() }}
             {{ forms.render_field(form.email, {'class': 'form-control'}) }}
