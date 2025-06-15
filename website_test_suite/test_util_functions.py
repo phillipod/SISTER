@@ -111,3 +111,25 @@ def test_get_forwardemail_ips_cached(monkeypatch, app):
         assert get_forwardemail_ips() == ['1.1.1.1']
         assert get_forwardemail_ips() == ['1.1.1.1']
         assert len(calls) == 1
+
+
+def test_fetch_forwardemail_ips(monkeypatch):
+    sample = [
+        {"hostname": "mx1.forwardemail.net", "ipv4": ["1.1.1.1"], "ipv6": []},
+        {"hostname": "mx2.forwardemail.net", "ipv4": [], "ipv6": ["2.2.2.2"]},
+        {"hostname": "other.host", "ipv4": ["3.3.3.3"], "ipv6": ["2001::3"]},
+    ]
+
+    class FakeResponse:
+        def raise_for_status(self):
+            pass
+        def json(self):
+            return sample
+
+    def fake_get(url, timeout=10):
+        assert "forwardemail" in url
+        return FakeResponse()
+
+    monkeypatch.setattr('sister_website.app.requests.get', fake_get)
+    ips = _fetch_forwardemail_ips()
+    assert ips == ["1.1.1.1", "2.2.2.2"]
