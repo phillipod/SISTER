@@ -147,7 +147,11 @@ def create_app():
     # Add context processor to make development flag available to all templates
     @app.context_processor
     def inject_environment():
-        return {'is_development': is_development}
+        flask_env = os.getenv('FLASK_ENV', 'development').upper()
+        return {
+            'is_development': is_development,
+            'flask_env': flask_env
+        }
 
     return app
 

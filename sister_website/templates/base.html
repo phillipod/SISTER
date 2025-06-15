@@ -14,15 +14,15 @@
 <body{% if is_development %} class="dev-environment"{% endif %}>
     {% if is_development %}
     <div class="dev-banner">
-        🚧 Development Environment - This is not the production site 🚧
+        🚧 {{ flask_env }} Environment - This is not the production site 🚧
     </div>
-    <div class="dev-overlay">
-        <div class="dev-layer dev-layer-1">DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT</div>
-        <div class="dev-layer dev-layer-2">DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE</div>
-        <div class="dev-layer dev-layer-3">NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION</div>
-        <div class="dev-layer dev-layer-4">TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST</div>
-        <div class="dev-layer dev-layer-5">DEV-SITE DEV-SITE DEV-SITE DEV-SITE DEV-SITE DEV-SITE DEV-SITE DEV-SITE DEV-SITE DEV-SITE DEV-SITE DEV-SITE</div>
-        <div class="dev-layer dev-layer-6">STAGING STAGING STAGING STAGING STAGING STAGING STAGING STAGING STAGING STAGING STAGING STAGING STAGING</div>
+    <div class="dev-overlay" style="--flask-env-text: '{% for i in range(30) %}{{ flask_env }} {% endfor %}';">
+        <div class="dev-layer dev-layer-1">{% for i in range(15) %}{{ flask_env }} {% endfor %}</div>
+        <div class="dev-layer dev-layer-2">{% for i in range(20) %}{{ flask_env }} {% endfor %}</div>
+        <div class="dev-layer dev-layer-3">{% for i in range(12) %}{{ flask_env }} {% endfor %}</div>
+        <div class="dev-layer dev-layer-4">{% for i in range(18) %}{{ flask_env }} {% endfor %}</div>
+        <div class="dev-layer dev-layer-5">{% for i in range(16) %}{{ flask_env }} {% endfor %}</div>
+        <div class="dev-layer dev-layer-6">{% for i in range(14) %}{{ flask_env }} {% endfor %}</div>
     </div>
     {% endif %}
     <div class="container">
