@@ -27,8 +27,8 @@
 .dev-overlay::before {
     content: var(--flask-env-text);
     position: absolute;
-    top: -70%;
-    left: -40%;
+    top: -80%;
+    left: 25%;
     width: 300%;
     height: 300%;
     font-size: 6rem;
@@ -48,8 +48,8 @@
 .dev-overlay::after {
     content: var(--flask-env-text);
     position: absolute;
-    top: -55%;
-    left: 20%;
+    top: -65%;
+    left: 45%;
     width: 300%;
     height: 300%;
     font-size: 6rem;
@@ -93,16 +93,16 @@
 }
 
 .dev-layer-1 {
-    top: -50%;
-    left: -20%;
+    top: -75%;
+    left: 35%;
     animation: devScroll 15s linear infinite;
     opacity: 0.08;
     z-index: 3;
 }
 
 .dev-layer-2 {
-    top: -40%;
-    left: 10%;
+    top: -55%;
+    left: 65%;
     animation: devScroll 18s linear infinite reverse;
     opacity: 0.06;
     font-size: 5rem;
@@ -111,8 +111,8 @@
 }
 
 .dev-layer-3 {
-    top: -25%;
-    left: 40%;
+    top: -35%;
+    left: 75%;
     animation: devScroll 22s linear infinite;
     opacity: 0.05;
     font-size: 4rem;
@@ -122,8 +122,8 @@
 }
 
 .dev-layer-4 {
-    top: -45%;
-    left: -30%;
+    top: -70%;
+    left: 55%;
     animation: devScroll 28s linear infinite reverse;
     opacity: 0.04;
     font-size: 7rem;
@@ -133,8 +133,8 @@
 }
 
 .dev-layer-5 {
-    top: -35%;
-    left: 50%;
+    top: -45%;
+    left: 30%;
     animation: devScroll 32s linear infinite;
     opacity: 0.07;
     font-size: 5.5rem;
@@ -145,8 +145,8 @@
 }
 
 .dev-layer-6 {
-    top: -60%;
-    left: 0%;
+    top: -25%;
+    left: 60%;
     animation: devScroll 35s linear infinite reverse;
     opacity: 0.03;
     font-size: 8rem;
