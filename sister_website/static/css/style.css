@@ -96,10 +96,6 @@
     opacity: 0.08;
 }
 
-.dev-layer-1::before {
-    content: 'DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT DEVELOPMENT';
-}
-
 .dev-layer-2 {
     top: -40%;
     left: -60%;
@@ -107,10 +103,6 @@
     opacity: 0.06;
     font-size: 5rem;
     line-height: 7rem;
-}
-
-.dev-layer-2::before {
-    content: 'DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE DEV-MODE';
 }
 
 .dev-layer-3 {
@@ -123,10 +115,6 @@
     transform: rotate(-45deg) rotateY(15deg);
 }
 
-.dev-layer-3::before {
-    content: 'NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION NOT-PRODUCTION';
-}
-
 .dev-layer-4 {
     top: -70%;
     left: -30%;
@@ -135,10 +123,6 @@
     font-size: 7rem;
     line-height: 9rem;
     letter-spacing: 3rem;
-}
-
-.dev-layer-4::before {
-    content: 'TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST TEST';
 }
 
 /* Development banner at the top */
