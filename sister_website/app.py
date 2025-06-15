@@ -33,6 +33,7 @@ from sqlalchemy import or_
 from sqlalchemy import case, func, and_
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from itsdangerous import URLSafeTimedSerializer as Serializer
+from PIL import Image
 
 from .models import (
     db,
@@ -167,6 +168,51 @@ def create_admin_command():
         db.session.commit()
         print(f"Admin user '{default_user}' created successfully.")
 
+@app.cli.command('generate-thumbnails')
+def generate_thumbnails_command():
+    """Generate thumbnails for existing screenshots that don't have them."""
+    with app.app_context():
+        # Query screenshots that don't have thumbnails
+        try:
+            screenshots = Screenshot.query.filter(
+                or_(Screenshot.thumbnail_data == None, Screenshot.thumbnail_data == b'')
+            ).all()
+        except Exception:
+            # If thumbnail_data field doesn't exist yet, skip this command
+            print("thumbnail_data field doesn't exist yet. Run database migration first.")
+            return
+            
+        if not screenshots:
+            print("No screenshots found that need thumbnails.")
+            return
+            
+        print(f"Generating thumbnails for {len(screenshots)} screenshots...")
+        
+        success_count = 0
+        error_count = 0
+        
+        for screenshot in screenshots:
+            if not screenshot.data:
+                print(f"Skipping screenshot {screenshot.id}: no image data")
+                continue
+                
+            thumbnail_data = generate_screenshot_thumbnail(screenshot.data)
+            if thumbnail_data:
+                screenshot.thumbnail_data = thumbnail_data
+                success_count += 1
+                print(f"Generated thumbnail for screenshot {screenshot.id} ({screenshot.filename})")
+            else:
+                error_count += 1
+                print(f"Failed to generate thumbnail for screenshot {screenshot.id} ({screenshot.filename})")
+        
+        try:
+            db.session.commit()
+            print(f"Successfully generated {success_count} thumbnails, {error_count} errors.")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error saving thumbnails to database: {e}")
+            return
+
 # Global variables
 ALLOWED_MIME_TYPES = {'image/png', 'image/jpeg'}
 
@@ -253,7 +299,7 @@ def is_admin():
     return user is not None and not user.is_locked
 
 def save_screenshot(file, filename_base=None):
-    """Saves a screenshot file, calculates its MD5, and creates a Screenshot record in memory without saving to disk."""
+    """Saves a screenshot file, calculates its MD5, generates a thumbnail, and creates a Screenshot record in memory without saving to disk."""
     filename_for_log = file.filename if file else "No file provided"
     current_app.logger.info(f"save_screenshot called for: {filename_for_log}")
     
@@ -289,11 +335,31 @@ def save_screenshot(file, filename_base=None):
 
         md5_hash = hashlib.md5(file_content).hexdigest()
 
-        new_screenshot = Screenshot(
-            filename=filename,
-            md5sum=md5_hash,
-            data=file_content,
-        )
+        # Generate thumbnail using the utility function
+        thumbnail_data = generate_screenshot_thumbnail(file_content)
+        if thumbnail_data:
+            current_app.logger.info(f"Generated thumbnail for {filename}: {len(thumbnail_data)} bytes")
+        else:
+            current_app.logger.warning(f"Failed to generate thumbnail for {filename}")
+            # Continue without thumbnail - it's not critical
+
+        # Create screenshot record, handling the case where thumbnail_data field might not exist yet
+        screenshot_kwargs = {
+            'filename': filename,
+            'md5sum': md5_hash,
+            'data': file_content,
+        }
+        
+        # Only add thumbnail_data if the field exists in the model
+        try:
+            # Try to create a test instance to check if thumbnail_data field exists
+            Screenshot()
+            if hasattr(Screenshot, 'thumbnail_data'):
+                screenshot_kwargs['thumbnail_data'] = thumbnail_data
+        except Exception:
+            pass  # Field might not exist yet, that's fine
+            
+        new_screenshot = Screenshot(**screenshot_kwargs)
         return new_screenshot
     except Exception as e:
         current_app.logger.error(f"Error processing screenshot data for {filename}: {e}")
@@ -305,6 +371,32 @@ def generate_acceptance_token(submission_id, email):
     message = f"{submission_id}:{email}".encode('utf-8')
     return hmac.new(secret.encode('utf-8'), message, hashlib.sha256).hexdigest()
 
+def generate_screenshot_thumbnail(screenshot_data):
+    """Generate a thumbnail from screenshot data. Returns thumbnail bytes or None."""
+    try:
+        with Image.open(BytesIO(screenshot_data)) as img:
+            # Convert to RGB if necessary (handles RGBA, P mode, etc.)
+            if img.mode in ('RGBA', 'LA', 'P'):
+                # Create a white background for transparent images
+                background = Image.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+                img = background
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            # Create thumbnail (240x240 max, maintaining aspect ratio)
+            img.thumbnail((240, 240), Image.Resampling.LANCZOS)
+            
+            # Save thumbnail as JPEG to BytesIO
+            thumbnail_buffer = BytesIO()
+            img.save(thumbnail_buffer, format='JPEG', quality=85, optimize=True)
+            return thumbnail_buffer.getvalue()
+            
+    except Exception as e:
+        current_app.logger.error(f"Error generating thumbnail: {e}")
+        return None
 
 @app.route('/')
 def home():
@@ -1058,6 +1150,27 @@ def admin_screenshot_image(screenshot_id):
         return send_file(BytesIO(sc.data), mimetype=mime)
     file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], sc.filename)
     return send_file(file_path, mimetype=mime)
+
+@app.route('/admin/screenshot/<int:screenshot_id>/thumbnail')
+def admin_screenshot_thumbnail(screenshot_id):
+    if not is_admin():
+        return "Unauthorized", 403
+    sc = Screenshot.query.get_or_404(screenshot_id)
+    
+    # Check if thumbnail_data field exists and has data
+    if hasattr(sc, 'thumbnail_data') and sc.thumbnail_data:
+        return send_file(BytesIO(sc.thumbnail_data), mimetype='image/jpeg')
+    elif sc.data:
+        # Generate thumbnail on-the-fly if not available
+        thumbnail_data = generate_screenshot_thumbnail(sc.data)
+        if thumbnail_data:
+            return send_file(BytesIO(thumbnail_data), mimetype='image/jpeg')
+        else:
+            # Fallback to full image if thumbnail generation fails
+            mime = 'image/png' if sc.filename.lower().endswith('png') else 'image/jpeg'
+            return send_file(BytesIO(sc.data), mimetype=mime)
+    else:
+        return "No image data", 404
 
 
 # Webhook endpoint for handling email replies
@@ -1906,6 +2019,29 @@ def user_screenshot_image(screenshot_id):
         
     mime = 'image/png' if sc.filename.lower().endswith('png') else 'image/jpeg'
     return send_file(BytesIO(sc.data), mimetype=mime)
+
+@app.route('/me/screenshot/<int:screenshot_id>/thumbnail')
+@login_required
+def user_screenshot_thumbnail(screenshot_id):
+    sc = Screenshot.query.get_or_404(screenshot_id)
+    # Security check: ensure the screenshot belongs to the current user.
+    if sc.build.submission.email != current_user.email:
+        return "Unauthorized", 403
+    
+    # Check if thumbnail_data field exists and has data
+    if hasattr(sc, 'thumbnail_data') and sc.thumbnail_data:
+        return send_file(BytesIO(sc.thumbnail_data), mimetype='image/jpeg')
+    elif sc.data:
+        # Generate thumbnail on-the-fly if not available
+        thumbnail_data = generate_screenshot_thumbnail(sc.data)
+        if thumbnail_data:
+            return send_file(BytesIO(thumbnail_data), mimetype='image/jpeg')
+        else:
+            # Fallback to full image if thumbnail generation fails
+            mime = 'image/png' if sc.filename.lower().endswith('png') else 'image/jpeg'
+            return send_file(BytesIO(sc.data), mimetype=mime)
+    else:
+        return "No image data", 404
 
 # --------------------- DIAGNOSTIC ROUTES ---------------------
 @app.route('/test-flash')

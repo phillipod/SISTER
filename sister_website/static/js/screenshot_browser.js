@@ -461,7 +461,10 @@ class ScreenshotBrowser {
 
             // Note: Popup event listeners will be added to the grid container using event delegation
 
-            const imageUrl = this.api.screenshotImage.replace('{sc_id}', id);
+            // Use thumbnail for grid view, full image for single view
+            const thumbnailUrl = this.api.screenshotImage.replace('{sc_id}', id) + '/thumbnail';
+            const imageUrl = thumbnailUrl;
+            
             if (isProgrammatic) {
                 img.src = `${imageUrl}?t=${Date.now()}`;
             } else {

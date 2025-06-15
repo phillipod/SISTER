@@ -64,6 +64,7 @@ class Screenshot(db.Model):
     filename = db.Column(db.String(255), nullable=False)
     md5sum = db.Column(db.String(32), nullable=False, index=True)
     data = db.Column(LONGBLOB, nullable=True)
+    thumbnail_data = db.Column(LONGBLOB, nullable=True)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class EmailLog(db.Model):
