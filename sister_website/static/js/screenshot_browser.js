@@ -459,20 +459,7 @@ class ScreenshotBrowser {
                 }
             });
 
-            // Add mouseover popup for submission info
-            let popupTimeout;
-            
-            img.addEventListener('mouseover', (e) => {
-                clearTimeout(popupTimeout);
-                popupTimeout = setTimeout(() => {
-                    this.showSubmissionPopup(e, id);
-                }, 500); // Longer delay to let CSS hover animation show first
-            });
-
-            img.addEventListener('mouseout', () => {
-                clearTimeout(popupTimeout);
-                this.hideSubmissionPopup();
-            });
+            // Note: Popup event listeners will be added to the grid container using event delegation
 
             const imageUrl = this.api.screenshotImage.replace('{sc_id}', id);
             if (isProgrammatic) {
@@ -486,6 +473,9 @@ class ScreenshotBrowser {
         
         this.previewContent.innerHTML = '';
         this.previewContent.appendChild(grid);
+
+        // Add event delegation for popup functionality to avoid interfering with CSS hover
+        this.setupGridPopupEvents(grid);
 
         if (!isProgrammatic) {
             this.initLazyLoad(grid);
@@ -854,5 +844,31 @@ class ScreenshotBrowser {
         } else {
             console.log('No existing popup found to remove');
         }
+    }
+
+    setupGridPopupEvents(grid) {
+        let popupTimeout;
+        
+        // Use event delegation on the grid container
+        grid.addEventListener('mouseover', (e) => {
+            const img = e.target.closest('.preview-grid-img');
+            if (!img) return;
+            
+            const screenshotId = img.dataset.screenshotId;
+            if (!screenshotId) return;
+            
+            clearTimeout(popupTimeout);
+            popupTimeout = setTimeout(() => {
+                this.showSubmissionPopup(e, screenshotId);
+            }, 800); // Longer delay to ensure CSS hover shows first
+        });
+
+        grid.addEventListener('mouseout', (e) => {
+            const img = e.target.closest('.preview-grid-img');
+            if (!img) return;
+            
+            clearTimeout(popupTimeout);
+            this.hideSubmissionPopup();
+        });
     }
 } 
