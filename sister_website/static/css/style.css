@@ -27,8 +27,8 @@
 .dev-overlay::before {
     content: 'DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV';
     position: absolute;
-    top: -30%;
-    left: -20%;
+    top: -20%;
+    left: -60%;
     width: 300%;
     height: 300%;
     font-size: 6rem;
@@ -48,8 +48,8 @@
 .dev-overlay::after {
     content: 'DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV DEV';
     position: absolute;
-    top: -75%;
-    left: 10%;
+    top: -80%;
+    left: 40%;
     width: 300%;
     height: 300%;
     font-size: 6rem;
@@ -93,16 +93,16 @@
 }
 
 .dev-layer-1 {
-    top: -15%;
-    left: 30%;
+    top: -50%;
+    left: 10%;
     animation: devScroll 15s linear infinite;
     opacity: 0.08;
     z-index: 3;
 }
 
 .dev-layer-2 {
-    top: -90%;
-    left: -40%;
+    top: -95%;
+    left: -30%;
     animation: devScroll 18s linear infinite reverse;
     opacity: 0.06;
     font-size: 5rem;
@@ -111,8 +111,8 @@
 }
 
 .dev-layer-3 {
-    top: -45%;
-    left: 50%;
+    top: -5%;
+    left: 60%;
     animation: devScroll 22s linear infinite;
     opacity: 0.05;
     font-size: 4rem;
@@ -122,8 +122,8 @@
 }
 
 .dev-layer-4 {
-    top: -5%;
-    left: -10%;
+    top: -35%;
+    left: -90%;
     animation: devScroll 28s linear infinite reverse;
     opacity: 0.04;
     font-size: 7rem;
@@ -134,7 +134,7 @@
 
 .dev-layer-5 {
     top: -65%;
-    left: -70%;
+    left: 70%;
     animation: devScroll 32s linear infinite;
     opacity: 0.07;
     font-size: 5.5rem;
@@ -145,8 +145,8 @@
 }
 
 .dev-layer-6 {
-    top: -35%;
-    left: 70%;
+    top: -110%;
+    left: 80%;
     animation: devScroll 35s linear infinite reverse;
     opacity: 0.03;
     font-size: 8rem;
