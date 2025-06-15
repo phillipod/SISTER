@@ -24,8 +24,10 @@ def test_user_password_and_tokens(app):
         assert user.password_reset_token is None
         assert user.password_reset_token_expiry is None
 
-        sub1 = Submission(email='test@example.com', acceptance_token='t1')
-        sub2 = Submission(email='test@example.com', acceptance_token='t2')
+        # Create submissions with explicit timestamps to ensure deterministic ordering
+        now = datetime.utcnow()
+        sub1 = Submission(email='test@example.com', acceptance_token='t1', created_at=now - timedelta(seconds=1))
+        sub2 = Submission(email='test@example.com', acceptance_token='t2', created_at=now)
         db.session.add_all([sub1, sub2])
         db.session.commit()
         subs = user.submissions
