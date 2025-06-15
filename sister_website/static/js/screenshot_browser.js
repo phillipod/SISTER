@@ -797,7 +797,7 @@ class ScreenshotBrowser {
             <div class="popup-content">
                 <p><strong>Email:</strong> ${info.email}</p>
                 <p><strong>Status:</strong> ${statusHtml}</p>
-                <p><strong>Submission:</strong> ${info.id ? String(info.id).substring(0, 8) : 'N/A'}...</p>
+                <p><strong>Submission:</strong> ${screenshotInfo.submission_id ? String(screenshotInfo.submission_id).substring(0, 8) : 'N/A'}...</p>
                 <p><strong>Screenshot:</strong> ${screenshotInfo.filename}</p>
             </div>
         `;
