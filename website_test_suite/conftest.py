@@ -1,7 +1,12 @@
 import os
 import io
 import pytest
-from sister_website.app import create_app
+
+# Set mandatory environment variables before importing the application factory.
+os.environ.setdefault('SECRET_KEY', 'test-secret')
+os.environ.setdefault('DATABASE_URL', 'sqlite:///:memory:')
+
+from sister_website.app import app as website_app
 from sister_website.models import db, AdminUser
 import sister_website.email_utils as email_utils
 
@@ -10,7 +15,8 @@ def app(tmp_path):
     os.environ['SECRET_KEY'] = 'test-secret'
     os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
     os.environ['UPLOAD_FOLDER'] = str(tmp_path)
-    app = create_app()
+    app = website_app
+    app.config['UPLOAD_FOLDER'] = str(tmp_path)
     app.config['TESTING'] = True
     app.config['WTF_CSRF_ENABLED'] = False
     with app.app_context():
@@ -34,7 +40,15 @@ def admin_user(app):
 
 @pytest.fixture(autouse=True)
 def mock_email(monkeypatch):
-    for name in ['send_consent_email', 'send_reply_confirmation_email', 'send_verification_email', 'send_password_reset_email']:
+    for name in [
+        'send_consent_email',
+        'send_reply_confirmation_email',
+        'send_verification_email',
+        'send_password_reset_email',
+    ]:
         monkeypatch.setattr(email_utils, name, lambda *args, **kwargs: True)
+        monkeypatch.setattr(
+            'sister_website.app.' + name, lambda *args, **kwargs: True, raising=False
+        )
     yield
 
