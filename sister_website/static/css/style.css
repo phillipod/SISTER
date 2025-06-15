@@ -28,7 +28,7 @@
 }
 
 .dev-overlay::before {
-    content: var(--flask-env-text);
+    content: attr(data-env-text);
     position: absolute;
     top: -80%;
     left: 25%;
@@ -49,7 +49,7 @@
 }
 
 .dev-overlay::after {
-    content: var(--flask-env-text);
+    content: attr(data-env-text);
     position: absolute;
     top: -65%;
     left: 45%;
