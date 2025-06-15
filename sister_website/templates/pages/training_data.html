@@ -133,14 +133,30 @@
             <div id="about-tab" class="tab-pane">
                 <div class="about-content">
                     <h3>Why We Need Your Screenshots</h3>
-                    <p>SISTER currently uses EasyOCR for text detection, which requires GPU acceleration to run fast enough for web applications. We're building a custom CNN to replace this dependency.</p>
+                    <p>SISTER currently uses EasyOCR for text detection, but this creates a performance bottleneck that prevents us from offering SISTER as a web API.</p>
+                    
+                    <div class="technical-explanation">
+                        <h4>The Performance Problem</h4>
+                        <p>EasyOCR works by recognizing text character-by-character, which is slow and requires significant processing power. For a web API to respond quickly enough for real-time use, we need a faster approach.</p>
+                        
+                        <h4>Our Solution: CNN-Based Label Detection</h4>
+                        <p>A CNN (Convolutional Neural Network) is a type of AI that excels at recognizing patterns in images. Instead of reading character-by-character like EasyOCR, we can train a CNN to recognize entire labels and text blocks at once.</p>
+                        
+                        <p>This approach is much faster because:</p>
+                        <ul>
+                            <li><strong>Whole-label recognition</strong> - Identifies complete text regions in one pass instead of individual characters</li>
+                            <li><strong>Specialized training</strong> - Optimized specifically for STO's UI elements rather than general text</li>
+                            <li><strong>Efficient processing</strong> - Designed to run quickly without GPU acceleration</li>
+                            <li><strong>Reduced complexity</strong> - Eliminates EasyOCR's multi-step character analysis</li>
+                        </ul>
+                    </div>
                     
                     <div class="goal-benefits">
                         <h4>What Your Screenshots Enable</h4>
                         <ul>
-                            <li>Fast label detection without EasyOCR dependency</li>
-                            <li>SISTER running as a web API without GPU requirements</li>
-                            <li>Support for future web applications using SISTER's pipeline</li>
+                            <li>Fast label detection without EasyOCR's character-by-character bottleneck</li>
+                            <li>SISTER running as a responsive web API without GPU requirements</li>
+                            <li>Real-time build analysis for web applications</li>
                             <li>Reliable performance across different UI scales and platforms</li>
                         </ul>
                     </div>
