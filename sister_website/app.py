@@ -1152,6 +1152,7 @@ def admin_screenshot_image(screenshot_id):
     return send_file(file_path, mimetype=mime)
 
 @app.route('/admin/screenshot/<int:screenshot_id>/thumbnail')
+@cache.cached(timeout=900)  # Cache for 15 minutes
 def admin_screenshot_thumbnail(screenshot_id):
     if not is_admin():
         return "Unauthorized", 403
@@ -2020,7 +2021,12 @@ def user_screenshot_image(screenshot_id):
     mime = 'image/png' if sc.filename.lower().endswith('png') else 'image/jpeg'
     return send_file(BytesIO(sc.data), mimetype=mime)
 
+def make_user_thumbnail_cache_key(screenshot_id):
+    """Generate a user-specific cache key for thumbnails."""
+    return f"user_thumb_{current_user.email}_{screenshot_id}"
+
 @app.route('/me/screenshot/<int:screenshot_id>/thumbnail')
+@cache.cached(timeout=900, make_cache_key=make_user_thumbnail_cache_key)
 @login_required
 def user_screenshot_thumbnail(screenshot_id):
     sc = Screenshot.query.get_or_404(screenshot_id)
