@@ -37,7 +37,7 @@ CARGO_TYPES = {
     },
     "personal_trait": {
         "tables": "Traits",
-        "fields": "_pageName=Page,name,chartype,environment,type,isunique,description",
+        "fields": "_pageName=Page,name,environment,type,description",
         "limit": 2500,
     },
     "starship_trait": {

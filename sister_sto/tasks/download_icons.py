@@ -71,12 +71,12 @@ class DownloadAllIconsTask(PipelineTask):
             ('equipment', {'type': 'Ship Device'}, 'space/device'),
 
             # Personal traits
-            ('personal_trait', {'environment': 'ground', 'type': '!reputation,!activereputation', 'chartype': 'char'}, 'ground/traits/personal'),
-            ('personal_trait', {'environment': 'ground', 'type': 'reputation', 'chartype': 'char'}, 'ground/traits/reputation'),
-            ('personal_trait', {'environment': 'ground', 'type': 'activereputation', 'chartype': 'char'}, 'ground/traits/active_reputation'),
-            ('personal_trait', {'environment': 'space', 'type': '!reputation,!activereputation', 'chartype': 'char'}, 'space/traits/personal'),
-            ('personal_trait', {'environment': 'space', 'type': 'reputation', 'chartype': 'char'}, 'space/traits/reputation'),
-            ('personal_trait', {'environment': 'space', 'type': 'activereputation', 'chartype': 'char'}, 'space/traits/active_reputation'),
+            ('personal_trait', {'environment': 'ground', 'type': '!reputation,!activereputation,!boff'}, 'ground/traits/personal'),
+            ('personal_trait', {'environment': 'ground', 'type': 'reputation'}, 'ground/traits/reputation'),
+            ('personal_trait', {'environment': 'ground', 'type': 'activereputation'}, 'ground/traits/active_reputation'),
+            ('personal_trait', {'environment': 'space', 'type': '!reputation,!activereputation,!boff'}, 'space/traits/personal'),
+            ('personal_trait', {'environment': 'space', 'type': 'reputation'}, 'space/traits/reputation'),
+            ('personal_trait', {'environment': 'space', 'type': 'activereputation'}, 'space/traits/active_reputation'),
 
             # Starship traits (no filters)
             ('starship_trait', None, 'space/traits/starship')
