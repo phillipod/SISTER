@@ -34,7 +34,7 @@ class LabelLocator:
     Returns a simple mapping from label->bbox tuples.
     """
 
-    def __init__(self, gpu: bool = False, scale_x: float = 1.25, debug: bool = False):
+    def __init__(self, gpu: bool = False, scale_x: float = 1.25, debug: bool = False, debug_output_path=None):
         """
         Initialize the Locator.
 
@@ -46,6 +46,15 @@ class LabelLocator:
         self.reader = easyocr.Reader(["en"], gpu=gpu)
         self.scale_x = scale_x
         self.allowed_labels = self._build_allowed_labels()
+
+        self.debug_output_path = debug_output_path
+
+        # Esnure debug output directory exists
+        if self.debug and self.debug_output_path:
+            print(f"Saving debug output to {self.debug_output_path}")
+            base, _ = os.path.splitext(self.debug_output_path)
+            os.makedirs(os.path.dirname(base), exist_ok=True)
+
 
     def _build_allowed_labels(self) -> list:
         """
@@ -275,6 +284,23 @@ class LabelLocator:
                         )
                         break
 
+            if not matched_label:
+                for label_norm, info in normalized_label_pairs:
+                    if normalized_text.endswith(label_norm):
+                        matched_label = info.get("real_label", info["label"])
+                        label_config = info
+                        logger.debug("Endswith match found: '{matched_label}'")
+                        break
+                    elif self.is_single_char_off(
+                        normalized_text[-len(label_norm):], label_norm
+                    ):
+                        matched_label = info.get("real_label", info["label"])
+                        label_config = info
+                        logger.debug(
+                            "Fuzzy Endswith match found (1-char off): '{matched_label}'"
+                        )
+                        break
+
             if matched_label and label_config.get("split_words"):
                 logger.debug("Splitting label: '{matched_label}' for box {rect}")
                 expected_parts = []
@@ -350,9 +376,9 @@ class LabelLocator:
         self.on_progress("Filtering OCR results", 87.0)
         filtered = self.filter_recognized_text(recognized, gray_upscaled)
 
-        # if self.debug:
-        #    if self.output_debug_path:
-        #        self.draw_debug_output(image, filtered, self.output_debug_path)
+        if self.debug:
+           if self.debug_output_path:
+               self.draw_debug_output(image, filtered, self.debug_output_path)
 
         self.on_progress("Building output", 95.0)
         # Build formatted return structure
@@ -398,6 +424,6 @@ class LabelLocator:
             )
 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        cv2.imwrite(output_path, debug_image)
+        cv2.imwrite(f"{output_path}/located_labels.png", debug_image)
 
         logger.info(f"Debug output saved to {output_path}")

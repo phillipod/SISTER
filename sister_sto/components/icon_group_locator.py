@@ -4,7 +4,7 @@ import os
 import random
 
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any
 
 import logging
 
@@ -464,7 +464,7 @@ ICON_GROUP_LOCATION_RULES = {
                             "x1": {"subtract": ["label:Personal Space Traits.left", "padding"]},
                             "x2": {"add": ["label:Personal Space Traits.right", "padding"]},
                             "y1": "label:Personal Space Traits.bottom",
-                            "height": { "multiply": ["line_height", 3] },
+                            "height": { "multiply": ["line_height", 3.1] },
                         }
                     },                    
                 ],
@@ -624,7 +624,7 @@ ICON_GROUP_LOCATION_RULES = {
                             "x1": {"subtract": ["label:Personal Ground Traits.left", "padding"]},
                             "x2": {"add": ["label:Personal Ground Traits.right", "padding"]},
                             "y1": "label:Personal Ground Traits.bottom",
-                            "height": { "multiply": ["line_height", 3] },
+                            "height": { "multiply": ["line_height", 3.1] },
                         }
                     },                    
                 ],
@@ -648,7 +648,7 @@ ICON_GROUP_LOCATION_RULES = {
                             "x1": {"subtract": ["label:Personal Ground Traits.left", {"multiply": ["padding", 0]}]}, 
                             "x2": {"add": ["label:Personal Ground Traits.right", {"multiply": ["padding", 4]}]}, 
                             "y1": "label:Personal Ground Traits.bottom",
-                            "height": { "multiply": ["line_height", 3] },
+                            "height": { "multiply": ["line_height", 3.1] },
                         }
                     },                    
                 ],
@@ -835,9 +835,71 @@ class IconGroupLocator:
                     },
                 }
 
-        #self._draw_debug_icon_groups(image, merged, f"output/icon_groups{bt}.png")
+        # Prevent icon group overlaps; labels may overlap but icon groups should not.
+        if merged:
+            self._prevent_icon_group_overlaps(merged, labels, image.shape[0])
+
+        if self.debug:
+            self._draw_debug_icon_groups(image, merged, f"output/icon_groups{bt}.png")
 
         return merged
+
+    def _prevent_icon_group_overlaps(
+        self,
+        merged: Dict[str, Dict[str, Any]],
+        labels: Dict[str, Any],
+        image_height: int,
+        min_height: int = 18,
+        gap: int = 0,
+    ) -> None:
+        """
+        Adjust icon group boxes in-place to prevent any overlap between groups.
+
+        - Only icon group vs icon group overlaps are resolved. Label boxes are ignored.
+        - Later groups (by top Y) are shrunk from the top when overlapping earlier groups.
+        - Boxes are clamped to at least min_height and within the image bounds.
+        """
+        # Prepare sortable list of (label, box, anchor_top)
+        items = []
+        for label, entry in merged.items():
+            if "IconGroup" not in entry or label not in labels:
+                continue
+            box = entry["IconGroup"]
+            anchor_top = labels[label]["bottom_left"][1]  # use label bottom as stable anchor
+            items.append((label, box, anchor_top))
+
+        # Sort by anchor (label bottom) ascending to preserve earlier groups
+        items.sort(key=lambda it: it[2])
+
+        def horizontal_overlap(a: Dict[str, Any], b: Dict[str, Any]) -> bool:
+            ax1 = a["top_left"][0]; ax2 = a["bottom_right"][0]
+            bx1 = b["top_left"][0]; bx2 = b["bottom_right"][0]
+            inter = min(ax2, bx2) - max(ax1, bx1)
+            return inter > 0
+
+        # For each earlier box, trim its bottom if it intrudes into the next anchored top below
+        for i in range(len(items)):
+            label_i, box_i, anchor_i = items[i]
+            ix1, iy1 = box_i["top_left"]
+            ix2, iy2 = box_i["bottom_right"]
+            limit_bottom = iy2
+
+            for j in range(i + 1, len(items)):
+                label_j, box_j, anchor_j = items[j]
+                if not horizontal_overlap(box_i, box_j):
+                    continue
+                # If current bottom would overlap the next group's anchored top, trim
+                if limit_bottom > anchor_j - gap:
+                    limit_bottom = anchor_j - gap
+
+            # Clamp and apply
+            new_bottom = max(iy1 + min_height, min(limit_bottom, image_height - 1))
+            if new_bottom < iy2:
+                box_i["bottom_right"][1] = int(new_bottom)
+                merged[label_i]["IconGroup"] = box_i
+                logger.debug(
+                    f"Trimmed IconGroup '{label_i}' bottom to {new_bottom} to respect anchors below"
+                )
 
     def _preprocess_grayscale(self, image):
         """
