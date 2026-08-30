@@ -27,6 +27,7 @@ setup(
     entry_points={
         "console_scripts": [
             "sister=sister_sto.cli:main",
+            "sister-annotate=sister_sto.annotations.cli:main",
         ],
     },
-) 
+)

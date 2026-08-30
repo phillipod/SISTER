@@ -25,6 +25,7 @@ dependencies = [
 
 [project.scripts]
 sister = "sister_sto.cli:main"
+sister-annotate = "sister_sto.annotations.cli:main"
 
 [tool.setuptools]
 package-data = {sister_sto = ["config/*.yaml", "resources/overlays/*", "resources/cache/*"]}

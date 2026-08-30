@@ -5,7 +5,7 @@ warnings.filterwarnings(
     "ignore",
     message=".*pin_memory.*no accelerator is found.*",
     category=UserWarning,
-    module="torch.utils.data.dataloader"
+    module="torch.utils.data.dataloader",
 )
 
 # suppress the “Unable to retrieve source for @torch.jit._overload function” warning
@@ -13,19 +13,31 @@ warnings.filterwarnings(
     "ignore",
     message=r".*Unable to retrieve source for @torch\.jit\._overload function.*",
     category=UserWarning,
-    module=r"torch\._jit_internal"
+    module=r"torch\._jit_internal",
 )
 
 import cv2
 import easyocr
 import os
 import numpy as np
+from dataclasses import dataclass, replace
 from difflib import SequenceMatcher
-from typing import Dict, Tuple, Optional, List
+from typing import Any, Dict, Tuple, Optional, List
 
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class LabelInstance:
+    """One spatial occurrence accepted by the label teacher."""
+
+    canonical_label: str
+    recognized_text: str
+    bbox_xyxy: Tuple[int, int, int, int]
+    match_method: str
+    instance_id: str = ""
 
 
 class LabelLocator:
@@ -34,7 +46,14 @@ class LabelLocator:
     Returns a simple mapping from label->bbox tuples.
     """
 
-    def __init__(self, gpu: bool = False, scale_x: float = 1.25, debug: bool = False, debug_output_path=None):
+    def __init__(
+        self,
+        gpu: bool = False,
+        scale_x: float = 1.25,
+        debug: bool = False,
+        debug_output_path=None,
+        reader: Optional[Any] = None,
+    ):
         """
         Initialize the Locator.
 
@@ -43,7 +62,7 @@ class LabelLocator:
             debug (bool): Whether to enable debug output.
         """
         self.debug = debug
-        self.reader = easyocr.Reader(["en"], gpu=gpu)
+        self.reader = reader if reader is not None else easyocr.Reader(["en"], gpu=gpu)
         self.scale_x = scale_x
         self.allowed_labels = self._build_allowed_labels()
 
@@ -54,7 +73,6 @@ class LabelLocator:
             print(f"Saving debug output to {self.debug_output_path}")
             base, _ = os.path.splitext(self.debug_output_path)
             os.makedirs(os.path.dirname(base), exist_ok=True)
-
 
     def _build_allowed_labels(self) -> list:
         """
@@ -216,11 +234,12 @@ class LabelLocator:
 
         return split_results
 
-    def filter_recognized_text(
+    def filter_recognized_text_instances(
         self,
         recognized_texts: Dict[Tuple[int, int, int, int], str],
         full_image: np.ndarray,
-    ) -> Dict[Tuple[int, int, int, int], str]:
+        from_reocr: bool = False,
+    ) -> List[LabelInstance]:
         """
         Filter OCR recognized texts to match against allowed labels.
 
@@ -229,10 +248,9 @@ class LabelLocator:
             full_image (np.array): Upscaled full image.
 
         Returns:
-            dict: Filtered recognized text regions.
+            list: Every accepted spatial label occurrence.
         """
-        filtered = {}
-        keyword_matches = {}
+        instances = []
         additional_recognized = {}
 
         def normalize_label(label_entry):
@@ -259,11 +277,13 @@ class LabelLocator:
 
             matched_label = None
             label_config = None
+            match_method = None
 
             for label_norm, info in normalized_label_pairs:
                 if normalized_text == label_norm:
                     matched_label = info.get("real_label", info["label"])
                     label_config = info
+                    match_method = "exact"
                     logger.debug(f"Exact match found: '{matched_label}'")
                     break
 
@@ -272,15 +292,17 @@ class LabelLocator:
                     if normalized_text.startswith(label_norm):
                         matched_label = info.get("real_label", info["label"])
                         label_config = info
-                        logger.debug("Startswith match found: '{matched_label}'")
+                        match_method = "prefix"
+                        logger.debug(f"Startswith match found: '{matched_label}'")
                         break
                     elif self.is_single_char_off(
                         normalized_text[: len(label_norm)], label_norm
                     ):
                         matched_label = info.get("real_label", info["label"])
                         label_config = info
+                        match_method = "fuzzy"
                         logger.debug(
-                            "Fuzzy Startswith match found (1-char off): '{matched_label}'"
+                            f"Fuzzy Startswith match found (1-char off): '{matched_label}'"
                         )
                         break
 
@@ -289,20 +311,22 @@ class LabelLocator:
                     if normalized_text.endswith(label_norm):
                         matched_label = info.get("real_label", info["label"])
                         label_config = info
-                        logger.debug("Endswith match found: '{matched_label}'")
+                        match_method = "suffix"
+                        logger.debug(f"Endswith match found: '{matched_label}'")
                         break
                     elif self.is_single_char_off(
-                        normalized_text[-len(label_norm):], label_norm
+                        normalized_text[-len(label_norm) :], label_norm
                     ):
                         matched_label = info.get("real_label", info["label"])
                         label_config = info
+                        match_method = "fuzzy"
                         logger.debug(
-                            "Fuzzy Endswith match found (1-char off): '{matched_label}'"
+                            f"Fuzzy Endswith match found (1-char off): '{matched_label}'"
                         )
                         break
 
-            if matched_label and label_config.get("split_words"):
-                logger.debug("Splitting label: '{matched_label}' for box {rect}")
+            if matched_label and label_config and label_config.get("split_words"):
+                logger.debug(f"Splitting label: '{matched_label}' for box {rect}")
                 expected_parts = []
                 if isinstance(matched_label, tuple):
                     for p in matched_label:
@@ -320,39 +344,86 @@ class LabelLocator:
                 continue
 
             if matched_label:
-                keyword_matches.setdefault(matched_label, []).append(
-                    (rect, text, matched_label)
+                instances.append(
+                    LabelInstance(
+                        canonical_label=str(matched_label),
+                        recognized_text=text,
+                        bbox_xyxy=tuple(int(value) for value in rect),
+                        match_method="re-ocr" if from_reocr else str(match_method),
+                    )
                 )
             else:
-                logger.debug("No match found for: '{text}'")
+                logger.debug(f"No match found for: '{text}'")
 
         if additional_recognized:
             logger.debug(
-                "Recursively processing {len(additional_recognized)} split results..."
+                f"Recursively processing {len(additional_recognized)} split results..."
             )
-            filtered.update(
-                self.filter_recognized_text(additional_recognized, full_image)
+            instances.extend(
+                self.filter_recognized_text_instances(
+                    additional_recognized, full_image, from_reocr=True
+                )
             )
 
-        for label, matches in keyword_matches.items():
-            rect, _, label_text = max(
-                matches, key=lambda m: (m[0][2] - m[0][0]) * (m[0][3] - m[0][1])
-            )
-            filtered[rect] = label_text
+        return instances
 
-        return filtered
+    @staticmethod
+    def _largest_instances(
+        instances: List[LabelInstance],
+    ) -> Dict[str, LabelInstance]:
+        largest = {}
+        for instance in instances:
+            x1, y1, x2, y2 = instance.bbox_xyxy
+            area = max(0, x2 - x1) * max(0, y2 - y1)
+            previous = largest.get(instance.canonical_label)
+            if previous is None:
+                largest[instance.canonical_label] = instance
+                continue
+            px1, py1, px2, py2 = previous.bbox_xyxy
+            previous_area = max(0, px2 - px1) * max(0, py2 - py1)
+            if area > previous_area:
+                largest[instance.canonical_label] = instance
+        return largest
 
-    def locate_labels(self, image: np.ndarray, on_progress=None) -> Dict[str, Tuple[int, int, int, int]]:
+    def filter_recognized_text(
+        self,
+        recognized_texts: Dict[Tuple[int, int, int, int], str],
+        full_image: np.ndarray,
+    ) -> Dict[Tuple[int, int, int, int], str]:
+        """Compatibility adapter returning one largest box per canonical label."""
+        instances = self.filter_recognized_text_instances(recognized_texts, full_image)
+        return {
+            instance.bbox_xyxy: instance.canonical_label
+            for instance in self._largest_instances(instances).values()
+        }
+
+    @staticmethod
+    def instances_to_label_dict(instances: List[LabelInstance]) -> Dict[str, dict]:
+        """Convert instances to the legacy one-box-per-label representation."""
+        label_dict = {}
+        for label, instance in LabelLocator._largest_instances(instances).items():
+            x1, y1, x2, y2 = instance.bbox_xyxy
+            label_dict[label] = {
+                "top_left": [int(x1), int(y1)],
+                "top_right": [int(x2), int(y1)],
+                "bottom_left": [int(x1), int(y2)],
+                "bottom_right": [int(x2), int(y2)],
+            }
+        return label_dict
+
+    def locate_label_instances(
+        self, image: np.ndarray, on_progress=None
+    ) -> List[LabelInstance]:
         """
-        Locate allowed labels within an image array.
+        Locate every allowed label occurrence within an image array.
 
         Args:
             image: np.ndarray (BGR screenshot)
 
         Returns:
-            dict: {label_str: (x1, y1, x2, y2)}
+            list: Deterministically ordered label instances.
         """
-        self.on_progress = on_progress
+        self.on_progress = on_progress or (lambda _message, _percentage: None)
 
         self.on_progress("Processing image", 1.0)
         # Preprocess
@@ -360,13 +431,14 @@ class LabelLocator:
         gray_upscaled = cv2.resize(
             gray, None, fx=self.scale_x, fy=1.0, interpolation=cv2.INTER_LINEAR
         )
-        
+
         self.on_progress("Running OCR", 6.0)
         results = self.reader.readtext(gray_upscaled, paragraph=True, height_ths=0.0)
-        
+
         self.on_progress("Processing OCR results", 80.0)
         recognized = {}
-        for bbox, text in results:
+        for result in results:
+            bbox, text = result[0], result[1]
             x1, y1 = bbox[0]
             x3, y3 = bbox[2]
             x1, y1 = int(x1 / self.scale_x), int(y1)
@@ -374,26 +446,43 @@ class LabelLocator:
             recognized[(x1, y1, x3, y3)] = text.strip()
 
         self.on_progress("Filtering OCR results", 87.0)
-        filtered = self.filter_recognized_text(recognized, gray_upscaled)
+        instances = self.filter_recognized_text_instances(recognized, gray_upscaled)
+        instances.sort(
+            key=lambda item: (
+                item.bbox_xyxy[1],
+                item.bbox_xyxy[0],
+                item.bbox_xyxy[3],
+                item.bbox_xyxy[2],
+                item.canonical_label,
+                item.recognized_text,
+            )
+        )
+        instances = [
+            replace(instance, instance_id=f"label-{index:04d}")
+            for index, instance in enumerate(instances, start=1)
+        ]
 
         if self.debug:
-           if self.debug_output_path:
-               self.draw_debug_output(image, filtered, self.debug_output_path)
+            if self.debug_output_path:
+                self.draw_debug_output(
+                    image,
+                    {
+                        instance.bbox_xyxy: instance.canonical_label
+                        for instance in instances
+                    },
+                    self.debug_output_path,
+                )
 
         self.on_progress("Building output", 95.0)
-        # Build formatted return structure
-        label_dict = {}
-        for (x1, y1, x2, y2), label in filtered.items():
-            label_dict[label] = {
-                "top_left": [int(x1), int(y1)],
-                "top_right": [int(x2), int(y1)],
-                "bottom_left": [int(x1), int(y2)],
-                "bottom_right": [int(x2), int(y2)],
-            }
-
         self.on_progress("Completed", 100.0)
-        
-        return label_dict
+
+        return instances
+
+    def locate_labels(self, image: np.ndarray, on_progress=None) -> Dict[str, dict]:
+        """Locate labels using the existing one-box-per-label contract."""
+        return self.instances_to_label_dict(
+            self.locate_label_instances(image, on_progress=on_progress)
+        )
 
     def draw_debug_output(
         self,

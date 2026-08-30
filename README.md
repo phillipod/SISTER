@@ -110,6 +110,32 @@ Options explained:
 
 **Windows users:** Be sure to run the command from `cmd.exe` or `powershell.exe`, and make sure you are in a directory where you want the output files to be stored. Otherwise, the output summary will be created in your current working directory.
 
+#### 4. Export teacher annotations for label-model training
+
+Use the dedicated annotation command to run only SISTER's OCR label locator and
+layout classifier. The command does not initialize icon caches, download assets,
+or perform icon matching. Platform and domain are explicit batch metadata because
+compendium collages can contain independent screen regions whose placement is not
+a reliable source of that information.
+
+```bash
+sister-annotate test/space-screenshots \
+  --output-dir .local/annotation-corpus \
+  --platform pc \
+  --domain space
+```
+
+Inputs may be image files or directories, which are scanned recursively for PNG,
+JPEG, WebP, and IMG files. Add `--gpu` to enable EasyOCR GPU acceleration,
+`--no-resize` to preserve source resolution during OCR, or `--force` to rewrite
+an exact existing annotation variant.
+
+The portable corpus stores byte-identical source images by SHA-256, deterministic
+JSON annotations, original-resolution color crops, review overlays, and an atomic
+`corpus.json` coverage index. Re-running the same source with the same teacher and
+metadata skips OCR; using different platform or domain metadata creates a separate
+annotation variant.
+
 ---
 
 ## 🛠 Pipeline Overview
