@@ -1,3 +1,10 @@
 *.png
 *.json
 *.txt
+*.[Pp][Nn][Gg]
+*.[Jj][Pp][Gg]
+*.[Jj][Pp][Ee][Gg]
+*.img
+*.bktree
+icon_capture/
+test_perceptree.py

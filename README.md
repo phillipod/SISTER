@@ -171,6 +171,10 @@ After all stages run, the pipeline writes a match summary file (e.g., `*_matches
 
 Most configuration is handled via CLI flags, but advanced users can modify settings by editing or overriding entries in the configuration dictionary (see `sister_sto/cli.py`):
 
+Set `SISTER_CONFIG_DIR` to override the standard `~/.sister_sto/config`
+configuration directory. This changes configuration lookup only; use
+`--data-dir` to relocate runtime data, caches, icons, and logs.
+
 ```python
 config = {
     "debug": True,

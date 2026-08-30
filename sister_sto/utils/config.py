@@ -37,7 +37,11 @@ def get_default_config_path() -> Optional[Path]:
 
 def get_user_config_dir() -> Path:
     """Get the user's config directory, creating it if it doesn't exist."""
-    config_dir = Path(os.path.expanduser("~/.sister_sto/config"))
+    configured_dir = os.environ.get("SISTER_CONFIG_DIR")
+    if configured_dir:
+        config_dir = Path(configured_dir).expanduser()
+    else:
+        config_dir = Path(os.path.expanduser("~/.sister_sto/config"))
     
     config_dir.mkdir(parents=True, exist_ok=True)
     return config_dir
@@ -90,4 +94,4 @@ def load_config(user_config_path: Optional[str] = None) -> Dict[str, Any]:
                 logger.warning(f"Failed to load config from {config_path}: {e}")
 
     
-    return config 
+    return config

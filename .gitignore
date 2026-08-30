@@ -71,6 +71,26 @@ instance/
 # Sphinx documentation
 docs/_build/
 
+# Local workstream documentation system
+/docs/incoming/
+/docs/outgoing/
+/docs/reference/
+/docs/workstreams/
+/docs/index.yaml
+/docs_legacy/
+/tools/docs_extract.py
+/tools/workstreams/
+
+# Local development tooling, caches, and recovered research
+/.local/
+/.claude/
+/.structural-cache/
+/BUG_FINDER_STATE.json
+/BUG_FINDER.log
+/analysis.md
+/bug-finder-bot.py
+/bug-finder-bot.py~
+
 # PyBuilder
 .pybuilder/
 target/

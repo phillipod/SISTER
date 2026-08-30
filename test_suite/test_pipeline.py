@@ -29,12 +29,24 @@ def pipeline_state():
     """Create a sample pipeline state."""
     return PipelineState(screenshots=["dummy.png"])
 
-def test_pipeline_creation():
+def test_pipeline_creation(tmp_path, monkeypatch):
     """Test pipeline initialization."""
+    class StubLocateLabelsStage(PipelineStage):
+        name = "locate_labels"
+
+        def __init__(self, opts, app_config):
+            super().__init__(opts, app_config)
+
+    monkeypatch.setattr(
+        "sister_sto.pipeline.pipeline.LocateLabelsStage",
+        StubLocateLabelsStage,
+    )
+
     pipeline = build_default_pipeline(
         on_progress=mock_on_progress,
         on_interactive=mock_on_interactive,
-        on_error=mock_on_error
+        on_error=mock_on_error,
+        config={"data_dir": str(tmp_path / "sister-data")},
     )
     assert pipeline is not None
     assert hasattr(pipeline, 'stages')
@@ -66,4 +78,4 @@ def test_pipeline_state():
     
     # Test attribute access methods
     assert hasattr(state, "test_attr")
-    assert getattr(state, "test_attr") == "test_value" 
+    assert getattr(state, "test_attr") == "test_value"

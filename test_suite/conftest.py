@@ -20,4 +20,10 @@ def sister_sto_root():
 @pytest.fixture(scope="session")
 def test_resources():
     """Return the test resources directory as a Path object."""
-    return Path(__file__).parent / "resources" 
+    return Path(__file__).parent / "resources"
+
+
+@pytest.fixture(autouse=True)
+def isolated_sister_config_dir(tmp_path, monkeypatch):
+    """Keep unit-test configuration writes inside the test's temporary tree."""
+    monkeypatch.setenv("SISTER_CONFIG_DIR", str(tmp_path / "sister-config"))

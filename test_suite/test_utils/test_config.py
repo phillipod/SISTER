@@ -8,6 +8,7 @@ import os
 def test_get_user_config_dir(tmp_path, monkeypatch):
     """Test that get_user_config_dir creates and returns the correct directory."""
     # Mock home directory to use a temporary directory
+    monkeypatch.delenv("SISTER_CONFIG_DIR", raising=False)
     monkeypatch.setenv('HOME', str(tmp_path))
     
     config_dir = get_user_config_dir()
@@ -16,6 +17,15 @@ def test_get_user_config_dir(tmp_path, monkeypatch):
     assert config_dir.is_dir()
     # Use parts to check path components in an OS-independent way
     assert config_dir.parts[-2:] == ('.sister_sto', 'config')
+
+
+def test_get_user_config_dir_override(tmp_path, monkeypatch):
+    """Test the explicit configuration directory override."""
+    expected = tmp_path / "custom-config"
+    monkeypatch.setenv("SISTER_CONFIG_DIR", str(expected))
+
+    assert get_user_config_dir() == expected
+    assert expected.is_dir()
 
 def test_load_config_empty():
     """Test loading config with no config files present."""
@@ -68,4 +78,4 @@ def test_load_config_precedence(tmp_path, monkeypatch):
     assert config['key'] == 'user'
     # Both configs should be merged
     assert 'unique_default' in config
-    assert 'unique_user' in config 
+    assert 'unique_user' in config
